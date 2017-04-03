@@ -24,9 +24,9 @@ dynamic log(value) => dart_math.log(value);
 dynamic select(bool condition, thenValue, elseValue) =>
     condition ? thenValue : elseValue;
 
-dynamic abs(num value) => value.abs();
+dynamic abs(value) => value.abs();
 
-dynamic sign(num value) => value.sign;
+dynamic sign(value) => value.sign;
 
 dynamic sum(value) => value;
 
