@@ -3,4 +3,5 @@
 
 library tensor_math;
 
-export 'src/tensor_math_base.dart';
+export 'src/nd_shape.dart';
+export 'src/nd_array.dart';
