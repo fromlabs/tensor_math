@@ -32,5 +32,5 @@ abstract class NDShape {
 
   NDShape broadcast(NDShape shape2);
 
-  NDShape matrixMul(NDShape shape2);
+  NDShape matMul(NDShape shape2);
 }

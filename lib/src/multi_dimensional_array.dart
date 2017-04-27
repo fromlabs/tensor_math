@@ -120,10 +120,10 @@ class MultiDimensionalArray<E> {
   MultiDimensionalArray<E> div(value) => _elementWiseBinaryOperation<E, E>(
       value, (dynamic value1, dynamic value2) => value1 / value2);
 
-  MultiDimensionalArray<E> matrixMul(value) {
+  MultiDimensionalArray<E> matMul(value) {
     // TODO to implement MultiDimensionalArray.matrixMul
     throw new UnimplementedError(
-        "to implement MultiDimensionalArray.matrixMul: $this");
+        "to implement MultiDimensionalArray.matMul: $this");
   }
 
   MultiDimensionalArray<bool> equal(value) =>

@@ -6,8 +6,11 @@ import "package:tensor_math/tensor_math.dart";
 import "package:tensor_math/src/nd_array_impl.dart" show createTestNDArray;
 
 void main() {
-  print(new NDArray([
-    [1, 2],
-    [3, 4]
-  ]).toValue());
+  var array1 = createTestNDArray([3, 2]);
+  print(array1);
+
+  var array2 = createTestNDArray([2, 4]);
+  print(array2);
+
+  print(array1.matMul(array2).toValue());
 }

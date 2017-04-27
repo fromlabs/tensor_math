@@ -24,7 +24,7 @@ abstract class NDArray {
 
   NDArray transpose({List<int> permutationAxis});
 
-  NDArray matrixMul(value2);
+  NDArray matMul(value2);
 
   NDArray abs();
 

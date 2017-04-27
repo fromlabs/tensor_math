@@ -144,7 +144,7 @@ class NDShapeImpl implements NDShape {
   }
 
   @override
-  NDShape matrixMul(covariant NDShapeImpl shape2) {
+  NDShape matMul(covariant NDShapeImpl shape2) {
     if (dimension == null) {
       if (shape2.dimension == null) {
         return this;

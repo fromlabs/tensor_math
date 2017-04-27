@@ -435,21 +435,21 @@ void main() {
     });
 
     test('Shape matrix multiplication test', () {
-      expect(() => createTestNDShape([]).matrixMul(createTestNDShape([])),
+      expect(() => createTestNDShape([]).matMul(createTestNDShape([])),
           throwsArgumentError);
 
-      expect(() => createTestNDShape([]).matrixMul(createTestNDShape()),
+      expect(() => createTestNDShape([]).matMul(createTestNDShape()),
           throwsArgumentError);
 
-      expect(() => createTestNDShape().matrixMul(createTestNDShape([])),
+      expect(() => createTestNDShape().matMul(createTestNDShape([])),
           throwsArgumentError);
 
-      expect(createTestNDShape().matrixMul(createTestNDShape()).dimensions,
-          isNull);
+      expect(
+          createTestNDShape().matMul(createTestNDShape()).dimensions, isNull);
 
       expect(
           createTestNDShape([1, 2])
-              .matrixMul(createTestNDShape([2, 3]))
+              .matMul(createTestNDShape([2, 3]))
               .dimensions,
           orderedEquals([1, 3]));
     });

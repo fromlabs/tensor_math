@@ -92,7 +92,7 @@ class NDArrayImpl implements NDArray {
   }
 
   @override
-  dynamic toValue() => _toValue(_offset, 0);
+  dynamic toValue() => _toValue();
 
   @override
   List<E> toVector<E>() {
@@ -161,9 +161,25 @@ class NDArrayImpl implements NDArray {
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 <= value2);
 
   @override
-  NDArray matrixMul(value2) {
-    // TODO to implement NDArrayImpl.matrixMul
-    throw new UnimplementedError("to implement NDArrayImpl.matrixMul: $this");
+  NDArray matMul(value2) {
+    var array2 = _toNDArray(value2);
+
+    var resultShape = shape.matMul(array2.shape);
+    var resultData = new List(resultShape.length);
+    var resultStride = _calculateDefaultStride(resultShape);
+
+    print(resultShape);
+
+    if (resultShape.dimension == 2) {
+
+
+
+    } else {
+      // TODO to implement matMul
+      throw new UnimplementedError("to implement matMul");
+    }
+
+    return new NDArrayImpl._(resultData, resultShape, resultStride, 0);
   }
 
   @override
@@ -215,107 +231,44 @@ class NDArrayImpl implements NDArray {
   String toString() =>
       "<value: ${toValue()}, shape: $shape, stride: $_stride, offset: $_offset>";
 
-  dynamic _toValue(int offset, int shapeIndex) {
-    var shapeLength = shape.dimension - shapeIndex;
-    switch (shapeLength) {
-      case 0:
-        return _data[offset];
-      case 1:
-        var length = shape[shapeIndex];
-        var delta = _stride[shapeIndex];
-        var values = new List(length);
-        for (var i = 0, index = offset; i < length; i++, index += delta) {
-          values[i] = _data[index];
-        }
-        return values;
-      case 2:
-        var length = shape[shapeIndex];
-        var delta = _stride[shapeIndex];
-        var values = new List<List>(length);
-        var shapeIndex2 = shapeIndex + 1;
-        var length2 = shape[shapeIndex2];
-        var delta2 = _stride[shapeIndex2];
-        for (var i = 0, index = offset; i < length; i++, index += delta) {
-          var values2 = new List(length2);
-          for (var i2 = 0, index2 = index;
-              i2 < length2;
-              i2++, index2 += delta2) {
-            values2[i2] = _data[index2];
+  dynamic _toValue() {
+    if (shape.isScalar) {
+      return _data[_offset];
+    } else {
+      var shapeIndex = 0;
+      var dimensionValues = new List(shape.dimension);
+      var dimensionIndexes = new List(shape.dimension);
+      var dataIndexes = new List(shape.dimension);
+      var dataIndex = dataIndexes[shapeIndex] = _offset;
+      var resultValues =
+          dimensionValues[shapeIndex] = new List(shape[shapeIndex]);
+      var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+      var i = 0;
+      while (i < shape.length) {
+        if (dimensionIndex < shape[shapeIndex]) {
+          if (shapeIndex == shape.dimension - 1) {
+            resultValues[dimensionIndex] = _data[dataIndex];
+            dataIndex += _stride[shapeIndex];
+            dimensionIndex++;
+            i++;
+          } else {
+            shapeIndex++;
+            dimensionValues[shapeIndex] = new List(shape[shapeIndex]);
+            resultValues =
+                resultValues[dimensionIndex] = dimensionValues[shapeIndex];
+            dataIndexes[shapeIndex] = dataIndex;
+            dimensionIndex = dimensionIndexes[shapeIndex] = 0;
           }
-          values[i] = values2;
+        } else {
+          shapeIndex--;
+          dataIndex = dataIndexes[shapeIndex] =
+              dataIndexes[shapeIndex] + _stride[shapeIndex];
+          resultValues = dimensionValues[shapeIndex];
+          dimensionIndex =
+              dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
         }
-        return values;
-      case 3:
-        var length = shape[shapeIndex];
-        var delta = _stride[shapeIndex];
-        var values = new List<List<List>>(length);
-        var shapeIndex2 = shapeIndex + 1;
-        var length2 = shape[shapeIndex2];
-        var delta2 = _stride[shapeIndex2];
-        var shapeIndex3 = shapeIndex2 + 1;
-        var length3 = shape[shapeIndex3];
-        var delta3 = _stride[shapeIndex3];
-        for (var i = 0, index = offset; i < length; i++, index += delta) {
-          var values2 = new List<List>(length2);
-          for (var i2 = 0, index2 = index;
-              i2 < length2;
-              i2++, index2 += delta2) {
-            var values3 = new List(length3);
-            for (var i3 = 0, index3 = index2;
-                i3 < length3;
-                i3++, index3 += delta3) {
-              values3[i3] = _data[index3];
-            }
-            values2[i2] = values3;
-          }
-          values[i] = values2;
-        }
-        return values;
-      case 4:
-        var length = shape[shapeIndex];
-        var delta = _stride[shapeIndex];
-        var values = new List<List<List<List>>>(length);
-        var shapeIndex2 = shapeIndex + 1;
-        var length2 = shape[shapeIndex2];
-        var delta2 = _stride[shapeIndex2];
-        var shapeIndex3 = shapeIndex2 + 1;
-        var length3 = shape[shapeIndex3];
-        var delta3 = _stride[shapeIndex3];
-        var shapeIndex4 = shapeIndex3 + 1;
-        var length4 = shape[shapeIndex4];
-        var delta4 = _stride[shapeIndex4];
-        for (var i = 0, index = offset; i < length; i++, index += delta) {
-          var values2 = new List<List<List>>(length2);
-          for (var i2 = 0, index2 = index;
-              i2 < length2;
-              i2++, index2 += delta2) {
-            var values3 = new List<List>(length3);
-            for (var i3 = 0, index3 = index2;
-                i3 < length3;
-                i3++, index3 += delta3) {
-              var values4 = new List(length3);
-              for (var i4 = 0, index4 = index3;
-                  i4 < length4;
-                  i4++, index4 += delta4) {
-                values4[i4] = _data[index4];
-              }
-              values3[i3] = values4;
-            }
-            values2[i2] = values3;
-          }
-          values[i] = values2;
-        }
-        return values;
-      default:
-        // TODO capire se possibile non utilizzare la ricorsione
-        var length = shape[shapeIndex];
-        var delta = _stride[shapeIndex];
-        var values = new List(length);
-        var nextShapeIndex = shapeIndex + 1;
-        for (var i = 0, index = offset; i < length; i++, index += delta) {
-          values[i] = _toValue(index, nextShapeIndex);
-        }
-        return values;
+      }
+      return dimensionValues[0];
     }
   }
 
@@ -324,54 +277,43 @@ class NDArrayImpl implements NDArray {
 
   NDArrayImpl _elementWiseUnaryOperation(unaryOperation(value)) {
     var resultData = new List(shape.length);
-    var resultShape = shape;
     var resultStride;
-    var resultOffset = 0;
 
-    switch (shape.dimension) {
-      case 0:
-        resultStride = _stride;
+    if (shape.isScalar) {
+      resultStride = _stride;
 
-        resultData[0] = unaryOperation(_data[_offset]);
+      resultData[0] = unaryOperation(_data[_offset]);
+    } else {
+      resultStride = _calculateDefaultStride(shape);
 
-        break;
-      default:
-        resultStride = _calculateDefaultStride(resultShape);
-
-        var shapeIndex = 0;
-        var dimensionIndexes = new List(shape.dimension);
-        var dataIndexes = new List(shape.dimension);
-        var dataDelta = _stride[shapeIndex];
-        var dataIndex = dataIndexes[shapeIndex] = _offset;
-        var resultDataIndex = resultOffset;
-        var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-        while (resultDataIndex < resultData.length) {
-          if (dimensionIndex < shape[shapeIndex]) {
-            if (shapeIndex == shape.dimension - 1) {
-              resultData[resultDataIndex++] = unaryOperation(_data[dataIndex]);
-              dataIndex += dataDelta;
-              dimensionIndex++;
-            } else {
-              shapeIndex++;
-              dataDelta = _stride[shapeIndex];
-              dataIndexes[shapeIndex] = dataIndex;
-              dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-            }
+      var shapeIndex = 0;
+      var dimensionIndexes = new List(shape.dimension);
+      var dataIndexes = new List(shape.dimension);
+      var dataIndex = dataIndexes[shapeIndex] = _offset;
+      var resultDataIndex = 0;
+      var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+      while (resultDataIndex < resultData.length) {
+        if (dimensionIndex < shape[shapeIndex]) {
+          if (shapeIndex == shape.dimension - 1) {
+            resultData[resultDataIndex++] = unaryOperation(_data[dataIndex]);
+            dataIndex += _stride[shapeIndex];
+            dimensionIndex++;
           } else {
-            shapeIndex--;
-            dataDelta = _stride[shapeIndex];
-            dataIndex =
-                dataIndexes[shapeIndex] = dataIndexes[shapeIndex] + dataDelta;
-            dimensionIndex =
-                dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
+            shapeIndex++;
+            dataIndexes[shapeIndex] = dataIndex;
+            dimensionIndex = dimensionIndexes[shapeIndex] = 0;
           }
+        } else {
+          shapeIndex--;
+          dataIndex = dataIndexes[shapeIndex] =
+              dataIndexes[shapeIndex] + _stride[shapeIndex];
+          dimensionIndex =
+              dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
         }
-
-        break;
+      }
     }
 
-    return new NDArrayImpl._(
-        resultData, resultShape, resultStride, resultOffset);
+    return new NDArrayImpl._(resultData, shape, resultStride, 0);
   }
 
   NDArrayImpl _elementWiseBinaryOperation(
@@ -381,109 +323,52 @@ class NDArrayImpl implements NDArray {
     var resultShape = shape.broadcast(array2.shape);
     var resultData = new List(resultShape.length);
     var resultStride;
-    var resultOffset = 0;
 
-    switch (resultShape.dimension) {
-      case 0:
-        resultStride = _stride;
-
-        resultData[0] =
-            binaryOperation(_data[_offset], array2._data[array2._offset]);
-
-        break;
-      default:
-        resultStride = _calculateDefaultStride(resultShape);
-
-        var shapeIndex = 0;
-        var dimensionIndexes = new List(resultShape.dimension);
-        var data1Indexes = new List(resultShape.dimension);
-        var stride1 = _calculateBroadcastedStride(resultShape, this);
-        var data1Delta = stride1[shapeIndex];
-        var data1Index = data1Indexes[shapeIndex] = _offset;
-        var data2Indexes = new List(resultShape.dimension);
-        var stride2 = _calculateBroadcastedStride(resultShape, array2);
-        var data2Delta = stride2[shapeIndex];
-        var data2Index = data2Indexes[shapeIndex] = array2._offset;
-        var resultDataIndex = resultOffset;
-        var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-        while (resultDataIndex < resultData.length) {
-          if (dimensionIndex < resultShape[shapeIndex]) {
-            if (shapeIndex == resultShape.dimension - 1) {
-              resultData[resultDataIndex++] =
-                  binaryOperation(_data[data1Index], array2._data[data2Index]);
-              data1Index += data1Delta;
-              data2Index += data2Delta;
-              dimensionIndex++;
-            } else {
-              shapeIndex++;
-              data1Delta = stride1[shapeIndex];
-              data1Indexes[shapeIndex] = data1Index;
-              data2Delta = stride2[shapeIndex];
-              data2Indexes[shapeIndex] = data2Index;
-              dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-            }
-          } else {
-            shapeIndex--;
-            data1Delta = stride1[shapeIndex];
-            data1Index = data1Indexes[shapeIndex] =
-                data1Indexes[shapeIndex] + data1Delta;
-            data2Delta = stride2[shapeIndex];
-            data2Index = data2Indexes[shapeIndex] =
-                data2Indexes[shapeIndex] + data2Delta;
-            dimensionIndex =
-                dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
-          }
-        }
-
-        break;
-    }
-
-    return new NDArrayImpl._(
-        resultData, resultShape, resultStride, resultOffset);
-  }
-
-  NDArrayImpl _elementWiseUnaryOperation2(unaryOperation(value)) {
-    var data = new List(shape.length);
-    var resultStride;
-
-    if (shape.isScalar) {
+    if (resultShape.isScalar) {
       resultStride = _stride;
 
-      data[0] = unaryOperation(_data[_offset]);
-    } else if (shape.isVector) {
-      resultStride = _calculateDefaultStride(shape);
-
-      var length = shape[0];
-      var delta = _stride[0];
-      for (var i = 0, index = _offset; i < length; i++, index += delta) {
-        data[i] = unaryOperation(_data[index]);
-      }
-    } else if (shape.isMatrix) {
-      resultStride = _calculateDefaultStride(shape);
-
-      var length = shape[0];
-      var delta = _stride[0];
-      var resultDelta = 1;
-      for (var i = 0, resultIndex = 0, index = _offset;
-          i < length;
-          i++, resultIndex += resultDelta, index += delta) {
-        data[resultIndex] = unaryOperation(_data[index]);
-      }
-    } else if (shape.isTensor3D) {
-      // TODO to implement NDArrayImpl._elementWiseUnaryOperation
-      throw new UnimplementedError(
-          "to implement NDArrayImpl._elementWiseUnaryOperation: $this");
-    } else if (shape.isTensor4D) {
-      // TODO to implement NDArrayImpl._elementWiseUnaryOperation
-      throw new UnimplementedError(
-          "to implement NDArrayImpl._elementWiseUnaryOperation: $this");
+      resultData[0] =
+          binaryOperation(_data[_offset], array2._data[array2._offset]);
     } else {
-      // TODO to implement NDArrayImpl._elementWiseUnaryOperation
-      throw new UnimplementedError(
-          "to implement NDArrayImpl._elementWiseUnaryOperation: $this");
+      resultStride = _calculateDefaultStride(resultShape);
+
+      var shapeIndex = 0;
+      var dimensionIndexes = new List(resultShape.dimension);
+      var data1Indexes = new List(resultShape.dimension);
+      var stride1 = _calculateBroadcastedStride(resultShape, this);
+      var data1Index = data1Indexes[shapeIndex] = _offset;
+      var data2Indexes = new List(resultShape.dimension);
+      var stride2 = _calculateBroadcastedStride(resultShape, array2);
+      var data2Index = data2Indexes[shapeIndex] = array2._offset;
+      var resultDataIndex = 0;
+      var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+      while (resultDataIndex < resultData.length) {
+        if (dimensionIndex < resultShape[shapeIndex]) {
+          if (shapeIndex == resultShape.dimension - 1) {
+            resultData[resultDataIndex++] =
+                binaryOperation(_data[data1Index], array2._data[data2Index]);
+            data1Index += stride1[shapeIndex];
+            data2Index += stride2[shapeIndex];
+            dimensionIndex++;
+          } else {
+            shapeIndex++;
+            data1Indexes[shapeIndex] = data1Index;
+            data2Indexes[shapeIndex] = data2Index;
+            dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+          }
+        } else {
+          shapeIndex--;
+          data1Index = data1Indexes[shapeIndex] =
+              data1Indexes[shapeIndex] + stride1[shapeIndex];
+          data2Index = data2Indexes[shapeIndex] =
+              data2Indexes[shapeIndex] + stride2[shapeIndex];
+          dimensionIndex =
+              dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
+        }
+      }
     }
 
-    return new NDArrayImpl._(data, shape, resultStride, 0);
+    return new NDArrayImpl._(resultData, resultShape, resultStride, 0);
   }
 
   NDArrayImpl _elementWiseTernaryOperation(
@@ -496,71 +381,64 @@ class NDArrayImpl implements NDArray {
     var resultStride;
     var resultOffset = 0;
 
-    switch (resultShape.dimension) {
-      case 0:
-        resultStride = _stride;
+    if (resultShape.isScalar) {
+      resultStride = _stride;
 
-        resultData[0] = ternaryOperation(_data[_offset],
-            array2._data[array2._offset], array3._data[array3._offset]);
+      resultData[0] = ternaryOperation(_data[_offset],
+          array2._data[array2._offset], array3._data[array3._offset]);
+    } else {
+      resultStride = _calculateDefaultStride(resultShape);
 
-        break;
-      default:
-        resultStride = _calculateDefaultStride(resultShape);
-
-        var shapeIndex = 0;
-        var dimensionIndexes = new List(resultShape.dimension);
-        var data1Indexes = new List(resultShape.dimension);
-        var stride1 = _calculateBroadcastedStride(resultShape, this);
-        var data1Delta = stride1[shapeIndex];
-        var data1Index = data1Indexes[shapeIndex] = _offset;
-        var data2Indexes = new List(resultShape.dimension);
-        var stride2 = _calculateBroadcastedStride(resultShape, array2);
-        var data2Delta = stride2[shapeIndex];
-        var data2Index = data2Indexes[shapeIndex] = array2._offset;
-        var data3Indexes = new List(resultShape.dimension);
-        var stride3 = _calculateBroadcastedStride(resultShape, array3);
-        var data3Delta = stride3[shapeIndex];
-        var data3Index = data3Indexes[shapeIndex] = array3._offset;
-        var resultDataIndex = resultOffset;
-        var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-        while (resultDataIndex < resultData.length) {
-          if (dimensionIndex < resultShape[shapeIndex]) {
-            if (shapeIndex == resultShape.dimension - 1) {
-              resultData[resultDataIndex++] = ternaryOperation(
-                  _data[data1Index],
-                  array2._data[data2Index],
-                  array3._data[data3Index]);
-              data1Index += data1Delta;
-              data2Index += data2Delta;
-              data3Index += data3Delta;
-              dimensionIndex++;
-            } else {
-              shapeIndex++;
-              data1Delta = stride1[shapeIndex];
-              data1Indexes[shapeIndex] = data1Index;
-              data2Delta = stride2[shapeIndex];
-              data2Indexes[shapeIndex] = data2Index;
-              data3Delta = stride3[shapeIndex];
-              data3Indexes[shapeIndex] = data3Index;
-              dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-            }
+      var shapeIndex = 0;
+      var dimensionIndexes = new List(resultShape.dimension);
+      var data1Indexes = new List(resultShape.dimension);
+      var stride1 = _calculateBroadcastedStride(resultShape, this);
+      var data1Delta = stride1[shapeIndex];
+      var data1Index = data1Indexes[shapeIndex] = _offset;
+      var data2Indexes = new List(resultShape.dimension);
+      var stride2 = _calculateBroadcastedStride(resultShape, array2);
+      var data2Delta = stride2[shapeIndex];
+      var data2Index = data2Indexes[shapeIndex] = array2._offset;
+      var data3Indexes = new List(resultShape.dimension);
+      var stride3 = _calculateBroadcastedStride(resultShape, array3);
+      var data3Delta = stride3[shapeIndex];
+      var data3Index = data3Indexes[shapeIndex] = array3._offset;
+      var resultDataIndex = resultOffset;
+      var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+      while (resultDataIndex < resultData.length) {
+        if (dimensionIndex < resultShape[shapeIndex]) {
+          if (shapeIndex == resultShape.dimension - 1) {
+            resultData[resultDataIndex++] = ternaryOperation(_data[data1Index],
+                array2._data[data2Index], array3._data[data3Index]);
+            data1Index += data1Delta;
+            data2Index += data2Delta;
+            data3Index += data3Delta;
+            dimensionIndex++;
           } else {
-            shapeIndex--;
+            shapeIndex++;
             data1Delta = stride1[shapeIndex];
-            data1Index = data1Indexes[shapeIndex] =
-                data1Indexes[shapeIndex] + data1Delta;
+            data1Indexes[shapeIndex] = data1Index;
             data2Delta = stride2[shapeIndex];
-            data2Index = data2Indexes[shapeIndex] =
-                data2Indexes[shapeIndex] + data2Delta;
+            data2Indexes[shapeIndex] = data2Index;
             data3Delta = stride3[shapeIndex];
-            data3Index = data3Indexes[shapeIndex] =
-                data2Indexes[shapeIndex] + data2Delta;
-            dimensionIndex =
-                dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
+            data3Indexes[shapeIndex] = data3Index;
+            dimensionIndex = dimensionIndexes[shapeIndex] = 0;
           }
+        } else {
+          shapeIndex--;
+          data1Delta = stride1[shapeIndex];
+          data1Index =
+              data1Indexes[shapeIndex] = data1Indexes[shapeIndex] + data1Delta;
+          data2Delta = stride2[shapeIndex];
+          data2Index =
+              data2Indexes[shapeIndex] = data2Indexes[shapeIndex] + data2Delta;
+          data3Delta = stride3[shapeIndex];
+          data3Index =
+              data3Indexes[shapeIndex] = data2Indexes[shapeIndex] + data2Delta;
+          dimensionIndex =
+              dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
         }
-
-        break;
+      }
     }
 
     return new NDArrayImpl._(
@@ -590,86 +468,32 @@ List<int> _calculateDefaultStride(NDShapeImpl shape) {
 
 List _calculateFlatData(value, NDShapeImpl shape) {
   var data = new List(shape.length);
-  switch (shape.dimension) {
-    case 0:
-      data[0] = value;
-      break;
-    case 1:
-      List values = value;
-      data.setAll(0, values);
-      break;
-    case 2:
-      List<List> values = value;
-      var dataIndex = 0;
-      for (var i = 0; i < values.length; i++) {
-        var values2 = values[i];
-        data.setAll(dataIndex, values2);
-        dataIndex += values2.length;
-      }
-
-      break;
-    case 3:
-      List<List<List>> values = value;
-      var dataIndex = 0;
-      for (var i = 0; i < values.length; i++) {
-        var values2 = values[i];
-        for (var i2 = 0; i2 < values2.length; i2++) {
-          var values3 = values2[i2];
-          data.setAll(dataIndex, values3);
-          dataIndex += values3.length;
-        }
-      }
-      break;
-    case 4:
-      List<List<List<List>>> values = value;
-      var dataIndex = 0;
-      for (var i = 0; i < values.length; i++) {
-        var values2 = values[i];
-        for (var i2 = 0; i2 < values2.length; i2++) {
-          var values3 = values2[i2];
-          for (var i3 = 0; i3 < values3.length; i3++) {
-            var values4 = values3[i3];
-            data.setAll(dataIndex, values4);
-            dataIndex += values4.length;
-          }
-        }
-      }
-      break;
-    default:
-      var dimensionValues = new List(shape.dimension - 4);
-      var dimensionIndexes = new List(shape.dimension - 4);
-      var shapeIndex = 0;
-      var dataIndex = 0;
-      var dimensionValue = dimensionValues[0] = value;
-      var dimensionIndex = dimensionIndexes[0] = 0;
-      while (dataIndex < data.length) {
-        if (dimensionIndex < shape[shapeIndex]) {
-          if (shapeIndex == shape.dimension - 5) {
-            List<List<List<List>>> values = dimensionValue[dimensionIndex++];
-            for (var i = 0; i < values.length; i++) {
-              var values2 = values[i];
-              for (var i2 = 0; i2 < values2.length; i2++) {
-                var values3 = values2[i2];
-                for (var i3 = 0; i3 < values3.length; i3++) {
-                  var values4 = values3[i3];
-                  data.setAll(dataIndex, values4);
-                  dataIndex += values4.length;
-                }
-              }
-            }
-          } else {
-            shapeIndex++;
-            dimensionValue =
-                dimensionValues[shapeIndex] = dimensionValue[dimensionIndex];
-            dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-          }
+  if (shape.isScalar) {
+    data[0] = value;
+  } else {
+    var dimensionValues = new List(shape.dimension);
+    var dimensionIndexes = new List(shape.dimension);
+    var shapeIndex = 0;
+    var dataIndex = 0;
+    var dimensionValue = dimensionValues[0] = value;
+    var dimensionIndex = dimensionIndexes[0] = 0;
+    while (dataIndex < data.length) {
+      if (dimensionIndex < shape[shapeIndex]) {
+        if (shapeIndex == shape.dimension - 1) {
+          data[dataIndex++] = dimensionValue[dimensionIndex++];
         } else {
-          shapeIndex--;
-          dimensionValue = dimensionValues[shapeIndex];
-          dimensionIndex =
-              dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
+          shapeIndex++;
+          dimensionValue =
+              dimensionValues[shapeIndex] = dimensionValue[dimensionIndex];
+          dimensionIndex = dimensionIndexes[shapeIndex] = 0;
         }
+      } else {
+        shapeIndex--;
+        dimensionValue = dimensionValues[shapeIndex];
+        dimensionIndex =
+            dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
       }
+    }
   }
   return data;
 }
