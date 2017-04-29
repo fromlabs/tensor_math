@@ -6,19 +6,16 @@ import "package:tensor_math/tensor_math.dart";
 import "package:tensor_math/src/nd_array_impl.dart" show createTestNDArray;
 
 void main() {
-  print(new NDArray([1, 2]).add(new NDArray(2)));
+  var array1 = createTestNDArray([2, 2]);
 
-  print(new NDArray(2).add(new NDArray([1, 2])));
+  var array2 = array1.transpose();
 
-  print(new NDArray([1, 2]).add(new NDArray([2])));
+  print(array1);
+  print(array2);
+  print(array2.neg());
 
-  print(new NDArray([
-    [1, 2],
-    [3, 4]
-  ]).add(new NDArray([2])));
+  array1 = createTestNDArray([2, 2, 2]);
+  print(array1);
 
-  print(createTestNDArray([]));
-  print(createTestNDArray([10]));
-  print(createTestNDArray([10, 3]));
-  print(createTestNDArray([2, 3, 4]));
+
 }

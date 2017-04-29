@@ -168,18 +168,60 @@ class NDArrayImpl implements NDArray {
     var resultData = new List(resultShape.length);
     var resultStride = _calculateDefaultStride(resultShape);
 
-    print(resultShape);
+    var shapeIndex = 0;
+    var dimensionIndexes = new List(resultShape.dimension);
+    var data1Indexes = new List(resultShape.dimension);
+    var data1Index = data1Indexes[shapeIndex] = _offset;
+    var data2Indexes = new List(resultShape.dimension);
+    var data2Index = data2Indexes[shapeIndex] = array2._offset;
+    var resultDataIndex = 0;
+    var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+    while (resultDataIndex < resultData.length) {
+      if (dimensionIndex < resultShape[shapeIndex]) {
+        if (shapeIndex == resultShape.dimension - 2) {
+/*
+          resultData[resultDataIndex++] =
+              binaryOperation(_data[data1Index], array2._data[data2Index]);
 
-    if (resultShape.dimension == 2) {
+          data1Index += _stride[shapeIndex];
+          data2Index += array2._stride[shapeIndex];
+*/
 
-
-
-    } else {
-      // TODO to implement matMul
-      throw new UnimplementedError("to implement matMul");
+          dimensionIndex++;
+        } else {
+          shapeIndex++;
+          data1Indexes[shapeIndex] = data1Index;
+          data2Indexes[shapeIndex] = data2Index;
+          dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+        }
+      } else {
+        shapeIndex--;
+        data1Index = data1Indexes[shapeIndex] =
+            data1Indexes[shapeIndex] + _stride[shapeIndex];
+        data2Index = data2Indexes[shapeIndex] =
+            data2Indexes[shapeIndex] + array2._stride[shapeIndex];
+        dimensionIndex =
+            dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
+      }
     }
 
     return new NDArrayImpl._(resultData, resultShape, resultStride, 0);
+  }
+
+  dynamic _matMul2d(value1, value2, List<int> shape1, List<int> shape2) {
+    var result = [];
+    for (int row1 = 0; row1 < shape1.first; row1++) {
+      var row = [];
+      for (int column2 = 0; column2 < shape2.last; column2++) {
+        var sumValue = 0;
+        for (int index = 0; index < shape1.last; index++) {
+          sumValue += value1[row1][index] * value2[index][column2];
+        }
+        row.add(sumValue);
+      }
+      result.add(row);
+    }
+    return result;
   }
 
   @override

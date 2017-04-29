@@ -452,6 +452,12 @@ void main() {
               .matMul(createTestNDShape([2, 3]))
               .dimensions,
           orderedEquals([1, 3]));
+
+      expect(
+          createTestNDShape([1, 2, 3])
+              .matMul(createTestNDShape([null, 3, 2]))
+              .dimensions,
+          orderedEquals([1, 2, 2]));
     });
   });
 }

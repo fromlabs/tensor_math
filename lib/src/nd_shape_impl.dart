@@ -215,7 +215,7 @@ class NDShapeImpl implements NDShape {
 
   @override
   String toString() =>
-      "[Shape: dimensions=$internalDimensions, dimension=$dimension, length=$length]";
+      "<Shape: dimensions=$internalDimensions, dimension=$dimension, length=$length>";
 
   static int _calculateLength(List<int> dimensions) {
     if (dimensions == null) {
