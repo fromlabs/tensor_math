@@ -179,15 +179,28 @@ class NDArrayImpl implements NDArray {
     while (resultDataIndex < resultData.length) {
       if (dimensionIndex < resultShape[shapeIndex]) {
         if (shapeIndex == resultShape.dimension - 2) {
-/*
-          resultData[resultDataIndex++] =
-              binaryOperation(_data[data1Index], array2._data[data2Index]);
+          for (var row1Index = 0, rowData1Index = data1Index;
+              row1Index < shape[shapeIndex];
+              row1Index++, rowData1Index += _stride[shapeIndex]) {
+            for (var column2Index = 0, columnData2Index = data2Index;
+                column2Index < array2.shape[shapeIndex + 1];
+                column2Index++,
+                columnData2Index += array2._stride[shapeIndex + 1]) {
+              var sumValue = 0;
+              for (var innerIndex = 0,
+                      data1Index = rowData1Index,
+                      data2Index = columnData2Index;
+                  innerIndex < shape[shapeIndex + 1];
+                  innerIndex++,
+                  data1Index += _stride[shapeIndex + 1],
+                  data2Index += array2._stride[shapeIndex]) {
+                sumValue += _data[data1Index] * array2._data[data2Index];
+              }
+              resultData[resultDataIndex++] = sumValue;
+            }
+          }
 
-          data1Index += _stride[shapeIndex];
-          data2Index += array2._stride[shapeIndex];
-*/
-
-          dimensionIndex++;
+          dimensionIndex = shape[shapeIndex];
         } else {
           shapeIndex++;
           data1Indexes[shapeIndex] = data1Index;
