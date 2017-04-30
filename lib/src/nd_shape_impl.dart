@@ -54,6 +54,39 @@ class NDShapeImpl implements NDShape {
   int operator [](int axe) => get(axe);
 
   @override
+  NDShape reduce({List<int> reductionAxis}) {
+    if (isUnknownDimension) {
+      return this;
+    } else {
+      var newReductionAxis = reductionAxis;
+
+      if (dimension == 0) {
+        throw new StateError("Can't reduce a scalar");
+      } else if (reductionAxis == null || reductionAxis.length == 0) {
+        newReductionAxis =
+            new List.generate(dimension, (index) => dimension - index - 1);
+      } else if (reductionAxis.length > dimension) {
+        throw new ArgumentError.value(
+            reductionAxis, "reduction axis", "Max dimension is $dimension");
+      } else if (reductionAxis.length != new Set.from(reductionAxis).length) {
+        throw new ArgumentError.value(reductionAxis, "reduction axis",
+            "Must be unique indexes $reductionAxis");
+      }
+
+      var resultDimensions = new List(dimension - newReductionAxis.length);
+      var axis = new Set.from(newReductionAxis);
+      var resultIndex = 0;
+      for (var i = 0; i < dimension; i++) {
+        if (!axis.contains(i)) {
+          resultDimensions[resultIndex++] = internalDimensions[i];
+        }
+      }
+
+      return new NDShapeImpl(resultDimensions);
+    }
+  }
+
+  @override
   NDShape transpose({List<int> permutationAxis}) {
     if (isUnknownDimension) {
       return this;
@@ -107,7 +140,8 @@ class NDShapeImpl implements NDShape {
 
         return new NDShapeImpl(resultDimensions);
       } else {
-        throw new ArgumentError("Shape dimensions must be equal: $this != $shape2");
+        throw new ArgumentError(
+            "Shape dimensions must be equal: $this != $shape2");
       }
     } else {
       return dimension != null ? this : shape2;
@@ -130,7 +164,8 @@ class NDShapeImpl implements NDShape {
         } else if (d2 == 1) {
           resultDimensions[resultIndex--] = d1;
         } else {
-          throw new ArgumentError("Shapes must be broadcastable: $this != $shape2");
+          throw new ArgumentError(
+              "Shapes must be broadcastable: $this != $shape2");
         }
 
         index1--;
@@ -177,7 +212,8 @@ class NDShapeImpl implements NDShape {
     } else if (shape2.dimension < 2) {
       throw new ArgumentError("Shape dimension must be almost 2: $shape2");
     } else if (dimension != shape2.dimension) {
-      throw new ArgumentError("Shape dimensions must be equal: $this != $shape2");
+      throw new ArgumentError(
+          "Shape dimensions must be equal: $this != $shape2");
     } else {
       var resultDimensions = new List(dimension);
 

@@ -28,6 +28,8 @@ abstract class NDShape {
 
   NDShape transpose({List<int> permutationAxis});
 
+  NDShape reduce({List<int> reductionAxis});
+
   NDShape merge(NDShape shape2);
 
   NDShape broadcast(NDShape shape2);

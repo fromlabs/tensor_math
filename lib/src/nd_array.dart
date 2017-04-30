@@ -26,6 +26,10 @@ abstract class NDArray {
 
   NDArray matMul(value2);
 
+  NDArray reduceSum({List<int> reductionAxis});
+
+  NDArray reduceMean({List<int> reductionAxis});
+
   NDArray abs();
 
   NDArray exp();
