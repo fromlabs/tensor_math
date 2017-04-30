@@ -120,6 +120,40 @@ void main() {
           equals(new NDArray([3, 4]).toValue()));
     });
 
+    test('Array reduce tests', () {
+      expect(createTestNDArray([2, 2, 2]).reduceSum().toValue(), equals(28));
+      expect(
+          createTestNDArray([2, 2, 2]).reduceSum(reductionAxis: [0]).toValue(),
+          equals([
+            [4, 6],
+            [8, 10]
+          ]));
+      expect(
+          createTestNDArray([2, 2, 2])
+              .reduceSum(reductionAxis: [0, 1]).toValue(),
+          equals([12, 16]));
+      expect(
+          createTestNDArray([2, 2, 2])
+              .reduceSum(reductionAxis: [2, 1]).toValue(),
+          equals([6, 22]));
+
+      expect(createTestNDArray([2, 2, 2]).reduceMean().toValue(), equals(3.5));
+      expect(
+          createTestNDArray([2, 2, 2]).reduceMean(reductionAxis: [0]).toValue(),
+          equals([
+            [2.0, 3.0],
+            [4.0, 5.0]
+          ]));
+      expect(
+          createTestNDArray([2, 2, 2])
+              .reduceMean(reductionAxis: [0, 1]).toValue(),
+          equals([3.0, 4.0]));
+      expect(
+          createTestNDArray([2, 2, 2])
+              .reduceMean(reductionAxis: [2, 1]).toValue(),
+          equals([1.5, 5.5]));
+    });
+
     test('Array select tests', () {});
   });
 
@@ -458,6 +492,34 @@ void main() {
               .matMul(createTestNDShape([null, 3, 2]))
               .dimensions,
           orderedEquals([1, 2, 2]));
+    });
+
+    test('Shape reduce test', () {
+      expect(() => createTestNDShape([]).reduce(), throwsStateError);
+
+      expect(
+          () => createTestNDShape([1, 1, null]).reduce(reductionAxis: [0, 0]),
+          throwsArgumentError);
+
+      expect(
+          () => createTestNDShape([1, 1, null])
+              .reduce(reductionAxis: [0, 1, 2, 3]),
+          throwsArgumentError);
+
+      expect(
+          createTestNDShape([2, 2, 2]).reduce().dimensions, orderedEquals([]));
+
+      expect(createTestNDShape([2, 2, 2]).reduce(reductionAxis: [0]).dimensions,
+          orderedEquals([2, 2]));
+
+      expect(
+          createTestNDShape([2, 2, 2]).reduce(reductionAxis: [0, 1]).dimensions,
+          orderedEquals([2]));
+
+      expect(
+          createTestNDShape([2, 2, 2])
+              .reduce(reductionAxis: [0, 1, 2]).dimensions,
+          orderedEquals([]));
     });
   });
 }
