@@ -1,6 +1,8 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "dart:math" as math;
+
 import 'nd_shape.dart';
 import "nd_array.dart";
 
@@ -13,6 +15,10 @@ NDArray createTestNDArray(List<int> dimensions, [generator(index)]) {
 
   return new NDArrayImpl._(data, shape, stride, 0);
 }
+
+NDArray adds(Iterable values) => values
+    .map<NDArray>((value) => _toNDArray(value))
+    .reduce((total, element) => total + element);
 
 class NDArrayImpl implements NDArray {
   @override
@@ -38,13 +44,14 @@ class NDArrayImpl implements NDArray {
   NDArray abs() => _elementWiseUnaryOperation((value) => value.abs());
 
   @override
-  NDArray exp() => _elementWiseUnaryOperation((value) => value.exp());
+  NDArray exp() =>
+      _elementWiseUnaryOperation((double value) => math.exp(value));
 
   @override
   NDArray inv() => _elementWiseUnaryOperation((value) => 1 / value);
 
   @override
-  NDArray log() => _elementWiseUnaryOperation((value) => value.log());
+  NDArray log() => _elementWiseUnaryOperation((value) => math.log(value));
 
   @override
   NDArray neg() => _elementWiseUnaryOperation((value) => -value);
@@ -89,6 +96,17 @@ class NDArrayImpl implements NDArray {
     } else {
       throw new StateError("Not a 4-dimensional tensor (shape: $shape)");
     }
+  }
+
+  @override
+  NDArray reshape({List<int> newDimensions}) {
+    var resultShape = shape.reshape(newDimensions: newDimensions);
+
+    var identity = _elementWiseUnaryOperation((value) => value);
+
+    var resultStride = _calculateDefaultStride(resultShape);
+
+    return new NDArrayImpl._(identity._data, resultShape, resultStride, 0);
   }
 
   @override
@@ -226,76 +244,6 @@ class NDArrayImpl implements NDArray {
         reduce: () => total / count);
   }
 
-  NDArray _reduceOperation(
-      {List<int> reductionAxis,
-      void initReduction(),
-      void onValueToReduce(value),
-      dynamic reduce()}) {
-    var newReductionAxis = reductionAxis == null || reductionAxis.length == 0
-        ? new List.generate(
-            shape.dimension, (index) => shape.dimension - index - 1)
-        : reductionAxis;
-
-    var resultShape = shape.reduce(reductionAxis: newReductionAxis);
-    var resultData = new List(resultShape.length);
-    var resultStride = _calculateDefaultStride(resultShape);
-
-    var shapeIndex = 0;
-    var permutedIndexes = new List(shape.dimension);
-    var axis = new Set.from(newReductionAxis);
-    var resultIndex = 0;
-    for (var i = 0; i < shape.dimension; i++) {
-      if (!axis.contains(i)) {
-        permutedIndexes[resultIndex++] = i;
-      }
-    }
-    for (var i = 0; i < newReductionAxis.length; i++) {
-      permutedIndexes[resultIndex++] = newReductionAxis[i];
-    }
-    var dimensionIndexes = new List(shape.dimension);
-    var dataIndexes = new List(shape.dimension);
-    var dataIndex = dataIndexes[permutedIndexes[shapeIndex]] = _offset;
-    var resultDataIndex = 0;
-    var dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
-
-    initReduction();
-
-    while (resultDataIndex < resultData.length) {
-      if (dimensionIndex < shape[permutedIndexes[shapeIndex]]) {
-        if (shapeIndex == shape.dimension - newReductionAxis.length - 1) {
-          initReduction();
-        }
-
-        if (shapeIndex == shape.dimension - 1) {
-          onValueToReduce(_data[dataIndex]);
-
-          dataIndex += _stride[permutedIndexes[shapeIndex]];
-          dimensionIndex++;
-        } else {
-          shapeIndex++;
-          dataIndexes[permutedIndexes[shapeIndex]] = dataIndex;
-          dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
-        }
-      } else {
-        shapeIndex--;
-
-        if (shapeIndex == shape.dimension - newReductionAxis.length - 1) {
-          resultData[resultDataIndex++] = reduce();
-        }
-
-        if (shapeIndex >= 0) {
-          dataIndex = dataIndexes[permutedIndexes[shapeIndex]] =
-              dataIndexes[permutedIndexes[shapeIndex]] +
-                  _stride[permutedIndexes[shapeIndex]];
-          dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] =
-              dimensionIndexes[permutedIndexes[shapeIndex]] + 1;
-        }
-      }
-    }
-
-    return new NDArrayImpl._(resultData, resultShape, resultStride, 0);
-  }
-
   @override
   NDArray add(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 + value2);
@@ -305,7 +253,7 @@ class NDArrayImpl implements NDArray {
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 / value2);
 
   @override
-  NDArray equal(value2) =>
+  NDArray equals(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 == value2);
 
   @override
@@ -313,7 +261,7 @@ class NDArrayImpl implements NDArray {
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 > value2);
 
   @override
-  NDArray greaterEqual(value2) =>
+  NDArray greaterOrEquals(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 >= value2);
 
   @override
@@ -321,7 +269,7 @@ class NDArrayImpl implements NDArray {
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 < value2);
 
   @override
-  NDArray lessEqual(value2) =>
+  NDArray lessOrEquals(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 <= value2);
 
   @override
@@ -329,8 +277,14 @@ class NDArrayImpl implements NDArray {
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 * value2);
 
   @override
-  NDArray notEqual(value2) =>
+  NDArray notEquals(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 != value2);
+
+  @override
+  bool any() {
+    // TODO to implement NDArrayImpl.any
+    throw new UnimplementedError("to implement NDArrayImpl.any: $this");
+  }
 
   @override
   NDArray sub(value2) =>
@@ -355,13 +309,13 @@ class NDArrayImpl implements NDArray {
   NDArray operator <(value2) => less(value2);
 
   @override
-  NDArray operator <=(value2) => lessEqual(value2);
+  NDArray operator <=(value2) => lessOrEquals(value2);
 
   @override
   NDArray operator >(value2) => greater(value2);
 
   @override
-  NDArray operator >=(value2) => greaterEqual(value2);
+  NDArray operator >=(value2) => greaterOrEquals(value2);
 
   @override
   NDArray select(thenValue, elseValue) => _elementWiseTernaryOperation(
@@ -413,9 +367,6 @@ class NDArrayImpl implements NDArray {
       return dimensionValues[0];
     }
   }
-
-  NDArrayImpl _toNDArray(value) =>
-      value is NDArray ? value : new NDArrayImpl(value);
 
   NDArrayImpl _elementWiseUnaryOperation(unaryOperation(value)) {
     var resultData = new List(shape.length);
@@ -586,7 +537,84 @@ class NDArrayImpl implements NDArray {
     return new NDArrayImpl._(
         resultData, resultShape, resultStride, resultOffset);
   }
+
+  NDArray _reduceOperation(
+      {List<int> reductionAxis,
+      void initReduction(),
+      void onValueToReduce(value),
+      dynamic reduce()}) {
+    var newReductionAxis = reductionAxis == null || reductionAxis.length == 0
+        ? new List.generate(
+            shape.dimension, (index) => shape.dimension - index - 1)
+        : reductionAxis;
+
+    if (newReductionAxis.isNotEmpty) {
+      var resultShape = shape.reduce(reductionAxis: newReductionAxis);
+      var resultData = new List(resultShape.length);
+      var resultStride = _calculateDefaultStride(resultShape);
+
+      var shapeIndex = 0;
+      var permutedIndexes = new List(shape.dimension);
+      var axis = new Set.from(newReductionAxis);
+      var resultIndex = 0;
+      for (var i = 0; i < shape.dimension; i++) {
+        if (!axis.contains(i)) {
+          permutedIndexes[resultIndex++] = i;
+        }
+      }
+      for (var i = 0; i < newReductionAxis.length; i++) {
+        permutedIndexes[resultIndex++] = newReductionAxis[i];
+      }
+      var dimensionIndexes = new List(shape.dimension);
+      var dataIndexes = new List(shape.dimension);
+      var dataIndex = dataIndexes[permutedIndexes[shapeIndex]] = _offset;
+      var resultDataIndex = 0;
+      var dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
+
+      initReduction();
+
+      while (resultDataIndex < resultData.length) {
+        if (dimensionIndex < shape[permutedIndexes[shapeIndex]]) {
+          if (shapeIndex == shape.dimension - newReductionAxis.length - 1) {
+            initReduction();
+          }
+
+          if (shapeIndex == shape.dimension - 1) {
+            onValueToReduce(_data[dataIndex]);
+
+            dataIndex += _stride[permutedIndexes[shapeIndex]];
+            dimensionIndex++;
+          } else {
+            shapeIndex++;
+            dataIndexes[permutedIndexes[shapeIndex]] = dataIndex;
+            dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
+          }
+        } else {
+          shapeIndex--;
+
+          if (shapeIndex == shape.dimension - newReductionAxis.length - 1) {
+            resultData[resultDataIndex++] = reduce();
+          }
+
+          if (shapeIndex >= 0) {
+            dataIndex = dataIndexes[permutedIndexes[shapeIndex]] =
+                dataIndexes[permutedIndexes[shapeIndex]] +
+                    _stride[permutedIndexes[shapeIndex]];
+            dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] =
+                dimensionIndexes[permutedIndexes[shapeIndex]] + 1;
+          }
+        }
+      }
+
+      return new NDArrayImpl._(resultData, resultShape, resultStride, 0);
+    } else {
+      return this;
+    }
+  }
 }
+
+NDArrayImpl _toNDArray(value) =>
+    value is NDArray ? value : new NDArrayImpl(value);
 
 NDShape _calculateShape(value) {
   var dimensions = [];
@@ -650,3 +678,76 @@ List<int> _calculateBroadcastedStride(
         return array._stride[index - dimensionDelta];
       }
     }, growable: false);
+/*
+NDArrayImpl _elementWiseIterableOperation(
+    Iterable values, iterableOperation(Iterable values)) {
+  var arrays = values.map(_toNDArray).toList(growable: false);
+
+  var resultShape = iterableBroadcast(arrays.map((array) => array.shape));
+  var resultData = new List(resultShape.length);
+  var resultStride;
+  var resultOffset = 0;
+
+  if (resultShape.isScalar) {
+    resultStride = arrays.first._stride;
+
+    resultData[0] =
+        iterableOperation(arrays.map((array) => array._data[array._offset]));
+  } else {
+    resultStride = _calculateDefaultStride(resultShape);
+
+    var shapeIndex = 0;
+    var dimensionIndexes = new List(resultShape.dimension);
+    var data1Indexes = new List(resultShape.dimension);
+    var stride1 = _calculateBroadcastedStride(resultShape, this);
+    var data1Delta = stride1[shapeIndex];
+    var data1Index = data1Indexes[shapeIndex] = _offset;
+    var data2Indexes = new List(resultShape.dimension);
+    var stride2 = _calculateBroadcastedStride(resultShape, array2);
+    var data2Delta = stride2[shapeIndex];
+    var data2Index = data2Indexes[shapeIndex] = array2._offset;
+    var data3Indexes = new List(resultShape.dimension);
+    var stride3 = _calculateBroadcastedStride(resultShape, array3);
+    var data3Delta = stride3[shapeIndex];
+    var data3Index = data3Indexes[shapeIndex] = array3._offset;
+    var resultDataIndex = resultOffset;
+    var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+    while (resultDataIndex < resultData.length) {
+      if (dimensionIndex < resultShape[shapeIndex]) {
+        if (shapeIndex == resultShape.dimension - 1) {
+          resultData[resultDataIndex++] = ternaryOperation(_data[data1Index],
+              array2._data[data2Index], array3._data[data3Index]);
+          data1Index += data1Delta;
+          data2Index += data2Delta;
+          data3Index += data3Delta;
+          dimensionIndex++;
+        } else {
+          shapeIndex++;
+          data1Delta = stride1[shapeIndex];
+          data1Indexes[shapeIndex] = data1Index;
+          data2Delta = stride2[shapeIndex];
+          data2Indexes[shapeIndex] = data2Index;
+          data3Delta = stride3[shapeIndex];
+          data3Indexes[shapeIndex] = data3Index;
+          dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+        }
+      } else {
+        shapeIndex--;
+        data1Delta = stride1[shapeIndex];
+        data1Index =
+            data1Indexes[shapeIndex] = data1Indexes[shapeIndex] + data1Delta;
+        data2Delta = stride2[shapeIndex];
+        data2Index =
+            data2Indexes[shapeIndex] = data2Indexes[shapeIndex] + data2Delta;
+        data3Delta = stride3[shapeIndex];
+        data3Index =
+            data3Indexes[shapeIndex] = data2Indexes[shapeIndex] + data2Delta;
+        dimensionIndex =
+            dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
+      }
+    }
+  }
+
+  return new NDArrayImpl._(resultData, resultShape, resultStride, resultOffset);
+}
+*/

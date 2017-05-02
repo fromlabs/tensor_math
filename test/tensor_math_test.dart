@@ -154,6 +154,118 @@ void main() {
           equals([1.5, 5.5]));
     });
 
+    test('Array reshape tests', () {
+      expect(
+          new NDArray([1, 2, 3, 4, 5, 6, 7, 8, 9])
+              .reshape(newDimensions: [3, 3]).toValue(),
+          equals([
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9]
+          ]));
+
+      expect(
+          new NDArray([
+            [
+              [1, 1],
+              [2, 2]
+            ],
+            [
+              [3, 3],
+              [4, 4]
+            ]
+          ]).reshape(newDimensions: [2, 4]).toValue(),
+          equals([
+            [1, 1, 2, 2],
+            [3, 3, 4, 4]
+          ]));
+
+      expect(
+          new NDArray([
+            [
+              [1, 1, 1],
+              [2, 2, 2]
+            ],
+            [
+              [3, 3, 3],
+              [4, 4, 4]
+            ],
+            [
+              [5, 5, 5],
+              [6, 6, 6]
+            ]
+          ]).reshape(newDimensions: [-1]).toValue(),
+          equals([1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6]));
+
+      expect(
+          new NDArray([
+            [
+              [1, 1, 1],
+              [2, 2, 2]
+            ],
+            [
+              [3, 3, 3],
+              [4, 4, 4]
+            ],
+            [
+              [5, 5, 5],
+              [6, 6, 6]
+            ]
+          ]).reshape(newDimensions: [2, -1]).toValue(),
+          equals([
+            [1, 1, 1, 2, 2, 2, 3, 3, 3],
+            [4, 4, 4, 5, 5, 5, 6, 6, 6]
+          ]));
+
+      expect(
+          new NDArray([
+            [
+              [1, 1, 1],
+              [2, 2, 2]
+            ],
+            [
+              [3, 3, 3],
+              [4, 4, 4]
+            ],
+            [
+              [5, 5, 5],
+              [6, 6, 6]
+            ]
+          ]).reshape(newDimensions: [-1, 9]).toValue(),
+          equals([
+            [1, 1, 1, 2, 2, 2, 3, 3, 3],
+            [4, 4, 4, 5, 5, 5, 6, 6, 6]
+          ]));
+
+      expect(
+          new NDArray([
+            [
+              [1, 1, 1],
+              [2, 2, 2]
+            ],
+            [
+              [3, 3, 3],
+              [4, 4, 4]
+            ],
+            [
+              [5, 5, 5],
+              [6, 6, 6]
+            ]
+          ]).reshape(newDimensions: [2, -1, 3]).toValue(),
+          equals([
+            [
+              [1, 1, 1],
+              [2, 2, 2],
+              [3, 3, 3]
+            ],
+            [
+              [4, 4, 4],
+              [5, 5, 5],
+              [6, 6, 6]
+            ]
+          ]));
+    });
+
     test('Array select tests', () {});
   });
 
@@ -519,6 +631,47 @@ void main() {
       expect(
           createTestNDShape([2, 2, 2])
               .reduce(reductionAxis: [0, 1, 2]).dimensions,
+          orderedEquals([]));
+    });
+
+    test('Shape reshape test', () {
+      expect(() => createTestNDShape([2]).reshape(newDimensions: []),
+          throwsArgumentError);
+
+      expect(createTestNDShape().reshape(newDimensions: [2, -1]).dimensions,
+          orderedEquals([2, null]));
+
+      expect(createTestNDShape().reshape(newDimensions: [2, 4]).dimensions,
+          orderedEquals([2, 4]));
+
+      expect(createTestNDShape([9]).reshape(newDimensions: [3, 3]).dimensions,
+          orderedEquals([3, 3]));
+
+      expect(
+          createTestNDShape([2, 2, 2])
+              .reshape(newDimensions: [2, 4]).dimensions,
+          orderedEquals([2, 4]));
+
+      expect(
+          createTestNDShape([3, 2, 3]).reshape(newDimensions: [-1]).dimensions,
+          orderedEquals([18]));
+
+      expect(
+          createTestNDShape([3, 2, 3])
+              .reshape(newDimensions: [2, -1]).dimensions,
+          orderedEquals([2, 9]));
+
+      expect(
+          createTestNDShape([3, 2, 3])
+              .reshape(newDimensions: [-1, 9]).dimensions,
+          orderedEquals([2, 9]));
+
+      expect(
+          createTestNDShape([3, 2, 3])
+              .reshape(newDimensions: [2, -1, 3]).dimensions,
+          orderedEquals([2, 3, 3]));
+
+      expect(createTestNDShape([1]).reshape(newDimensions: []).dimensions,
           orderedEquals([]));
     });
   });

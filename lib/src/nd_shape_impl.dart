@@ -8,6 +8,9 @@ import "nd_shape.dart";
 NDShape createTestNDShape([List<int> dimensions]) =>
     new NDShapeImpl(dimensions);
 
+NDShape broadcastIterable(Iterable<NDShape> shapes) =>
+    shapes.reduce((total, element) => total.broadcast(element));
+
 class NDShapeImpl implements NDShape {
   final List<int> internalDimensions;
   final int _length;
@@ -65,16 +68,18 @@ class NDShapeImpl implements NDShape {
       } else if (reductionAxis == null || reductionAxis.length == 0) {
         newReductionAxis =
             new List.generate(dimension, (index) => dimension - index - 1);
+      } else if (reductionAxis.length == 0) {
+        return this;
       } else if (reductionAxis.length > dimension) {
         throw new ArgumentError.value(
             reductionAxis, "reduction axis", "Max dimension is $dimension");
-      } else if (reductionAxis.length != new Set.from(reductionAxis).length) {
+      } else if (reductionAxis.length != reductionAxis.toSet().length) {
         throw new ArgumentError.value(reductionAxis, "reduction axis",
             "Must be unique indexes $reductionAxis");
       }
 
       var resultDimensions = new List(dimension - newReductionAxis.length);
-      var axis = new Set.from(newReductionAxis);
+      var axis = newReductionAxis.toSet();
       var resultIndex = 0;
       for (var i = 0; i < dimension; i++) {
         if (!axis.contains(i)) {
@@ -99,8 +104,7 @@ class NDShapeImpl implements NDShape {
       } else if (permutationAxis.length != dimension) {
         throw new ArgumentError.value(
             permutationAxis, "permutation axis", "Dimension is $dimension");
-      } else if (permutationAxis.length !=
-          new Set.from(permutationAxis).length) {
+      } else if (permutationAxis.length != permutationAxis.toSet().length) {
         throw new ArgumentError.value(permutationAxis, "permutation axis",
             "Must be unique indexes $permutationAxis");
       }
@@ -246,6 +250,47 @@ class NDShapeImpl implements NDShape {
 
         return new NDShapeImpl(resultDimensions);
       }
+    }
+  }
+
+  @override
+  NDShape reshape({List<int> newDimensions}) {
+    var newLength = 1;
+    var wildcardDimensionIndex;
+    for (var i = 0; i < newDimensions.length; i++) {
+      var dimension = newDimensions[i];
+
+      if (dimension == -1) {
+        if (wildcardDimensionIndex == null) {
+          wildcardDimensionIndex = i;
+        } else {
+          throw new ArgumentError.value(newDimensions, "reshape dimensions",
+              "Just one -1 dimension allowed");
+        }
+      } else {
+        newLength *= dimension;
+      }
+    }
+
+    if (wildcardDimensionIndex != null) {
+      if (!isUnknownLength) {
+        if (length % newLength == 0) {
+          newDimensions[wildcardDimensionIndex] = length ~/ newLength;
+        } else {
+          throw new ArgumentError.value(newDimensions, "reshape dimensions",
+              "Reshape not allowed: $this != $newDimensions");
+        }
+      } else {
+        newDimensions[wildcardDimensionIndex] = null;
+      }
+    }
+
+    var newShape = new NDShapeImpl(newDimensions);
+    if (isUnknownLength || newShape.length == length) {
+      return newShape;
+    } else {
+      throw new ArgumentError.value(
+          newShape.length, "new shape length", "Must be $length");
     }
   }
 

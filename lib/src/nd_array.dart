@@ -5,6 +5,8 @@ import "nd_shape.dart";
 
 import "nd_array_impl.dart";
 
+export "nd_array_impl.dart" show adds;
+
 abstract class NDArray {
   factory NDArray(value) => new NDArrayImpl(value);
 
@@ -21,6 +23,8 @@ abstract class NDArray {
   List<List<List<E>>> toTensor3D<E>();
 
   List<List<List<List<E>>>> toTensor4D<E>();
+
+  NDArray reshape({List<int> newDimensions});
 
   NDArray transpose({List<int> permutationAxis});
 
@@ -52,19 +56,21 @@ abstract class NDArray {
 
   NDArray not();
 
-  NDArray equal(value2);
+  NDArray equals(value2);
 
-  NDArray notEqual(value2);
+  NDArray notEquals(value2);
 
   NDArray greater(value2);
 
-  NDArray greaterEqual(value2);
+  NDArray greaterOrEquals(value2);
 
   NDArray less(value2);
 
-  NDArray lessEqual(value2);
+  NDArray lessOrEquals(value2);
 
   NDArray select(thenValue, elseValue);
+
+  bool any();
 
   NDArray operator -();
 
