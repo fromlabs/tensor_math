@@ -63,13 +63,12 @@ class NDShapeImpl implements NDShape {
     } else {
       var newReductionAxis = reductionAxis;
 
-      if (dimension == 0) {
-        throw new StateError("Can't reduce a scalar");
-      } else if (reductionAxis == null || reductionAxis.length == 0) {
-        newReductionAxis =
-            new List.generate(dimension, (index) => dimension - index - 1);
-      } else if (reductionAxis.length == 0) {
+      if (reductionAxis == null && dimension > 0) {
+        newReductionAxis = new List.generate(dimension, (index) => index);
+      } else if (reductionAxis == null || reductionAxis.isEmpty) {
         return this;
+      } else if (dimension == 0) {
+        throw new StateError("Can't reduce a scalar");
       } else if (reductionAxis.length > dimension) {
         throw new ArgumentError.value(
             reductionAxis, "reduction axis", "Max dimension is $dimension");
@@ -272,26 +271,46 @@ class NDShapeImpl implements NDShape {
       }
     }
 
+    var newDimensions2;
     if (wildcardDimensionIndex != null) {
+      newDimensions2 = new List.from(newDimensions);
+
       if (!isUnknownLength) {
         if (length % newLength == 0) {
-          newDimensions[wildcardDimensionIndex] = length ~/ newLength;
+          newDimensions2[wildcardDimensionIndex] = length ~/ newLength;
         } else {
           throw new ArgumentError.value(newDimensions, "reshape dimensions",
               "Reshape not allowed: $this != $newDimensions");
         }
       } else {
-        newDimensions[wildcardDimensionIndex] = null;
+        newDimensions2[wildcardDimensionIndex] = null;
       }
+    } else {
+      newDimensions2 = newDimensions;
     }
 
-    var newShape = new NDShapeImpl(newDimensions);
+    var newShape = new NDShapeImpl(newDimensions2);
     if (isUnknownLength || newShape.length == length) {
       return newShape;
     } else {
       throw new ArgumentError.value(
           newShape.length, "new shape length", "Must be $length");
     }
+  }
+
+  @override
+  NDShape tile(List<int> multiplies) {
+    if (isScalar) {
+      throw new StateError("Can't tile a scalar");
+    } else if (multiplies == null || multiplies.length != dimension) {
+      throw new ArgumentError.value(
+          multiplies, "tile multiplis", "Must be $dimension length");
+    }
+
+    var newDimensions = new List.generate(
+        dimension, (index) => multiplies[index] * dimensions[index]);
+
+    return new NDShapeImpl(newDimensions);
   }
 
   @override

@@ -607,8 +607,6 @@ void main() {
     });
 
     test('Shape reduce test', () {
-      expect(() => createTestNDShape([]).reduce(), throwsStateError);
-
       expect(
           () => createTestNDShape([1, 1, null]).reduce(reductionAxis: [0, 0]),
           throwsArgumentError);
@@ -617,6 +615,8 @@ void main() {
           () => createTestNDShape([1, 1, null])
               .reduce(reductionAxis: [0, 1, 2, 3]),
           throwsArgumentError);
+
+      expect(createTestNDShape([]).reduce().dimensions, isEmpty);
 
       expect(
           createTestNDShape([2, 2, 2]).reduce().dimensions, orderedEquals([]));

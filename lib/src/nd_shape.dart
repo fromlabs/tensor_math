@@ -39,4 +39,6 @@ abstract class NDShape {
   NDShape matMul(NDShape shape2);
 
   NDShape reshape({List<int> newDimensions});
+
+  NDShape tile(List<int> multiplies);
 }

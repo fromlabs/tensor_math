@@ -6,11 +6,11 @@ import "package:tensor_math/tensor_math.dart";
 import "package:tensor_math/src/nd_array_impl.dart" show createTestNDArray;
 
 void main() {
-  var array1 = createTestNDArray([3, 2]);
-  print(array1);
+  print(createTestNDArray([2, 1]).tile([2, 1]));
 
-  var array2 = createTestNDArray([2, 4]);
-  print(array2);
+  print(createTestNDArray([2, 2]).tile([1, 1]));
 
-  print(array1.matMul(array2).toValue());
+  print(createTestNDArray([2, 2]).tile([3, 2]));
+
+  print(new NDArray(1).reshape(newDimensions: [1, 1]).tile([2, 2]));
 }

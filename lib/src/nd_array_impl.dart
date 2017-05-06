@@ -44,8 +44,7 @@ class NDArrayImpl implements NDArray {
   NDArray abs() => _elementWiseUnaryOperation((value) => value.abs());
 
   @override
-  NDArray exp() =>
-      _elementWiseUnaryOperation((double value) => math.exp(value));
+  NDArray exp() => _elementWiseUnaryOperation((value) => math.exp(value));
 
   @override
   NDArray inv() => _elementWiseUnaryOperation((value) => 1 / value);
@@ -107,6 +106,61 @@ class NDArrayImpl implements NDArray {
     var resultStride = _calculateDefaultStride(resultShape);
 
     return new NDArrayImpl._(identity._data, resultShape, resultStride, 0);
+  }
+
+  @override
+  NDArray tile(List<int> multiplies) {
+    var resultShape = shape.tile(multiplies);
+    var resultData = new List(resultShape.length);
+    var resultStride = _calculateDefaultStride(resultShape);
+
+    var shapeIndex = 0;
+    var dimensionIndexes = new List(resultShape.dimension);
+    var dimensionSourceIndexes = new List(resultShape.dimension);
+    var data1Indexes = new List(resultShape.dimension);
+    var startData1Indexes = new List(resultShape.dimension);
+    var stride1 = _stride;
+    var data1Index = data1Indexes[shapeIndex] = _offset;
+    var startData1Index = startData1Indexes[shapeIndex] = data1Index;
+    var resultDataIndex = 0;
+    var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+    var dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
+    while (resultDataIndex < resultData.length) {
+      if (dimensionIndex < resultShape[shapeIndex]) {
+        if (shapeIndex == resultShape.dimension - 1) {
+          resultData[resultDataIndex++] = _data[data1Index];
+          dimensionIndex++;
+          if (dimensionSourceIndex < shape[shapeIndex] - 1) {
+            data1Index += stride1[shapeIndex];
+            dimensionSourceIndex++;
+          } else {
+            data1Index = startData1Index;
+            dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
+          }
+        } else {
+          shapeIndex++;
+          data1Indexes[shapeIndex] = data1Index;
+          startData1Index = startData1Indexes[shapeIndex] = data1Index;
+          dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+          dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
+        }
+      } else {
+        shapeIndex--;
+        dimensionIndex =
+            dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
+        if (dimensionSourceIndexes[shapeIndex] < shape[shapeIndex] - 1) {
+          data1Index = data1Indexes[shapeIndex] =
+              data1Indexes[shapeIndex] + stride1[shapeIndex];
+          dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] =
+              dimensionSourceIndexes[shapeIndex] + 1;
+        } else {
+          data1Index = data1Indexes[shapeIndex] = startData1Indexes[shapeIndex];
+          dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
+        }
+      }
+    }
+
+    return new NDArrayImpl._(resultData, resultShape, resultStride, 0);
   }
 
   @override
@@ -245,6 +299,21 @@ class NDArrayImpl implements NDArray {
   }
 
   @override
+  NDArray reduceAny({List<int> reductionAxis}) {
+    bool total;
+
+    return _reduceOperation(
+        reductionAxis: reductionAxis,
+        initReduction: () {
+          total = false;
+        },
+        onValueToReduce: (bool value) {
+          total = total || value;
+        },
+        reduce: () => total);
+  }
+
+  @override
   NDArray add(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 + value2);
 
@@ -279,12 +348,6 @@ class NDArrayImpl implements NDArray {
   @override
   NDArray notEquals(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 != value2);
-
-  @override
-  bool any() {
-    // TODO to implement NDArrayImpl.any
-    throw new UnimplementedError("to implement NDArrayImpl.any: $this");
-  }
 
   @override
   NDArray sub(value2) =>
@@ -527,7 +590,7 @@ class NDArrayImpl implements NDArray {
               data2Indexes[shapeIndex] = data2Indexes[shapeIndex] + data2Delta;
           data3Delta = stride3[shapeIndex];
           data3Index =
-              data3Indexes[shapeIndex] = data2Indexes[shapeIndex] + data2Delta;
+              data3Indexes[shapeIndex] = data3Indexes[shapeIndex] + data3Delta;
           dimensionIndex =
               dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
         }
@@ -543,10 +606,8 @@ class NDArrayImpl implements NDArray {
       void initReduction(),
       void onValueToReduce(value),
       dynamic reduce()}) {
-    var newReductionAxis = reductionAxis == null || reductionAxis.length == 0
-        ? new List.generate(
-            shape.dimension, (index) => shape.dimension - index - 1)
-        : reductionAxis;
+    var newReductionAxis =
+        reductionAxis ?? new List.generate(shape.dimension, (index) => index);
 
     if (newReductionAxis.isNotEmpty) {
       var resultShape = shape.reduce(reductionAxis: newReductionAxis);
@@ -678,6 +739,7 @@ List<int> _calculateBroadcastedStride(
         return array._stride[index - dimensionDelta];
       }
     }, growable: false);
+
 /*
 NDArrayImpl _elementWiseIterableOperation(
     Iterable values, iterableOperation(Iterable values)) {

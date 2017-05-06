@@ -26,6 +26,8 @@ abstract class NDArray {
 
   NDArray reshape({List<int> newDimensions});
 
+  NDArray tile(List<int> multiplies);
+
   NDArray transpose({List<int> permutationAxis});
 
   NDArray matMul(value2);
@@ -33,6 +35,8 @@ abstract class NDArray {
   NDArray reduceSum({List<int> reductionAxis});
 
   NDArray reduceMean({List<int> reductionAxis});
+
+  NDArray reduceAny({List<int> reductionAxis});
 
   NDArray abs();
 
@@ -69,8 +73,6 @@ abstract class NDArray {
   NDArray lessOrEquals(value2);
 
   NDArray select(thenValue, elseValue);
-
-  bool any();
 
   NDArray operator -();
 
