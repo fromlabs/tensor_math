@@ -57,7 +57,7 @@ class NDShapeImpl implements NDShape {
   int operator [](int axe) => get(axe);
 
   @override
-  NDShape reduce({List<int> reductionAxis}) {
+  NDShape reduce({List<int> reductionAxis, bool keepDimensions = false}) {
     if (isUnknownDimension) {
       return this;
     } else {
@@ -77,12 +77,18 @@ class NDShapeImpl implements NDShape {
             "Must be unique indexes $reductionAxis");
       }
 
-      var resultDimensions = new List(dimension - newReductionAxis.length);
+      var resultDimensions = new List(
+          keepDimensions ? dimension : dimension - newReductionAxis.length);
       var axis = newReductionAxis.toSet();
       var resultIndex = 0;
       for (var i = 0; i < dimension; i++) {
-        if (!axis.contains(i)) {
-          resultDimensions[resultIndex++] = internalDimensions[i];
+        if (keepDimensions) {
+          resultDimensions[resultIndex++] =
+              !axis.contains(i) ? internalDimensions[i] : 1;
+        } else {
+          if (!axis.contains(i)) {
+            resultDimensions[resultIndex++] = internalDimensions[i];
+          }
         }
       }
 

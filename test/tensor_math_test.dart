@@ -154,6 +154,84 @@ void main() {
           equals([1.5, 5.5]));
     });
 
+    test('Array reduce keep dimensions tests', () {
+      expect(
+          createTestNDArray([2, 2, 2])
+              .reduceSum(keepDimensions: true)
+              .toValue(),
+          equals([
+            [
+              [28]
+            ]
+          ]));
+      expect(
+          createTestNDArray([2, 2, 2])
+              .reduceSum(reductionAxis: [0], keepDimensions: true).toValue(),
+          equals([
+            [
+              [4, 6],
+              [8, 10]
+            ]
+          ]));
+      expect(
+          createTestNDArray([2, 2, 2])
+              .reduceSum(reductionAxis: [0, 1], keepDimensions: true).toValue(),
+          equals([
+            [
+              [12, 16]
+            ]
+          ]));
+      expect(
+          createTestNDArray([2, 2, 2])
+              .reduceSum(reductionAxis: [2, 1], keepDimensions: true).toValue(),
+          equals([
+            [
+              [6]
+            ],
+            [
+              [22]
+            ]
+          ]));
+
+      expect(
+          createTestNDArray([2, 2, 2])
+              .reduceMean(keepDimensions: true)
+              .toValue(),
+          equals([
+            [
+              [3.5]
+            ]
+          ]));
+      expect(
+          createTestNDArray([2, 2, 2])
+              .reduceMean(reductionAxis: [0], keepDimensions: true).toValue(),
+          equals([
+            [
+              [2.0, 3.0],
+              [4.0, 5.0]
+            ]
+          ]));
+      expect(
+          createTestNDArray([2, 2, 2]).reduceMean(
+              reductionAxis: [0, 1], keepDimensions: true).toValue(),
+          equals([
+            [
+              [3.0, 4.0]
+            ]
+          ]));
+      expect(
+          createTestNDArray([2, 2, 2]).reduceMean(
+              reductionAxis: [2, 1], keepDimensions: true).toValue(),
+          equals([
+            [
+              [1.5]
+            ],
+            [
+              [5.5]
+            ]
+          ]));
+    });
+
     test('Array reshape tests', () {
       expect(
           new NDArray([1, 2, 3, 4, 5, 6, 7, 8, 9])
@@ -632,6 +710,40 @@ void main() {
           createTestNDShape([2, 2, 2])
               .reduce(reductionAxis: [0, 1, 2]).dimensions,
           orderedEquals([]));
+    });
+
+    test('Shape reduce keep dimensions test', () {
+      expect(
+          () => createTestNDShape([1, 1, null])
+              .reduce(reductionAxis: [0, 0], keepDimensions: true),
+          throwsArgumentError);
+
+      expect(
+          () => createTestNDShape([1, 1, null])
+              .reduce(reductionAxis: [0, 1, 2, 3], keepDimensions: true),
+          throwsArgumentError);
+
+      expect(createTestNDShape([]).reduce(keepDimensions: true).dimensions,
+          isEmpty);
+
+      expect(
+          createTestNDShape([2, 2, 2]).reduce(keepDimensions: true).dimensions,
+          orderedEquals([1, 1, 1]));
+
+      expect(
+          createTestNDShape([2, 2, 2])
+              .reduce(reductionAxis: [0], keepDimensions: true).dimensions,
+          orderedEquals([1, 2, 2]));
+
+      expect(
+          createTestNDShape([2, 2, 2])
+              .reduce(reductionAxis: [0, 1], keepDimensions: true).dimensions,
+          orderedEquals([1, 1, 2]));
+
+      expect(
+          createTestNDShape([2, 2, 2]).reduce(
+              reductionAxis: [0, 1, 2], keepDimensions: true).dimensions,
+          orderedEquals([1, 1, 1]));
     });
 
     test('Shape reshape test', () {

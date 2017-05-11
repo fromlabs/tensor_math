@@ -266,32 +266,34 @@ class NDArrayImpl implements NDArray {
   }
 
   @override
-  NDArray reduceSum({List<int> reductionAxis}) {
+  NDArray reduceSum({List<int> reductionAxis, bool keepDimensions = false}) {
     var total;
 
     return _reduceOperation(
         reductionAxis: reductionAxis,
+        keepDimensions: keepDimensions,
         initReduction: () {
           total = 0;
         },
-        onValueToReduce: (value) {
+        onValueToReduce: (int valueIndex, value) {
           total += value;
         },
         reduce: () => total);
   }
 
   @override
-  NDArray reduceMean({List<int> reductionAxis}) {
+  NDArray reduceMean({List<int> reductionAxis, bool keepDimensions = false}) {
     var total;
     var count;
 
     return _reduceOperation(
         reductionAxis: reductionAxis,
+        keepDimensions: keepDimensions,
         initReduction: () {
           total = 0;
           count = 0;
         },
-        onValueToReduce: (value) {
+        onValueToReduce: (int valueIndex, value) {
           total += value;
           count++;
         },
@@ -299,18 +301,62 @@ class NDArrayImpl implements NDArray {
   }
 
   @override
-  NDArray reduceAny({List<int> reductionAxis}) {
+  NDArray reduceMax({List<int> reductionAxis, bool keepDimensions = false}) {
+    var maxValue;
+
+    return _reduceOperation(
+        reductionAxis: reductionAxis,
+        keepDimensions: keepDimensions,
+        initReduction: () {
+          maxValue = null;
+        },
+        onValueToReduce: (int valueIndex, value) {
+          if (maxValue == null || value > maxValue) {
+            maxValue = value;
+          }
+        },
+        reduce: () => maxValue);
+  }
+
+  @override
+  NDArray reduceAny({List<int> reductionAxis, bool keepDimensions = false}) {
     bool total;
 
     return _reduceOperation(
         reductionAxis: reductionAxis,
+        keepDimensions: keepDimensions,
         initReduction: () {
           total = false;
         },
-        onValueToReduce: (bool value) {
+        onValueToReduce: (int valueIndex, bool value) {
           total = total || value;
         },
         reduce: () => total);
+  }
+
+  @override
+  NDArray argmax({int axis}) {
+    if (axis != null) {
+      var maxValueIndex;
+      var maxValue;
+
+      return _reduceOperation(
+          reductionAxis: [axis],
+          keepDimensions: false,
+          initReduction: () {
+            maxValueIndex = null;
+            maxValue = null;
+          },
+          onValueToReduce: (int valueIndex, value) {
+            if (maxValue == null || value > maxValue) {
+              maxValueIndex = valueIndex;
+              maxValue = value;
+            }
+          },
+          reduce: () => maxValueIndex);
+    } else {
+      return reshape(newDimensions: [-1]).argmax(axis: 0);
+    }
   }
 
   @override
@@ -322,23 +368,19 @@ class NDArrayImpl implements NDArray {
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 / value2);
 
   @override
-  NDArray equals(value2) =>
-      _elementWiseBinaryOperation(value2, (value1, value2) => value1 == value2);
-
-  @override
-  NDArray greater(value2) =>
+  NDArray isGreater(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 > value2);
 
   @override
-  NDArray greaterOrEquals(value2) =>
+  NDArray isGreaterOrEquals(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 >= value2);
 
   @override
-  NDArray less(value2) =>
+  NDArray isLess(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 < value2);
 
   @override
-  NDArray lessOrEquals(value2) =>
+  NDArray isLessOrEquals(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 <= value2);
 
   @override
@@ -346,7 +388,11 @@ class NDArrayImpl implements NDArray {
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 * value2);
 
   @override
-  NDArray notEquals(value2) =>
+  NDArray isEquals(value2) =>
+      _elementWiseBinaryOperation(value2, (value1, value2) => value1 == value2);
+
+  @override
+  NDArray isNotEquals(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 != value2);
 
   @override
@@ -369,16 +415,16 @@ class NDArrayImpl implements NDArray {
   NDArray operator /(value2) => div(value2);
 
   @override
-  NDArray operator <(value2) => less(value2);
+  NDArray operator <(value2) => isLess(value2);
 
   @override
-  NDArray operator <=(value2) => lessOrEquals(value2);
+  NDArray operator <=(value2) => isLessOrEquals(value2);
 
   @override
-  NDArray operator >(value2) => greater(value2);
+  NDArray operator >(value2) => isGreater(value2);
 
   @override
-  NDArray operator >=(value2) => greaterOrEquals(value2);
+  NDArray operator >=(value2) => isGreaterOrEquals(value2);
 
   @override
   NDArray select(thenValue, elseValue) => _elementWiseTernaryOperation(
@@ -603,14 +649,16 @@ class NDArrayImpl implements NDArray {
 
   NDArray _reduceOperation(
       {List<int> reductionAxis,
+      bool keepDimensions,
       void initReduction(),
-      void onValueToReduce(value),
+      void onValueToReduce(int valueIndex, value),
       dynamic reduce()}) {
     var newReductionAxis =
         reductionAxis ?? new List.generate(shape.dimension, (index) => index);
 
     if (newReductionAxis.isNotEmpty) {
-      var resultShape = shape.reduce(reductionAxis: newReductionAxis);
+      var resultShape = shape.reduce(
+          reductionAxis: newReductionAxis, keepDimensions: keepDimensions);
       var resultData = new List(resultShape.length);
       var resultStride = _calculateDefaultStride(resultShape);
 
@@ -641,7 +689,7 @@ class NDArrayImpl implements NDArray {
           }
 
           if (shapeIndex == shape.dimension - 1) {
-            onValueToReduce(_data[dataIndex]);
+            onValueToReduce(dimensionIndex, _data[dataIndex]);
 
             dataIndex += _stride[permutedIndexes[shapeIndex]];
             dimensionIndex++;

@@ -1,9 +1,14 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "nd_shape_impl.dart";
+
 export "nd_shape_impl.dart" show broadcastIterable;
 
 abstract class NDShape {
+  factory NDShape(List<int> dimensions) =>
+      new NDShapeImpl(new List.from(dimensions));
+
   int get dimension;
 
   int get length;
@@ -30,7 +35,7 @@ abstract class NDShape {
 
   NDShape transpose({List<int> permutationAxis});
 
-  NDShape reduce({List<int> reductionAxis});
+  NDShape reduce({List<int> reductionAxis, bool keepDimensions = false});
 
   NDShape merge(NDShape shape2);
 

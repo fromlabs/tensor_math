@@ -3,12 +3,34 @@
 
 import "nd_shape.dart";
 
+import "nd_shape_impl.dart";
 import "nd_array_impl.dart";
 
 export "nd_array_impl.dart" show adds;
 
 abstract class NDArray {
   factory NDArray(value) => new NDArrayImpl(value);
+
+  factory NDArray.zeros(List<int> dimensions) {
+    var shape = new NDShapeImpl(dimensions);
+
+    return new NDArrayImpl(new List.filled(shape.length, 0))
+        .reshape(newDimensions: dimensions);
+  }
+
+  factory NDArray.ones(List<int> dimensions) {
+    var shape = new NDShapeImpl(dimensions);
+
+    return new NDArrayImpl(new List.filled(shape.length, 1))
+        .reshape(newDimensions: dimensions);
+  }
+
+  factory NDArray.filled(List<int> dimensions, dynamic value) {
+    var shape = new NDShapeImpl(dimensions);
+
+    return new NDArrayImpl(new List.filled(shape.length, value))
+        .reshape(newDimensions: dimensions);
+  }
 
   NDShape get shape;
 
@@ -32,11 +54,15 @@ abstract class NDArray {
 
   NDArray matMul(value2);
 
-  NDArray reduceSum({List<int> reductionAxis});
+  NDArray reduceSum({List<int> reductionAxis, bool keepDimensions = false});
 
-  NDArray reduceMean({List<int> reductionAxis});
+  NDArray reduceMean({List<int> reductionAxis, bool keepDimensions = false});
 
-  NDArray reduceAny({List<int> reductionAxis});
+  NDArray reduceMax({List<int> reductionAxis, bool keepDimensions = false});
+
+  NDArray reduceAny({List<int> reductionAxis, bool keepDimensions = false});
+
+  NDArray argmax({int axis});
 
   NDArray abs();
 
@@ -60,17 +86,17 @@ abstract class NDArray {
 
   NDArray not();
 
-  NDArray equals(value2);
+  NDArray isEquals(value2);
 
-  NDArray notEquals(value2);
+  NDArray isNotEquals(value2);
 
-  NDArray greater(value2);
+  NDArray isGreater(value2);
 
-  NDArray greaterOrEquals(value2);
+  NDArray isGreaterOrEquals(value2);
 
-  NDArray less(value2);
+  NDArray isLess(value2);
 
-  NDArray lessOrEquals(value2);
+  NDArray isLessOrEquals(value2);
 
   NDArray select(thenValue, elseValue);
 
