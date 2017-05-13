@@ -8,24 +8,33 @@ import "nd_shape.dart";
 NDShape createTestNDShape([List<int> dimensions]) =>
     new NDShapeImpl(dimensions);
 
+/*
 NDShape broadcastIterable(Iterable<NDShape> shapes) =>
     shapes.reduce((total, element) => total.broadcast(element));
+*/
 
 class NDShapeImpl implements NDShape {
-  final List<int> internalDimensions;
+  @override
+  final List<int> dimensions;
+
   final int _length;
 
-  NDShapeImpl(this.internalDimensions)
-      : this._length = _calculateLength(internalDimensions);
+  NDShapeImpl(List<int> dimensions)
+      : this.dimensions =
+            dimensions != null ? new List.unmodifiable(dimensions) : null,
+        this._length = _calculateLength(dimensions);
 
   @override
-  int get dimension => internalDimensions?.length;
+  NDShape get shape => this;
+
+  @override
+  int get dimension => dimensions?.length;
 
   @override
   int get length => _length;
 
   @override
-  bool get isUnknownDimension => internalDimensions == null;
+  bool get isUnknownDimension => dimensions == null;
 
   @override
   bool get isUnknownLength => _length == null;
@@ -46,18 +55,176 @@ class NDShapeImpl implements NDShape {
   bool get isTensor4D => dimension == 4;
 
   @override
-  List<int> get dimensions =>
-      internalDimensions != null ? new List.from(internalDimensions) : null;
-
-  @override
-  int get(int axe) =>
-      internalDimensions != null ? internalDimensions[axe] : null;
+  int get(int axe) => dimensions != null ? dimensions[axe] : null;
 
   @override
   int operator [](int axe) => get(axe);
 
   @override
-  NDShape reduce({List<int> reductionAxis, bool keepDimensions = false}) {
+  NDShape merge(covariant NDShapeImpl shape2) => _merge(shape2);
+
+  @override
+  NDShape broadcast(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape reduce({List<int> reductionAxis, bool keepDimensions = false}) =>
+      _reduce(reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+
+  @override
+  NDShape operator *(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape operator +(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape operator -(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape operator -() => this;
+
+  @override
+  NDShape operator /(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape operator <(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape operator <=(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape operator >(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape operator >=(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape abs() => this;
+
+  @override
+  NDShape add(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape argMax({int axis}) {
+    if (axis != null) {
+      return _reduce(reductionAxis: [axis], keepDimensions: false);
+    } else {
+      return reshape(newDimensions: [-1]).argMax(axis: 0);
+    }
+  }
+
+  @override
+  NDShape div(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape exp() => this;
+
+  @override
+  NDShape inv() => this;
+
+  @override
+  NDShape isEqual(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape isGreater(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape isGreaterOrEqual(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape isLess(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape isLessOrEqual(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape isNotEqual(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape log() => this;
+
+  @override
+  NDShape matMul(covariant NDShapeImpl shape2) => _matMul(shape2);
+
+  @override
+  NDShape mul(covariant NDShapeImpl shape2) => _broadcast(shape2);
+
+  @override
+  NDShape neg() => this;
+
+  @override
+  NDShape not() => this;
+
+  @override
+  NDShape reduceAny({List<int> reductionAxis, bool keepDimensions: false}) =>
+      _reduce(reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+
+  @override
+  NDShape reduceMax({List<int> reductionAxis, bool keepDimensions: false}) =>
+      _reduce(reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+
+  @override
+  NDShape reduceMean({List<int> reductionAxis, bool keepDimensions: false}) =>
+      _reduce(reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+
+  @override
+  NDShape reduceSum({List<int> reductionAxis, bool keepDimensions: false}) =>
+      _reduce(reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+
+  @override
+  NDShape reshape({List<int> newDimensions}) =>
+      _reshape(newDimensions: newDimensions);
+
+  @override
+  NDShape select(
+          covariant NDShapeImpl thenShape, covariant NDShapeImpl elseShape) =>
+      _broadcast(thenShape)._broadcast(elseShape);
+
+  @override
+  NDShape sign() => this;
+
+  @override
+  NDShape sub(NDShape shape2) => _broadcast(shape2);
+
+  @override
+  NDShape tile(List<int> multiplies) => _tile(multiplies);
+
+  @override
+  NDShape transpose({List<int> permutationAxis}) =>
+      _transpose(permutationAxis: permutationAxis);
+
+  NDShapeImpl _merge(NDShapeImpl shape2) {
+    if (dimension != null && shape2.dimension != null) {
+      if (dimension == shape2.dimension) {
+        var resultDimensions = new List(dimension);
+
+        for (var i = 0; i < resultDimensions.length; i++) {
+          var dimension1 = this.dimensions[i];
+          var dimension2 = shape2.dimensions[i];
+          if (dimension1 != null && dimension2 != null) {
+            if (dimension1 == dimension2) {
+              resultDimensions[i] = dimension1;
+            } else {
+              throw new ArgumentError(
+                  "Shape dimensions $i must be equal: $this != $shape2");
+            }
+          } else if (dimension1 != null) {
+            resultDimensions[i] = dimension1;
+          } else {
+            resultDimensions[i] = dimension2;
+          }
+        }
+
+        return new NDShapeImpl(resultDimensions);
+      } else {
+        throw new ArgumentError(
+            "Shape dimensions must be equal: $this != $shape2");
+      }
+    } else {
+      return dimension != null ? this : shape2;
+    }
+  }
+
+  NDShapeImpl _reduce({List<int> reductionAxis, bool keepDimensions = false}) {
     if (isUnknownDimension) {
       return this;
     } else {
@@ -84,10 +251,10 @@ class NDShapeImpl implements NDShape {
       for (var i = 0; i < dimension; i++) {
         if (keepDimensions) {
           resultDimensions[resultIndex++] =
-              !axis.contains(i) ? internalDimensions[i] : 1;
+              !axis.contains(i) ? dimensions[i] : 1;
         } else {
           if (!axis.contains(i)) {
-            resultDimensions[resultIndex++] = internalDimensions[i];
+            resultDimensions[resultIndex++] = dimensions[i];
           }
         }
       }
@@ -96,8 +263,7 @@ class NDShapeImpl implements NDShape {
     }
   }
 
-  @override
-  NDShape transpose({List<int> permutationAxis}) {
+  NDShapeImpl _transpose({List<int> permutationAxis}) {
     if (isUnknownDimension) {
       return this;
     } else {
@@ -117,48 +283,14 @@ class NDShapeImpl implements NDShape {
       var resultDimensions = new List(dimension);
 
       for (var i = 0; i < resultDimensions.length; i++) {
-        resultDimensions[i] = internalDimensions[newPermutationAxis[i]];
+        resultDimensions[i] = dimensions[newPermutationAxis[i]];
       }
 
       return new NDShapeImpl(resultDimensions);
     }
   }
 
-  @override
-  NDShape merge(covariant NDShapeImpl shape2) {
-    if (dimension != null && shape2.dimension != null) {
-      if (dimension == shape2.dimension) {
-        var resultDimensions = new List(dimension);
-
-        for (var i = 0; i < resultDimensions.length; i++) {
-          var dimension1 = this.internalDimensions[i];
-          var dimension2 = shape2.internalDimensions[i];
-          if (dimension1 != null && dimension2 != null) {
-            if (dimension1 == dimension2) {
-              resultDimensions[i] = dimension1;
-            } else {
-              throw new ArgumentError(
-                  "Shape dimensions $i must be equal: $this != $shape2");
-            }
-          } else if (dimension1 != null) {
-            resultDimensions[i] = dimension1;
-          } else {
-            resultDimensions[i] = dimension2;
-          }
-        }
-
-        return new NDShapeImpl(resultDimensions);
-      } else {
-        throw new ArgumentError(
-            "Shape dimensions must be equal: $this != $shape2");
-      }
-    } else {
-      return dimension != null ? this : shape2;
-    }
-  }
-
-  @override
-  NDShape broadcast(covariant NDShapeImpl shape2) {
+  NDShapeImpl _broadcast(NDShapeImpl shape2) {
     if (dimension != null && shape2.dimension != null) {
       var resultDimensions = new List(max(dimension, shape2.dimension));
 
@@ -166,8 +298,8 @@ class NDShapeImpl implements NDShape {
       var index1 = dimension - 1;
       var index2 = shape2.dimension - 1;
       while (index1 >= 0 || index2 >= 0) {
-        var d1 = index1 >= 0 ? (internalDimensions[index1] ?? 1) : 1;
-        var d2 = index2 >= 0 ? (shape2.internalDimensions[index2] ?? 1) : 1;
+        var d1 = index1 >= 0 ? (dimensions[index1] ?? 1) : 1;
+        var d2 = index2 >= 0 ? (shape2.dimensions[index2] ?? 1) : 1;
         if (d1 == 1 || d1 == d2) {
           resultDimensions[resultIndex--] = d2;
         } else if (d2 == 1) {
@@ -187,8 +319,7 @@ class NDShapeImpl implements NDShape {
     }
   }
 
-  @override
-  NDShape matMul(covariant NDShapeImpl shape2) {
+  NDShapeImpl _matMul(NDShapeImpl shape2) {
     if (dimension == null) {
       if (shape2.dimension == null) {
         return this;
@@ -199,7 +330,7 @@ class NDShapeImpl implements NDShape {
 
         resultDimensions[shape2.dimension - 2] = null;
         resultDimensions[shape2.dimension - 1] =
-            shape2.internalDimensions[shape2.dimension - 1];
+            shape2.dimensions[shape2.dimension - 1];
 
         return new NDShapeImpl(resultDimensions);
       }
@@ -211,7 +342,7 @@ class NDShapeImpl implements NDShape {
       } else {
         var resultDimensions = new List(dimension);
 
-        resultDimensions[dimension - 2] = internalDimensions[dimension - 2];
+        resultDimensions[dimension - 2] = dimensions[dimension - 2];
         resultDimensions[dimension - 1] = null;
 
         return new NDShapeImpl(resultDimensions);
@@ -229,8 +360,8 @@ class NDShapeImpl implements NDShape {
       // check head
       if (dimension > 2) {
         for (var i = 0; i < dimension - 2; i++) {
-          var dimension1 = internalDimensions[i];
-          var dimension2 = shape2.internalDimensions[i];
+          var dimension1 = dimensions[i];
+          var dimension2 = shape2.dimensions[i];
           if (dimension1 != null &&
               dimension2 != null &&
               dimension1 != dimension2) {
@@ -243,23 +374,22 @@ class NDShapeImpl implements NDShape {
       }
 
       // check tail matrix
-      var cols1 = internalDimensions[dimension - 1];
-      var rows2 = shape2.internalDimensions[shape2.dimension - 2];
+      var cols1 = dimensions[dimension - 1];
+      var rows2 = shape2.dimensions[shape2.dimension - 2];
       if (cols1 != null && rows2 != null && cols1 != rows2) {
         throw new ArgumentError(
             "Shape not valid for matrix multiplication: $cols1 != $rows2");
       } else {
-        resultDimensions[dimension - 2] = internalDimensions[dimension - 2];
+        resultDimensions[dimension - 2] = dimensions[dimension - 2];
         resultDimensions[dimension - 1] =
-            shape2.internalDimensions[shape2.dimension - 1];
+            shape2.dimensions[shape2.dimension - 1];
 
         return new NDShapeImpl(resultDimensions);
       }
     }
   }
 
-  @override
-  NDShape reshape({List<int> newDimensions}) {
+  NDShapeImpl _reshape({List<int> newDimensions}) {
     var newLength = 1;
     var wildcardDimensionIndex;
     for (var i = 0; i < newDimensions.length; i++) {
@@ -304,8 +434,7 @@ class NDShapeImpl implements NDShape {
     }
   }
 
-  @override
-  NDShape tile(List<int> multiplies) {
+  NDShapeImpl _tile(List<int> multiplies) {
     if (isScalar) {
       throw new StateError("Can't tile a scalar");
     } else if (multiplies == null || multiplies.length != dimension) {
@@ -321,7 +450,7 @@ class NDShapeImpl implements NDShape {
 
   @override
   String toString() =>
-      "<Shape: dimensions=$internalDimensions, dimension=$dimension, length=$length>";
+      "<Shape: dimensions=$dimensions, dimension=$dimension, length=$length>";
 
   static int _calculateLength(List<int> dimensions) {
     if (dimensions == null) {

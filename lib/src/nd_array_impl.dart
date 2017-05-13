@@ -335,7 +335,7 @@ class NDArrayImpl implements NDArray {
   }
 
   @override
-  NDArray argmax({int axis}) {
+  NDArray argMax({int axis}) {
     if (axis != null) {
       var maxValueIndex;
       var maxValue;
@@ -355,7 +355,7 @@ class NDArrayImpl implements NDArray {
           },
           reduce: () => maxValueIndex);
     } else {
-      return reshape(newDimensions: [-1]).argmax(axis: 0);
+      return reshape(newDimensions: [-1]).argMax(axis: 0);
     }
   }
 
@@ -372,7 +372,7 @@ class NDArrayImpl implements NDArray {
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 > value2);
 
   @override
-  NDArray isGreaterOrEquals(value2) =>
+  NDArray isGreaterOrEqual(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 >= value2);
 
   @override
@@ -380,7 +380,7 @@ class NDArrayImpl implements NDArray {
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 < value2);
 
   @override
-  NDArray isLessOrEquals(value2) =>
+  NDArray isLessOrEqual(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 <= value2);
 
   @override
@@ -388,11 +388,11 @@ class NDArrayImpl implements NDArray {
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 * value2);
 
   @override
-  NDArray isEquals(value2) =>
+  NDArray isEqual(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 == value2);
 
   @override
-  NDArray isNotEquals(value2) =>
+  NDArray isNotEqual(value2) =>
       _elementWiseBinaryOperation(value2, (value1, value2) => value1 != value2);
 
   @override
@@ -418,13 +418,13 @@ class NDArrayImpl implements NDArray {
   NDArray operator <(value2) => isLess(value2);
 
   @override
-  NDArray operator <=(value2) => isLessOrEquals(value2);
+  NDArray operator <=(value2) => isLessOrEqual(value2);
 
   @override
   NDArray operator >(value2) => isGreater(value2);
 
   @override
-  NDArray operator >=(value2) => isGreaterOrEquals(value2);
+  NDArray operator >=(value2) => isGreaterOrEqual(value2);
 
   @override
   NDArray select(thenValue, elseValue) => _elementWiseTernaryOperation(
