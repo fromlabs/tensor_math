@@ -3,5 +3,6 @@
 
 library tensor_math;
 
+export 'src/nd_shapeable.dart';
 export 'src/nd_shape.dart';
 export 'src/nd_array.dart';

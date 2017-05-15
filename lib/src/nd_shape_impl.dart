@@ -5,13 +5,13 @@ import "dart:math";
 
 import "nd_shape.dart";
 
-NDShape createTestNDShape([List<int> dimensions]) =>
-    new NDShapeImpl(dimensions);
-
 /*
 NDShape broadcastIterable(Iterable<NDShape> shapes) =>
     shapes.reduce((total, element) => total.broadcast(element));
 */
+
+NDShape addShapes(Iterable<NDShape> shapes) =>
+    shapes.reduce((total, element) => total + element);
 
 class NDShapeImpl implements NDShape {
   @override
@@ -19,7 +19,7 @@ class NDShapeImpl implements NDShape {
 
   final int _length;
 
-  NDShapeImpl(List<int> dimensions)
+  NDShapeImpl([List<int> dimensions])
       : this.dimensions =
             dimensions != null ? new List.unmodifiable(dimensions) : null,
         this._length = _calculateLength(dimensions);
@@ -59,6 +59,30 @@ class NDShapeImpl implements NDShape {
 
   @override
   int operator [](int axe) => get(axe);
+
+  @override
+  bool isMatching(NDShape shape2) {
+    if (isUnknownDimension || shape2.isUnknownDimension) {
+      return true;
+    } else if (dimension != shape2.dimension) {
+      return false;
+    } else {
+      for (var i = 0; i < dimension; i++) {
+        var axeDimension = dimensions[i];
+        var axeDimension2 = shape2.dimensions[i];
+        if (axeDimension == null || axeDimension2 == null) {
+          // continue
+        } else if (axeDimension != null && axeDimension2 != null) {
+          if (axeDimension != axeDimension2) {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
   @override
   NDShape merge(covariant NDShapeImpl shape2) => _merge(shape2);
@@ -390,6 +414,14 @@ class NDShapeImpl implements NDShape {
   }
 
   NDShapeImpl _reshape({List<int> newDimensions}) {
+    if (newDimensions == null) {
+      if (isUnknownDimension) {
+        return this;
+      } else {
+        return new NDShape();
+      }
+    }
+
     var newLength = 1;
     var wildcardDimensionIndex;
     for (var i = 0; i < newDimensions.length; i++) {

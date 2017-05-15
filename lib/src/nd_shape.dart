@@ -5,11 +5,10 @@ import "nd_shapeable.dart";
 
 import "nd_shape_impl.dart";
 
-// export "nd_shape_impl.dart" show broadcastIterable;
+export "nd_shape_impl.dart" show addShapes; //, broadcastIterable;
 
 abstract class NDShape implements NDShapeable {
-  factory NDShape(List<int> dimensions) =>
-      new NDShapeImpl(new List.from(dimensions));
+  factory NDShape([List<int> dimensions]) => new NDShapeImpl(dimensions);
 
   int get dimension;
 
@@ -34,6 +33,8 @@ abstract class NDShape implements NDShapeable {
   int get(int axe);
 
   int operator [](int axe);
+
+  bool isMatching(NDShape shape2);
 
   NDShape merge(NDShape shape2);
 

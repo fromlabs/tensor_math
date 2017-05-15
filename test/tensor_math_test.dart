@@ -351,7 +351,7 @@ void main() {
     setUp(() {});
 
     test('Shape dimension test', () {
-      var shape = createTestNDShape();
+      var shape = new NDShape();
       expect(shape.dimension, isNull);
       expect(shape.length, isNull);
       expect(shape.isUnknownDimension, isTrue);
@@ -360,7 +360,7 @@ void main() {
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
 
-      shape = createTestNDShape([]);
+      shape = new NDShape([]);
       expect(shape.dimension, 0);
       expect(shape.length, 1);
       expect(shape.isUnknownDimension, isFalse);
@@ -369,7 +369,7 @@ void main() {
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
 
-      shape = createTestNDShape([null]);
+      shape = new NDShape([null]);
       expect(shape.dimension, 1);
       expect(shape.length, null);
       expect(shape.isUnknownDimension, isFalse);
@@ -378,7 +378,7 @@ void main() {
       expect(shape.isVector, isTrue);
       expect(shape.isMatrix, isFalse);
 
-      shape = createTestNDShape([1]);
+      shape = new NDShape([1]);
       expect(shape.dimension, 1);
       expect(shape.length, 1);
       expect(shape.isUnknownDimension, isFalse);
@@ -387,7 +387,7 @@ void main() {
       expect(shape.isVector, isTrue);
       expect(shape.isMatrix, isFalse);
 
-      shape = createTestNDShape([10]);
+      shape = new NDShape([10]);
       expect(shape.dimension, 1);
       expect(shape.length, 10);
       expect(shape.isUnknownDimension, isFalse);
@@ -396,7 +396,7 @@ void main() {
       expect(shape.isVector, isTrue);
       expect(shape.isMatrix, isFalse);
 
-      shape = createTestNDShape([null, null]);
+      shape = new NDShape([null, null]);
       expect(shape.dimension, 2);
       expect(shape.length, null);
       expect(shape.isUnknownDimension, isFalse);
@@ -405,7 +405,7 @@ void main() {
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isTrue);
 
-      shape = createTestNDShape([1, null]);
+      shape = new NDShape([1, null]);
       expect(shape.dimension, 2);
       expect(shape.length, null);
       expect(shape.isUnknownDimension, isFalse);
@@ -414,7 +414,7 @@ void main() {
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isTrue);
 
-      shape = createTestNDShape([null, 1]);
+      shape = new NDShape([null, 1]);
       expect(shape.dimension, 2);
       expect(shape.length, null);
       expect(shape.isUnknownDimension, isFalse);
@@ -423,7 +423,7 @@ void main() {
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isTrue);
 
-      shape = createTestNDShape([1, 1]);
+      shape = new NDShape([1, 1]);
       expect(shape.dimension, 2);
       expect(shape.length, 1);
       expect(shape.isUnknownDimension, isFalse);
@@ -432,7 +432,7 @@ void main() {
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isTrue);
 
-      shape = createTestNDShape([10, 10]);
+      shape = new NDShape([10, 10]);
       expect(shape.dimension, 2);
       expect(shape.length, 100);
       expect(shape.isUnknownDimension, isFalse);
@@ -441,7 +441,7 @@ void main() {
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isTrue);
 
-      shape = createTestNDShape([null, null, null]);
+      shape = new NDShape([null, null, null]);
       expect(shape.dimension, 3);
       expect(shape.length, null);
       expect(shape.isUnknownDimension, isFalse);
@@ -450,7 +450,7 @@ void main() {
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
 
-      shape = createTestNDShape([10, 10, 10]);
+      shape = new NDShape([10, 10, 10]);
       expect(shape.dimension, 3);
       expect(shape.length, 1000);
       expect(shape.isUnknownDimension, isFalse);
@@ -461,7 +461,7 @@ void main() {
     });
 
     test('Shape transpose test', () {
-      var shape = createTestNDShape(null).transpose();
+      var shape = new NDShape(null).transpose();
       expect(shape.dimension, isNull);
       expect(shape.length, isNull);
       expect(shape.isUnknownDimension, isTrue);
@@ -470,7 +470,7 @@ void main() {
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
 
-      shape = createTestNDShape([null, null, null]).transpose();
+      shape = new NDShape([null, null, null]).transpose();
       expect(shape.dimension, 3);
       expect(shape.length, null);
       expect(shape.isUnknownDimension, isFalse);
@@ -479,7 +479,7 @@ void main() {
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
 
-      shape = createTestNDShape([1, 2, 3]).transpose();
+      shape = new NDShape([1, 2, 3]).transpose();
       expect(shape.dimension, 3);
       expect(shape.length, 6);
       expect(shape.isUnknownDimension, isFalse);
@@ -495,283 +495,236 @@ void main() {
       expect(shape[1], 2);
       expect(shape[2], 1);
 
-      expect(() => createTestNDShape([1, 2, 3]).transpose(permutationAxis: []),
+      expect(() => new NDShape([1, 2, 3]).transpose(permutationAxis: []),
           throwsArgumentError);
 
-      expect(() => createTestNDShape([1, 2, 3]).transpose(permutationAxis: [0]),
+      expect(() => new NDShape([1, 2, 3]).transpose(permutationAxis: [0]),
           throwsArgumentError);
 
       expect(
-          () => createTestNDShape([1, 2, 3])
-              .transpose(permutationAxis: [0, 1, null]),
+          () => new NDShape([1, 2, 3]).transpose(permutationAxis: [0, 1, null]),
           throwsArgumentError);
 
-      shape =
-          createTestNDShape([1, 2, 3]).transpose(permutationAxis: [0, 1, 2]);
+      shape = new NDShape([1, 2, 3]).transpose(permutationAxis: [0, 1, 2]);
       expect(shape.dimensions, orderedEquals([1, 2, 3]));
 
-      expect(
-          () => createTestNDShape([1, 2, 3])
-              .transpose(permutationAxis: [1, 2, 3]),
+      expect(() => new NDShape([1, 2, 3]).transpose(permutationAxis: [1, 2, 3]),
           throwsRangeError);
 
-      expect(
-          () => createTestNDShape([1, 2, 3])
-              .transpose(permutationAxis: [0, 1, 1]),
+      expect(() => new NDShape([1, 2, 3]).transpose(permutationAxis: [0, 1, 1]),
           throwsArgumentError);
     });
 
     test('Shape merge test', () {
-      expect(() => createTestNDShape([]).merge(createTestNDShape([null])),
+      expect(() => new NDShape([]).merge(new NDShape([null])),
           throwsArgumentError);
 
-      expect(() => createTestNDShape([null]).merge(createTestNDShape([])),
+      expect(() => new NDShape([null]).merge(new NDShape([])),
           throwsArgumentError);
-
-      expect(() => createTestNDShape([1]).merge(createTestNDShape([2])),
-          throwsArgumentError);
-
-      expect(() => createTestNDShape([2]).merge(createTestNDShape([1])),
-          throwsArgumentError);
-
-      expect(() => createTestNDShape([1, 1]).merge(createTestNDShape([1, 2])),
-          throwsArgumentError);
-
-      expect(() => createTestNDShape([1, 2]).merge(createTestNDShape([1, 1])),
-          throwsArgumentError);
-
-      expect(createTestNDShape().merge(createTestNDShape()).dimensions, isNull);
-
-      expect(createTestNDShape([]).merge(createTestNDShape([])).dimensions,
-          orderedEquals([]));
-
-      expect(createTestNDShape().merge(createTestNDShape([])).dimensions,
-          orderedEquals([]));
-
-      expect(createTestNDShape([]).merge(createTestNDShape()).dimensions,
-          orderedEquals([]));
-
-      expect(createTestNDShape([1]).merge(createTestNDShape([1])).dimensions,
-          orderedEquals([1]));
 
       expect(
-          createTestNDShape([null]).merge(createTestNDShape([null])).dimensions,
+          () => new NDShape([1]).merge(new NDShape([2])), throwsArgumentError);
+
+      expect(
+          () => new NDShape([2]).merge(new NDShape([1])), throwsArgumentError);
+
+      expect(() => new NDShape([1, 1]).merge(new NDShape([1, 2])),
+          throwsArgumentError);
+
+      expect(() => new NDShape([1, 2]).merge(new NDShape([1, 1])),
+          throwsArgumentError);
+
+      expect(new NDShape().merge(new NDShape()).dimensions, isNull);
+
+      expect(
+          new NDShape([]).merge(new NDShape([])).dimensions, orderedEquals([]));
+
+      expect(
+          new NDShape().merge(new NDShape([])).dimensions, orderedEquals([]));
+
+      expect(
+          new NDShape([]).merge(new NDShape()).dimensions, orderedEquals([]));
+
+      expect(new NDShape([1]).merge(new NDShape([1])).dimensions,
+          orderedEquals([1]));
+
+      expect(new NDShape([null]).merge(new NDShape([null])).dimensions,
           orderedEquals([null]));
 
-      expect(createTestNDShape([1]).merge(createTestNDShape([null])).dimensions,
+      expect(new NDShape([1]).merge(new NDShape([null])).dimensions,
           orderedEquals([1]));
 
-      expect(createTestNDShape([null]).merge(createTestNDShape([1])).dimensions,
+      expect(new NDShape([null]).merge(new NDShape([1])).dimensions,
           orderedEquals([1]));
 
-      expect(
-          createTestNDShape([1, 2])
-              .merge(createTestNDShape([1, null]))
-              .dimensions,
+      expect(new NDShape([1, 2]).merge(new NDShape([1, null])).dimensions,
           orderedEquals([1, 2]));
 
-      expect(
-          createTestNDShape([1, null])
-              .merge(createTestNDShape([1, 2]))
-              .dimensions,
+      expect(new NDShape([1, null]).merge(new NDShape([1, 2])).dimensions,
           orderedEquals([1, 2]));
     });
 
     test('Shape broadcast test', () {
-      expect(() => createTestNDShape([2]).add(createTestNDShape([3])),
+      expect(() => new NDShape([2]).add(new NDShape([3])), throwsArgumentError);
+
+      expect(() => new NDShape([2, 2]).add(new NDShape([2, 3])),
           throwsArgumentError);
 
-      expect(() => createTestNDShape([2, 2]).add(createTestNDShape([2, 3])),
-          throwsArgumentError);
+      expect(
+          () => new NDShape([2, 2]).add(new NDShape([3])), throwsArgumentError);
 
-      expect(() => createTestNDShape([2, 2]).add(createTestNDShape([3])),
-          throwsArgumentError);
+      expect(
+          () => new NDShape([3]).add(new NDShape([2, 2])), throwsArgumentError);
 
-      expect(() => createTestNDShape([3]).add(createTestNDShape([2, 2])),
-          throwsArgumentError);
+      expect(new NDShape().add(new NDShape()).dimensions, isNull);
 
-      expect(createTestNDShape().add(createTestNDShape()).dimensions, isNull);
+      expect(
+          new NDShape([]).add(new NDShape([])).dimensions, orderedEquals([]));
 
-      expect(createTestNDShape([]).add(createTestNDShape([])).dimensions,
-          orderedEquals([]));
-
-      expect(createTestNDShape([2]).add(createTestNDShape([2])).dimensions,
+      expect(new NDShape([2]).add(new NDShape([2])).dimensions,
           orderedEquals([2]));
 
-      expect(
-          createTestNDShape([2, 3]).add(createTestNDShape([2, 3])).dimensions,
+      expect(new NDShape([2, 3]).add(new NDShape([2, 3])).dimensions,
           orderedEquals([2, 3]));
 
-      expect(createTestNDShape().add(createTestNDShape([])).dimensions,
-          orderedEquals([]));
+      expect(new NDShape().add(new NDShape([])).dimensions, orderedEquals([]));
 
-      expect(createTestNDShape([]).add(createTestNDShape()).dimensions,
-          orderedEquals([]));
+      expect(new NDShape([]).add(new NDShape()).dimensions, orderedEquals([]));
 
-      expect(
-          createTestNDShape([2, 3])
-              .add(createTestNDShape([null, 3]))
-              .dimensions,
+      expect(new NDShape([2, 3]).add(new NDShape([null, 3])).dimensions,
           orderedEquals([2, 3]));
 
-      expect(
-          createTestNDShape([null, 3])
-              .add(createTestNDShape([2, 3]))
-              .dimensions,
+      expect(new NDShape([null, 3]).add(new NDShape([2, 3])).dimensions,
           orderedEquals([2, 3]));
 
-      expect(
-          createTestNDShape([2, 3]).add(createTestNDShape([1, 3])).dimensions,
+      expect(new NDShape([2, 3]).add(new NDShape([1, 3])).dimensions,
           orderedEquals([2, 3]));
 
-      expect(
-          createTestNDShape([1, 3]).add(createTestNDShape([2, 3])).dimensions,
+      expect(new NDShape([1, 3]).add(new NDShape([2, 3])).dimensions,
           orderedEquals([2, 3]));
 
-      expect(createTestNDShape([2, 3]).add(createTestNDShape([])).dimensions,
+      expect(new NDShape([2, 3]).add(new NDShape([])).dimensions,
           orderedEquals([2, 3]));
 
-      expect(createTestNDShape([]).add(createTestNDShape([2, 3])).dimensions,
+      expect(new NDShape([]).add(new NDShape([2, 3])).dimensions,
           orderedEquals([2, 3]));
 
-      expect(createTestNDShape([2, 3]).add(createTestNDShape([3])).dimensions,
+      expect(new NDShape([2, 3]).add(new NDShape([3])).dimensions,
           orderedEquals([2, 3]));
 
-      expect(createTestNDShape([3]).add(createTestNDShape([2, 3])).dimensions,
+      expect(new NDShape([3]).add(new NDShape([2, 3])).dimensions,
           orderedEquals([2, 3]));
+
+      expect(new NDShape([3, 2]).add(new NDShape()).dimensions, isNull);
     });
 
     test('Shape matrix multiplication test', () {
-      expect(() => createTestNDShape([]).matMul(createTestNDShape([])),
-          throwsArgumentError);
-
-      expect(() => createTestNDShape([]).matMul(createTestNDShape()),
-          throwsArgumentError);
-
-      expect(() => createTestNDShape().matMul(createTestNDShape([])),
-          throwsArgumentError);
-
       expect(
-          createTestNDShape().matMul(createTestNDShape()).dimensions, isNull);
+          () => new NDShape([]).matMul(new NDShape([])), throwsArgumentError);
 
-      expect(
-          createTestNDShape([1, 2])
-              .matMul(createTestNDShape([2, 3]))
-              .dimensions,
+      expect(() => new NDShape([]).matMul(new NDShape()), throwsArgumentError);
+
+      expect(() => new NDShape().matMul(new NDShape([])), throwsArgumentError);
+
+      expect(new NDShape().matMul(new NDShape()).dimensions, isNull);
+
+      expect(new NDShape([1, 2]).matMul(new NDShape([2, 3])).dimensions,
           orderedEquals([1, 3]));
 
       expect(
-          createTestNDShape([1, 2, 3])
-              .matMul(createTestNDShape([null, 3, 2]))
-              .dimensions,
+          new NDShape([1, 2, 3]).matMul(new NDShape([null, 3, 2])).dimensions,
           orderedEquals([1, 2, 2]));
     });
 
     test('Shape reduce test', () {
+      expect(() => new NDShape([1, 1, null]).reduceMax(reductionAxis: [0, 0]),
+          throwsArgumentError);
+
       expect(
           () =>
-              createTestNDShape([1, 1, null]).reduceMax(reductionAxis: [0, 0]),
+              new NDShape([1, 1, null]).reduceMax(reductionAxis: [0, 1, 2, 3]),
           throwsArgumentError);
 
-      expect(
-          () => createTestNDShape([1, 1, null])
-              .reduceMax(reductionAxis: [0, 1, 2, 3]),
-          throwsArgumentError);
+      expect(new NDShape([]).reduceMax().dimensions, isEmpty);
 
-      expect(createTestNDShape([]).reduceMax().dimensions, isEmpty);
+      expect(new NDShape([2, 2, 2]).reduceMax().dimensions, orderedEquals([]));
 
-      expect(createTestNDShape([2, 2, 2]).reduceMax().dimensions,
-          orderedEquals([]));
-
-      expect(
-          createTestNDShape([2, 2, 2]).reduceMax(reductionAxis: [0]).dimensions,
+      expect(new NDShape([2, 2, 2]).reduceMax(reductionAxis: [0]).dimensions,
           orderedEquals([2, 2]));
 
-      expect(
-          createTestNDShape([2, 2, 2])
-              .reduceMax(reductionAxis: [0, 1]).dimensions,
+      expect(new NDShape([2, 2, 2]).reduceMax(reductionAxis: [0, 1]).dimensions,
           orderedEquals([2]));
 
       expect(
-          createTestNDShape([2, 2, 2])
-              .reduceMax(reductionAxis: [0, 1, 2]).dimensions,
+          new NDShape([2, 2, 2]).reduceMax(reductionAxis: [0, 1, 2]).dimensions,
           orderedEquals([]));
     });
 
     test('Shape reduce keep dimensions test', () {
       expect(
-          () => createTestNDShape([1, 1, null])
+          () => new NDShape([1, 1, null])
               .reduceMax(reductionAxis: [0, 0], keepDimensions: true),
           throwsArgumentError);
 
       expect(
-          () => createTestNDShape([1, 1, null])
+          () => new NDShape([1, 1, null])
               .reduceMax(reductionAxis: [0, 1, 2, 3], keepDimensions: true),
           throwsArgumentError);
 
-      expect(createTestNDShape([]).reduceMax(keepDimensions: true).dimensions,
-          isEmpty);
-
       expect(
-          createTestNDShape([2, 2, 2])
-              .reduceMax(keepDimensions: true)
-              .dimensions,
+          new NDShape([]).reduceMax(keepDimensions: true).dimensions, isEmpty);
+
+      expect(new NDShape([2, 2, 2]).reduceMax(keepDimensions: true).dimensions,
           orderedEquals([1, 1, 1]));
 
       expect(
-          createTestNDShape([2, 2, 2])
+          new NDShape([2, 2, 2])
               .reduceMax(reductionAxis: [0], keepDimensions: true).dimensions,
           orderedEquals([1, 2, 2]));
 
       expect(
-          createTestNDShape([2, 2, 2]).reduceMax(
+          new NDShape([2, 2, 2]).reduceMax(
               reductionAxis: [0, 1], keepDimensions: true).dimensions,
           orderedEquals([1, 1, 2]));
 
       expect(
-          createTestNDShape([2, 2, 2]).reduceMax(
+          new NDShape([2, 2, 2]).reduceMax(
               reductionAxis: [0, 1, 2], keepDimensions: true).dimensions,
           orderedEquals([1, 1, 1]));
     });
 
     test('Shape reshape test', () {
-      expect(() => createTestNDShape([2]).reshape(newDimensions: []),
+      expect(() => new NDShape([2]).reshape(newDimensions: []),
           throwsArgumentError);
 
-      expect(createTestNDShape().reshape(newDimensions: [2, -1]).dimensions,
+      expect(new NDShape([2]).reshape(newDimensions: null).dimensions, isNull);
+
+      expect(new NDShape().reshape(newDimensions: [2, -1]).dimensions,
           orderedEquals([2, null]));
 
-      expect(createTestNDShape().reshape(newDimensions: [2, 4]).dimensions,
+      expect(new NDShape().reshape(newDimensions: [2, 4]).dimensions,
           orderedEquals([2, 4]));
 
-      expect(createTestNDShape([9]).reshape(newDimensions: [3, 3]).dimensions,
+      expect(new NDShape([9]).reshape(newDimensions: [3, 3]).dimensions,
           orderedEquals([3, 3]));
 
-      expect(
-          createTestNDShape([2, 2, 2])
-              .reshape(newDimensions: [2, 4]).dimensions,
+      expect(new NDShape([2, 2, 2]).reshape(newDimensions: [2, 4]).dimensions,
           orderedEquals([2, 4]));
 
-      expect(
-          createTestNDShape([3, 2, 3]).reshape(newDimensions: [-1]).dimensions,
+      expect(new NDShape([3, 2, 3]).reshape(newDimensions: [-1]).dimensions,
           orderedEquals([18]));
 
-      expect(
-          createTestNDShape([3, 2, 3])
-              .reshape(newDimensions: [2, -1]).dimensions,
+      expect(new NDShape([3, 2, 3]).reshape(newDimensions: [2, -1]).dimensions,
+          orderedEquals([2, 9]));
+
+      expect(new NDShape([3, 2, 3]).reshape(newDimensions: [-1, 9]).dimensions,
           orderedEquals([2, 9]));
 
       expect(
-          createTestNDShape([3, 2, 3])
-              .reshape(newDimensions: [-1, 9]).dimensions,
-          orderedEquals([2, 9]));
-
-      expect(
-          createTestNDShape([3, 2, 3])
-              .reshape(newDimensions: [2, -1, 3]).dimensions,
+          new NDShape([3, 2, 3]).reshape(newDimensions: [2, -1, 3]).dimensions,
           orderedEquals([2, 3, 3]));
 
-      expect(createTestNDShape([1]).reshape(newDimensions: []).dimensions,
+      expect(new NDShape([1]).reshape(newDimensions: []).dimensions,
           orderedEquals([]));
     });
   });

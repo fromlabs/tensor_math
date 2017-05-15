@@ -3,7 +3,7 @@
 
 import "nd_shapeable.dart";
 
-import "nd_shape_impl.dart";
+import "nd_shape.dart";
 import "nd_array_impl.dart";
 
 export "nd_array_impl.dart" show adds;
@@ -12,28 +12,28 @@ abstract class NDArray implements NDShapeable {
   factory NDArray(value) => new NDArrayImpl(value);
 
   factory NDArray.zeros(List<int> dimensions) {
-    var shape = new NDShapeImpl(dimensions);
+    var shape = new NDShape(dimensions);
 
     return new NDArrayImpl(new List.filled(shape.length, 0))
         .reshape(newDimensions: dimensions);
   }
 
   factory NDArray.ones(List<int> dimensions) {
-    var shape = new NDShapeImpl(dimensions);
+    var shape = new NDShape(dimensions);
 
     return new NDArrayImpl(new List.filled(shape.length, 1))
         .reshape(newDimensions: dimensions);
   }
 
   factory NDArray.filled(List<int> dimensions, dynamic value) {
-    var shape = new NDShapeImpl(dimensions);
+    var shape = new NDShape(dimensions);
 
     return new NDArrayImpl(new List.filled(shape.length, value))
         .reshape(newDimensions: dimensions);
   }
 
   factory NDArray.generate(List<int> dimensions, dynamic generator(int index)) {
-    var shape = new NDShapeImpl(dimensions);
+    var shape = new NDShape(dimensions);
 
     return new NDArrayImpl(new List.generate(shape.length, generator))
         .reshape(newDimensions: dimensions);

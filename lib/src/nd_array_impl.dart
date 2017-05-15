@@ -6,10 +6,8 @@ import "dart:math" as math;
 import 'nd_shape.dart';
 import "nd_array.dart";
 
-import 'nd_shape_impl.dart';
-
 NDArray createTestNDArray(List<int> dimensions, [generator(index)]) {
-  var shape = new NDShapeImpl(dimensions);
+  var shape = new NDShape(dimensions);
   var data = new List.generate(shape.length, generator ?? (index) => index);
   var stride = _calculateDefaultStride(shape);
 
@@ -199,7 +197,7 @@ class NDArrayImpl implements NDArray {
       permutedStride[i] = _stride[permutationAxe];
     }
 
-    var permutedShape = new NDShapeImpl(permutedDimensions);
+    var permutedShape = new NDShape(permutedDimensions);
 
     return new NDArrayImpl._(_data, permutedShape, permutedStride, _offset);
   }
@@ -732,10 +730,10 @@ NDShape _calculateShape(value) {
     dimensions.add(element.length);
     element = element[0];
   }
-  return new NDShapeImpl(dimensions);
+  return new NDShape(dimensions);
 }
 
-List<int> _calculateDefaultStride(NDShapeImpl shape) {
+List<int> _calculateDefaultStride(NDShape shape) {
   List<int> stride = new List(shape.dimension);
   var factor = 1;
   for (var i = shape.dimension - 1; i >= 0; i--) {
@@ -745,7 +743,7 @@ List<int> _calculateDefaultStride(NDShapeImpl shape) {
   return stride;
 }
 
-List _calculateFlatData(value, NDShapeImpl shape) {
+List _calculateFlatData(value, NDShape shape) {
   var data = new List(shape.length);
   if (shape.isScalar) {
     data[0] = value;
@@ -778,7 +776,7 @@ List _calculateFlatData(value, NDShapeImpl shape) {
 }
 
 List<int> _calculateBroadcastedStride(
-        NDShapeImpl broadcastedShape, NDArrayImpl array) =>
+        NDShape broadcastedShape, NDArrayImpl array) =>
     new List.generate(broadcastedShape.dimension, (index) {
       var dimensionDelta = broadcastedShape.dimension - array.shape.dimension;
       if (index < dimensionDelta || array.shape[index - dimensionDelta] == 1) {
