@@ -1,6 +1,7 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "dart:typed_data";
 import "dart:math" as math;
 
 import 'nd_shape.dart';
@@ -18,7 +19,39 @@ NDArray adds(Iterable values) => values
     .map<NDArray>((value) => _toNDArray(value))
     .reduce((total, element) => total + element);
 
-class NDArrayImpl implements NDArray {
+class NDArrayImpl extends BaseNDArray {
+  factory NDArrayImpl(value) {
+    var shape = _calculateShape(value);
+    var data = _calculateFlatData(value, new List(shape.length), shape);
+    var stride = _calculateDefaultStride(shape);
+
+    return new NDArrayImpl._(data, shape, stride, 0);
+  }
+
+  NDArrayImpl._(List data, NDShape shape, List<int> stride, int offset)
+      : super._(data, shape, stride, offset);
+
+  @override
+  List _createData(int length) => new List(length);
+}
+
+class NDArrayFloat64Impl extends BaseNDArray {
+  factory NDArrayFloat64Impl(value) {
+    var shape = _calculateShape(value);
+    var data = _calculateFlatData(value, new Float64List(shape.length), shape);
+    var stride = _calculateDefaultStride(shape);
+
+    return new NDArrayFloat64Impl._(data, shape, stride, 0);
+  }
+
+  NDArrayFloat64Impl._(List data, NDShape shape, List<int> stride, int offset)
+      : super._(data, shape, stride, offset);
+
+  @override
+  List _createData(int length) => new Float64List(length);
+}
+
+abstract class BaseNDArray implements NDArray {
   @override
   final NDShape shape;
 
@@ -28,15 +61,9 @@ class NDArrayImpl implements NDArray {
 
   final int _offset;
 
-  factory NDArrayImpl(value) {
-    var shape = _calculateShape(value);
-    var data = _calculateFlatData(value, shape);
-    var stride = _calculateDefaultStride(shape);
+  BaseNDArray._(this._data, this.shape, this._stride, this._offset);
 
-    return new NDArrayImpl._(data, shape, stride, 0);
-  }
-
-  NDArrayImpl._(this._data, this.shape, this._stride, this._offset);
+  List _createData(int length);
 
   @override
   NDArray abs() => _elementWiseUnaryOperation((value) => value.abs());
@@ -109,7 +136,7 @@ class NDArrayImpl implements NDArray {
   @override
   NDArray tile(List<int> multiplies) {
     var resultShape = shape.tile(multiplies);
-    var resultData = new List(resultShape.length);
+    var resultData = _createData(resultShape.length);
     var resultStride = _calculateDefaultStride(resultShape);
 
     var shapeIndex = 0;
@@ -207,7 +234,7 @@ class NDArrayImpl implements NDArray {
     var array2 = _toNDArray(value2);
 
     var resultShape = shape.matMul(array2.shape);
-    var resultData = new List(resultShape.length);
+    var resultData = _createData(resultShape.length);
     var resultStride = _calculateDefaultStride(resultShape);
 
     var shapeIndex = 0;
@@ -476,7 +503,7 @@ class NDArrayImpl implements NDArray {
   }
 
   NDArrayImpl _elementWiseUnaryOperation(unaryOperation(value)) {
-    var resultData = new List(shape.length);
+    var resultData = _createData(shape.length);
     var resultStride;
 
     if (shape.isScalar) {
@@ -495,9 +522,12 @@ class NDArrayImpl implements NDArray {
       while (resultDataIndex < resultData.length) {
         if (dimensionIndex < shape[shapeIndex]) {
           if (shapeIndex == shape.dimension - 1) {
-            resultData[resultDataIndex++] = unaryOperation(_data[dataIndex]);
-            dataIndex += _stride[shapeIndex];
-            dimensionIndex++;
+            var axeDimension = shape[shapeIndex];
+            var axeStride = _stride[shapeIndex];
+            while (dimensionIndex++ < axeDimension) {
+              resultData[resultDataIndex++] = unaryOperation(_data[dataIndex]);
+              dataIndex += axeStride;
+            }
           } else {
             shapeIndex++;
             dataIndexes[shapeIndex] = dataIndex;
@@ -521,7 +551,7 @@ class NDArrayImpl implements NDArray {
     var array2 = _toNDArray(value2);
 
     var resultShape = shape.broadcast(array2.shape);
-    var resultData = new List(resultShape.length);
+    var resultData = _createData(resultShape.length);
     var resultStride;
 
     if (resultShape.isScalar) {
@@ -577,7 +607,7 @@ class NDArrayImpl implements NDArray {
     var array3 = _toNDArray(value3);
 
     var resultShape = shape.broadcast(array2.shape).broadcast(array3.shape);
-    var resultData = new List(resultShape.length);
+    var resultData = _createData(resultShape.length);
     var resultStride;
     var resultOffset = 0;
 
@@ -657,7 +687,7 @@ class NDArrayImpl implements NDArray {
     if (newReductionAxis.isNotEmpty) {
       var resultShape = shape.reduce(
           reductionAxis: newReductionAxis, keepDimensions: keepDimensions);
-      var resultData = new List(resultShape.length);
+      var resultData = _createData(resultShape.length);
       var resultStride = _calculateDefaultStride(resultShape);
 
       var shapeIndex = 0;
@@ -743,8 +773,7 @@ List<int> _calculateDefaultStride(NDShape shape) {
   return stride;
 }
 
-List _calculateFlatData(value, NDShape shape) {
-  var data = new List(shape.length);
+List _calculateFlatData(value, List data, NDShape shape) {
   if (shape.isScalar) {
     data[0] = value;
   } else {
@@ -792,7 +821,7 @@ NDArrayImpl _elementWiseIterableOperation(
   var arrays = values.map(_toNDArray).toList(growable: false);
 
   var resultShape = iterableBroadcast(arrays.map((array) => array.shape));
-  var resultData = new List(resultShape.length);
+  var resultData = _createData(resultShape.length);
   var resultStride;
   var resultOffset = 0;
 

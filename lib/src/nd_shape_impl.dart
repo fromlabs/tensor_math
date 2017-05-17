@@ -322,11 +322,11 @@ class NDShapeImpl implements NDShape {
       var index1 = dimension - 1;
       var index2 = shape2.dimension - 1;
       while (index1 >= 0 || index2 >= 0) {
-        var d1 = index1 >= 0 ? (dimensions[index1] ?? 1) : 1;
-        var d2 = index2 >= 0 ? (shape2.dimensions[index2] ?? 1) : 1;
-        if (d1 == 1 || d1 == d2) {
+        var d1 = index1 >= 0 ? dimensions[index1] : 1;
+        var d2 = index2 >= 0 ? shape2.dimensions[index2] : 1;
+        if (d1 == 1 || d1 == d2 || (d2 != 1 && d1 == null)) {
           resultDimensions[resultIndex--] = d2;
-        } else if (d2 == 1) {
+        } else if (d2 == 1 || d1 != 1 && d2 == null) {
           resultDimensions[resultIndex--] = d1;
         } else {
           throw new ArgumentError(
@@ -339,7 +339,7 @@ class NDShapeImpl implements NDShape {
 
       return new NDShapeImpl(resultDimensions);
     } else {
-      return dimension != null ? this : shape2;
+      return dimension == null ? shape : shape2;
     }
   }
 

@@ -5,7 +5,6 @@ import 'package:test/test.dart';
 
 import "package:tensor_math/tensor_math.dart";
 
-import "package:tensor_math/src/nd_shape_impl.dart" show createTestNDShape;
 import "package:tensor_math/src/nd_array_impl.dart" show createTestNDArray;
 
 void main() {
@@ -587,9 +586,11 @@ void main() {
       expect(new NDShape([2, 3]).add(new NDShape([2, 3])).dimensions,
           orderedEquals([2, 3]));
 
-      expect(new NDShape().add(new NDShape([])).dimensions, orderedEquals([]));
+      expect(new NDShape().add(new NDShape([])).dimensions, isNull);
 
-      expect(new NDShape([]).add(new NDShape()).dimensions, orderedEquals([]));
+      expect(new NDShape([]).add(new NDShape()).dimensions, isNull);
+
+      expect(new NDShape([3, 2]).add(new NDShape()).dimensions, isNull);
 
       expect(new NDShape([2, 3]).add(new NDShape([null, 3])).dimensions,
           orderedEquals([2, 3]));
@@ -614,8 +615,6 @@ void main() {
 
       expect(new NDShape([3]).add(new NDShape([2, 3])).dimensions,
           orderedEquals([2, 3]));
-
-      expect(new NDShape([3, 2]).add(new NDShape()).dimensions, isNull);
     });
 
     test('Shape matrix multiplication test', () {
