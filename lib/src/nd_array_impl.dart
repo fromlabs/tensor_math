@@ -4,6 +4,7 @@
 import "dart:typed_data";
 import "dart:math" as math;
 
+import "package:meta/meta.dart";
 import "package:collection/collection.dart";
 
 import 'nd_descriptor.dart';
@@ -43,7 +44,7 @@ NDArray toNDArray(value, {NDDataType dataType}) {
   }
 }
 
-final _iterableEquality = new IterableEquality();
+final _iterableEquality = new IterableEquality<dynamic>();
 
 class NDArrayImpl implements NDArray {
   @override
@@ -190,11 +191,12 @@ class NDArrayImpl implements NDArray {
       var resultDescriptor = descriptor.reshape(newDimensions: newDimensions);
 
       var identity =
-      _elementWiseUnaryOperation(resultDescriptor, reuse, (value) => value);
+          _elementWiseUnaryOperation(resultDescriptor, reuse, (value) => value);
 
       var resultStride = _calculateDefaultStride(resultDescriptor.shape);
 
-      return new NDArrayImpl._(identity._data, resultDescriptor, resultStride, 0);
+      return new NDArrayImpl._(
+          identity._data, resultDescriptor, resultStride, 0);
     }
   }
 
@@ -311,10 +313,9 @@ class NDArrayImpl implements NDArray {
               var innerIndex = 0;
               var data1Index = rowData1Index;
               var data2Index = columnData2Index;
-
-              while (innerIndex++ < shapeDimensionInternal) {
+              while (innerIndex < shapeDimensionInternal) {
                 sumValue += _data[data1Index] * array2._data[data2Index];
-
+                innerIndex++;
                 data1Index += stride1Internal;
                 data2Index += stride2Internal;
               }
@@ -601,6 +602,74 @@ class NDArrayImpl implements NDArray {
   }
 
   @override
+  NDArray elementWiseUnaryOperation(
+          {NDDataType resultDataType,
+          covariant NDArray reuse,
+          unaryOperation(value)}) =>
+      _elementWiseUnaryOperation(
+          descriptor.elementWiseUnaryOperation(resultDataType: resultDataType),
+          reuse,
+          unaryOperation);
+
+  @override
+  NDArray elementWiseBinaryOperation(covariant NDArray value2,
+      {NDDataType dataType2,
+      @required NDDataType resultDataType,
+      covariant NDArray reuse,
+      binaryOperation(value1, value2)}) {
+    var array2 = toNDArray(value2, dataType: dataType2);
+
+    return _elementWiseBinaryOperation(
+        array2,
+        descriptor.elementWiseBinaryOperation(array2.descriptor,
+            resultDataType: resultDataType),
+        reuse,
+        binaryOperation);
+  }
+
+  @override
+  NDArray elementWiseTernaryOperation(
+      covariant NDArray value2, covariant NDArray value3,
+      {NDDataType dataType2,
+      NDDataType dataType3,
+      NDDataType resultDataType,
+      covariant NDArray reuse,
+      ternaryOperation(value1, value2, value3)}) {
+    var array2 = toNDArray(value2, dataType: dataType2);
+    var array3 = toNDArray(value3, dataType: dataType3);
+
+    return _elementWiseTernaryOperation(
+        array2,
+        array3,
+        descriptor.elementWiseTernaryOperation(
+            array2.descriptor, array3.descriptor,
+            resultDataType: resultDataType),
+        reuse,
+        ternaryOperation);
+  }
+
+  @override
+  NDArray reduceOperation(
+      {List<int> reductionAxis,
+      bool keepDimensions = false,
+      NDDataType resultDataType,
+      covariant NDArray reuse,
+      @required void initReduction(),
+      @required void onValueToReduce(int valueIndex, value),
+      @required dynamic reduce()}) {
+    var resultDescriptor = descriptor.reduceOperation(
+        reductionAxis: reductionAxis,
+        keepDimensions: keepDimensions,
+        resultDataType: resultDataType);
+
+    return _reduceOperation(
+        reductionAxis, keepDimensions, resultDescriptor, reuse,
+        initReduction: initReduction,
+        onValueToReduce: onValueToReduce,
+        reduce: reduce);
+  }
+
+  @override
   String toString() =>
       "<value: ${_toValue()}, shape: $shape, dataType: $dataType, stride: $_stride, offset: $_offset>";
 
@@ -620,6 +689,7 @@ class NDArrayImpl implements NDArray {
       while (i < shape.length) {
         if (dimensionIndex < shape[shapeIndex]) {
           if (shapeIndex == shape.dimension - 1) {
+            // TODO ciclo while interno
             resultValues[dimensionIndex] = _data[dataIndex];
             dataIndex += _stride[shapeIndex];
             dimensionIndex++;
@@ -959,7 +1029,10 @@ void _loadConvertedData(
     while (dataIndex < data.length) {
       if (dimensionIndex < shape[shapeIndex]) {
         if (shapeIndex == shape.dimension - 1) {
-          data[dataIndex++] = converter(dimensionValue[dimensionIndex++]);
+          var axeDimension = shape[shapeIndex];
+          while (dimensionIndex < axeDimension) {
+            data[dataIndex++] = converter(dimensionValue[dimensionIndex++]);
+          }
         } else {
           shapeIndex++;
           dimensionValue =
@@ -988,6 +1061,10 @@ List<int> _calculateBroadcastedStride(
     }, growable: false);
 
 List _createData(NDDescriptor descriptor, NDArrayImpl reuse) {
+  if (descriptor.dataType == NDDataType.unknown) {
+    throw new ArgumentError.value(descriptor.dataType.toString(), "data type");
+  }
+
   if (reuse != null &&
       reuse.dataType == descriptor.dataType &&
       reuse._data.length == descriptor.shape.length) {

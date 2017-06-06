@@ -17,7 +17,9 @@ class NDDescriptor implements NDObject {
   @override
   final NDDataType dataType;
 
-  NDDescriptor({NDShape shape, NDDataType dataType}) : this.shape = shape ?? new NDShape(), this.dataType = dataType ?? NDDataType.unknown;
+  NDDescriptor({NDShape shape, NDDataType dataType})
+      : this.shape = shape ?? new NDShape(),
+        this.dataType = dataType ?? NDDataType.unknown;
 
   @override
   NDDescriptor get descriptor => this;
@@ -81,9 +83,9 @@ class NDDescriptor implements NDObject {
           shape: shape.arg(axis: axis), dataType: NDDataType.uint32);
 
   NDDescriptor broadcast(covariant NDDescriptor descriptor2,
-          {@required NDDataType dataType}) =>
+          {@required NDDataType resultDataType}) =>
       new NDDescriptor(
-          shape: shape.broadcast(descriptor2.shape), dataType: dataType);
+          shape: shape.broadcast(descriptor2.shape), dataType: resultDataType);
 
   @override
   NDDescriptor tile(List<int> multiplies, {covariant NDDescriptor reuse}) =>
@@ -226,13 +228,13 @@ class NDDescriptor implements NDObject {
           dataType: dataType);
 
   NDDescriptor reduce(
-          {@required NDDataType dataType,
+          {@required NDDataType resultDataType,
           List<int> reductionAxis,
           bool keepDimensions: false}) =>
       new NDDescriptor(
           shape: shape.reduce(
               reductionAxis: reductionAxis, keepDimensions: keepDimensions),
-          dataType: dataType);
+          dataType: resultDataType);
 
   @override
   NDDescriptor reduceAny(
@@ -247,7 +249,7 @@ class NDDescriptor implements NDObject {
     return reduce(
         reductionAxis: reductionAxis,
         keepDimensions: keepDimensions,
-        dataType: NDDataType.boolean);
+        resultDataType: NDDataType.boolean);
   }
 
   @override
@@ -263,7 +265,7 @@ class NDDescriptor implements NDObject {
     return reduce(
         reductionAxis: reductionAxis,
         keepDimensions: keepDimensions,
-        dataType: dataType);
+        resultDataType: dataType);
   }
 
   @override
@@ -279,7 +281,7 @@ class NDDescriptor implements NDObject {
     return reduce(
         reductionAxis: reductionAxis,
         keepDimensions: keepDimensions,
-        dataType: dataType);
+        resultDataType: dataType);
   }
 
   @override
@@ -295,7 +297,7 @@ class NDDescriptor implements NDObject {
     return reduce(
         reductionAxis: reductionAxis,
         keepDimensions: keepDimensions,
-        dataType: dataType);
+        resultDataType: dataType);
   }
 
   @override
@@ -369,7 +371,7 @@ class NDDescriptor implements NDObject {
           "NDArray($dataType)): supported only numeric data type");
     }
 
-    return broadcast(descriptor2, dataType: dataType);
+    return broadcast(descriptor2, resultDataType: dataType);
   }
 
   @override
@@ -383,7 +385,7 @@ class NDDescriptor implements NDObject {
           "NDArray($dataType)): supported only numeric data type");
     }
 
-    return broadcast(descriptor2, dataType: dataType);
+    return broadcast(descriptor2, resultDataType: dataType);
   }
 
   @override
@@ -397,7 +399,7 @@ class NDDescriptor implements NDObject {
           "NDArray($dataType)): supported only numeric data type");
     }
 
-    return broadcast(descriptor2, dataType: dataType);
+    return broadcast(descriptor2, resultDataType: dataType);
   }
 
   @override
@@ -411,10 +413,50 @@ class NDDescriptor implements NDObject {
           "NDArray($dataType)): supported only float data type");
     }
 
-    return broadcast(descriptor2, dataType: dataType);
+    return broadcast(descriptor2, resultDataType: dataType);
   }
 
   @override
+  NDDescriptor elementWiseUnaryOperation(
+          {@required NDDataType resultDataType,
+          covariant NDDescriptor reuse,
+          unaryOperation(value)}) =>
+      new NDDescriptor(shape: shape, dataType: resultDataType);
+
+  @override
+  NDDescriptor elementWiseBinaryOperation(covariant NDDescriptor descriptor2,
+          {NDDataType dataType2,
+          @required NDDataType resultDataType,
+          covariant NDDescriptor reuse,
+          binaryOperation(value1, value2)}) =>
+      broadcast(descriptor2, resultDataType: resultDataType);
+
+  @override
+  NDDescriptor elementWiseTernaryOperation(covariant NDDescriptor descriptor2,
+          covariant NDDescriptor descriptor3,
+          {NDDataType dataType2,
+          NDDataType dataType3,
+          @required NDDataType resultDataType,
+          covariant NDDescriptor reuse,
+          ternaryOperation(value1, value2, value3)}) =>
+      broadcast(descriptor2, resultDataType: resultDataType)
+          .broadcast(descriptor3, resultDataType: resultDataType);
+
+  @override
+  NDDescriptor reduceOperation(
+          {List<int> reductionAxis,
+          bool keepDimensions = false,
+          @required NDDataType resultDataType,
+          covariant NDDescriptor reuse,
+          void initReduction(),
+          void onValueToReduce(int valueIndex, value),
+          dynamic reduce()}) =>
+      this.reduce(
+          reductionAxis: reductionAxis,
+          keepDimensions: keepDimensions,
+          resultDataType: resultDataType);
+
+  @override
   String toString() =>
-    "[Descriptor: shape: ${shape.dimensions}, dataType: $dataType]";
+      "[Descriptor: shape: ${shape.dimensions}, dataType: $dataType]";
 }

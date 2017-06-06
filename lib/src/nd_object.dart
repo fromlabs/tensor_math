@@ -1,6 +1,8 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "package:meta/meta.dart";
+
 import "nd_data_type.dart";
 import "nd_shape.dart";
 import "nd_descriptor.dart";
@@ -89,4 +91,31 @@ abstract class NDObject {
   NDObject operator <(value2);
 
   NDObject operator <=(value2);
+
+  NDObject elementWiseUnaryOperation(
+      {@required NDDataType resultDataType,
+      NDObject reuse,
+      @required unaryOperation(value)});
+
+  NDObject elementWiseBinaryOperation(value2,
+      {NDDataType dataType2,
+      @required NDDataType resultDataType,
+      NDObject reuse,
+      @required binaryOperation(value1, value2)});
+
+  NDObject elementWiseTernaryOperation(value2, value3,
+      {NDDataType dataType2,
+      NDDataType dataType3,
+      @required NDDataType resultDataType,
+      NDObject reuse,
+      @required ternaryOperation(value1, value2, value3)});
+
+  NDObject reduceOperation(
+      {List<int> reductionAxis,
+      bool keepDimensions = false,
+      @required NDDataType resultDataType,
+      NDObject reuse,
+      @required void initReduction(),
+      @required void onValueToReduce(int valueIndex, value),
+      @required dynamic reduce()});
 }
