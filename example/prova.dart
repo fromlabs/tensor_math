@@ -1,16 +1,14 @@
 import "package:tensor_math/tensor_math.dart";
 
 void main() {
-  var a = new NDArray.generate([2, 2, 2], (index) => index.toDouble());
+  var a = new NDArray.generate([2, 2, 2], (index) => index,
+      dataType: NDDataType.float32);
 
   print(a);
 
-  print(new NDArray([1.0, 2.0, 3.5], dataType: NDDataType.int64));
+  print(-a.inv());
 
-  print(new NDArray([1.0, 2, 3]));
-
-  print(new NDArray.zeros([2, 2], dataType: NDDataType.float64) +
-      new NDArray.zeros([2, 2], dataType: NDDataType.float32));
-
-
+  print(a.elementWiseUnaryOperation(
+      resultDataType: NDDataType.float32,
+      unaryOperation: (value) => -1 / value));
 }

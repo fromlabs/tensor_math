@@ -319,7 +319,6 @@ class NDArrayImpl implements NDArray {
                 data1Index += stride1Internal;
                 data2Index += stride2Internal;
               }
-
               resultData[resultDataIndex++] = sumValue;
             }
           }
