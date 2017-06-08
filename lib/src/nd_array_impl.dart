@@ -279,6 +279,10 @@ class NDArrayImpl implements NDArray {
   NDArray matMul(value2, {NDArray reuse}) {
     NDArrayImpl array2 = toNDArray(value2, dataType: dataType);
 
+    if (dataType == NDDataType.float32) {
+      return matMulFloat32x4(this, array2);
+    }
+
     var resultDescriptor = descriptor.matMul(array2.descriptor);
     var resultShape = resultDescriptor.shape;
     var resultData = _createData(resultDescriptor, reuse);
@@ -1103,4 +1107,250 @@ List _createData(NDDescriptor descriptor, NDArrayImpl reuse) {
         throw new StateError("DEAD CODE");
     }
   }
+}
+
+// TODO ottimizzare le matematiche
+
+// TODO supporto dimensioni > 2
+
+NDArray matMulFloat32x4(NDArray array1, NDArray array2) {
+  var resultDescriptor = array1.descriptor.matMul(array2.descriptor);
+
+  var list1 = _toFloat32x4ListHBlock(array1);
+
+  var list2 = _toFloat32x4ListVBlock(array2);
+
+  var resultList =
+      _matMulFloat32x4Internal(list1, array1.shape, list2, array2.shape);
+
+  return _fromFloat32x4ListHBlock(resultList, resultDescriptor);
+}
+
+Float32x4List _matMulFloat32x4Internal(
+    Float32x4List list1, NDShape shape1, Float32x4List list2, NDShape shape2) {
+  var rows1 = _toCeil4(shape1[shape1.dimension - 2]);
+  var columns1 = _toCeil4(shape1[shape1.dimension - 1]);
+  var rows2 = _toCeil4(shape2[shape2.dimension - 2]);
+  var columns2 = _toCeil4(shape2[shape2.dimension - 1]);
+
+  var resultList = new Float32x4List(rows1 * columns2 ~/ 4);
+
+  var blockPerRow1 = columns1 >> 2;
+  var blockPerColumn2 = rows2 >> 2;
+  var resultBlockPerRow = columns2 >> 2;
+
+  for (var row1 = 0; row1 < rows1; row1 += 4) {
+    var blockRow1 = row1 ~/ 4;
+    var blockOffset1 = row1 % 4;
+
+    for (var column2 = 0; column2 < columns2; column2 += 4) {
+      var blockColumn2 = column2 ~/ 4;
+
+      var result0 = new Float32x4.zero();
+      var result1 = new Float32x4.zero();
+      var result2 = new Float32x4.zero();
+      var result3 = new Float32x4.zero();
+
+      for (var i = 0; i < columns1; i += 4) {
+        var blockColumn1 = i ~/ 4;
+        var blockIndex1 = blockRow1 * blockPerRow1 + blockColumn1;
+        var i10 = blockIndex1 * 4 + blockOffset1;
+
+        var blockRow2 = i ~/ 4;
+        var blockOffset2 = i % 4;
+        var blockIndex2 = blockColumn2 * blockPerColumn2 + blockRow2;
+        var i20 = blockIndex2 * 4 + blockOffset2;
+
+        var b0 = list2[i20++];
+        var b1 = list2[i20++];
+        var b2 = list2[i20++];
+        var b3 = list2[i20++];
+
+        var a0 = list1[i10++];
+        result0 += a0.shuffle(Float32x4.XXXX) * b0 +
+            a0.shuffle(Float32x4.YYYY) * b1 +
+            a0.shuffle(Float32x4.ZZZZ) * b2 +
+            a0.shuffle(Float32x4.WWWW) * b3;
+
+        var a1 = list1[i10++];
+        result1 += a1.shuffle(Float32x4.XXXX) * b0 +
+            a1.shuffle(Float32x4.YYYY) * b1 +
+            a1.shuffle(Float32x4.ZZZZ) * b2 +
+            a1.shuffle(Float32x4.WWWW) * b3;
+
+        var a2 = list1[i10++];
+        result2 += a2.shuffle(Float32x4.XXXX) * b0 +
+            a2.shuffle(Float32x4.YYYY) * b1 +
+            a2.shuffle(Float32x4.ZZZZ) * b2 +
+            a2.shuffle(Float32x4.WWWW) * b3;
+
+        var a3 = list1[i10++];
+        result3 += a3.shuffle(Float32x4.XXXX) * b0 +
+            a3.shuffle(Float32x4.YYYY) * b1 +
+            a3.shuffle(Float32x4.ZZZZ) * b2 +
+            a3.shuffle(Float32x4.WWWW) * b3;
+      }
+
+      var resultBlockIndex = blockRow1 * resultBlockPerRow + blockColumn2;
+
+      var ir0 = resultBlockIndex * 4 + blockOffset1;
+      resultList[ir0++] = result0;
+      resultList[ir0++] = result1;
+      resultList[ir0++] = result2;
+      resultList[ir0++] = result3;
+    }
+  }
+
+  return resultList;
+}
+
+int _toCeil4(int value) => 4 * (value / 4).ceil();
+
+Float32x4List _toFloat32x4ListHBlock(NDArrayImpl array) {
+  var blockPerColumn = (array.shape[array.shape.dimension - 2] / 4).ceil();
+  var blockPerRow = (array.shape[array.shape.dimension - 1] / 4).ceil();
+  var lastBlockColumnOffset = array.shape[array.shape.dimension - 1] % 4;
+
+  var data = new Float32x4List(4 * blockPerColumn * blockPerRow);
+
+  var values = array.reshape(newDimensions: [-1]).toVector();
+
+  var i1 = 0;
+  var i2 = 0;
+  while (i2 < values.length) {
+    var offsetBlockColumn = i1 % blockPerRow;
+
+    var value4;
+    if (lastBlockColumnOffset == 0 || offsetBlockColumn < blockPerRow - 1) {
+      value4 =
+          new Float32x4(values[i2++], values[i2++], values[i2++], values[i2++]);
+    } else {
+      switch (lastBlockColumnOffset) {
+        case 3:
+          value4 = new Float32x4(values[i2++], values[i2++], values[i2++], 0.0);
+          break;
+        case 2:
+          value4 = new Float32x4(values[i2++], values[i2++], 0.0, 0.0);
+          break;
+        case 1:
+          value4 = new Float32x4(values[i2++], 0.0, 0.0, 0.0);
+          break;
+      }
+    }
+
+    var index = i1 ~/ blockPerRow;
+    var blockRow = index ~/ 4;
+    var blockRowOffset = index % 4;
+    var blockColumn = i1 % blockPerRow;
+    var blockIndex = blockRow * blockPerRow + blockColumn;
+    var i3 = blockIndex * 4 + blockRowOffset;
+
+    data[i3] = value4;
+
+    i1++;
+  }
+
+  return data;
+}
+
+Float32x4List _toFloat32x4ListVBlock(NDArrayImpl array) {
+  var blockPerColumn = (array.shape[array.shape.dimension - 2] / 4).ceil();
+  var blockPerRow = (array.shape[array.shape.dimension - 1] / 4).ceil();
+  var lastBlockColumnOffset = array.shape[array.shape.dimension - 1] % 4;
+
+  var data = new Float32x4List(4 * blockPerColumn * blockPerRow);
+
+  var values = array.reshape(newDimensions: [-1]).toVector();
+
+  var i1 = 0;
+  var i2 = 0;
+  while (i2 < values.length) {
+    var offsetBlockColumn = i1 % blockPerRow;
+
+    var value4;
+    if (lastBlockColumnOffset == 0 || offsetBlockColumn < blockPerRow - 1) {
+      value4 =
+          new Float32x4(values[i2++], values[i2++], values[i2++], values[i2++]);
+    } else {
+      switch (lastBlockColumnOffset) {
+        case 3:
+          value4 = new Float32x4(values[i2++], values[i2++], values[i2++], 0.0);
+          break;
+        case 2:
+          value4 = new Float32x4(values[i2++], values[i2++], 0.0, 0.0);
+          break;
+        case 1:
+          value4 = new Float32x4(values[i2++], 0.0, 0.0, 0.0);
+          break;
+      }
+    }
+
+    var index = i1 ~/ blockPerRow;
+    var blockRow = index ~/ 4;
+    var blockRowOffset = index % 4;
+    var blockColumn = i1 % blockPerRow;
+    var blockIndex = blockColumn * blockPerColumn + blockRow;
+    var i3 = blockIndex * 4 + blockRowOffset;
+
+    data[i3] = value4;
+
+    i1++;
+  }
+
+  return data;
+}
+
+NDArray _fromFloat32x4ListHBlock(
+    Float32x4List list, NDDescriptor resultDescriptor) {
+  var resultData = new Float32List(
+      resultDescriptor.shape[resultDescriptor.shape.dimension - 2] *
+          resultDescriptor.shape[resultDescriptor.shape.dimension - 1]);
+
+  var blockPerRow =
+      (resultDescriptor.shape[resultDescriptor.shape.dimension - 1] / 4).ceil();
+  var lastBlockColumnOffset =
+      resultDescriptor.shape[resultDescriptor.shape.dimension - 1] % 4;
+
+  var i1 = 0;
+  var i2 = 0;
+  while (i2 < resultData.length) {
+    var offsetBlockColumn = i1 % blockPerRow;
+
+    var index = i1 ~/ blockPerRow;
+    var blockRow = index ~/ 4;
+    var blockRowOffset = index % 4;
+    var blockColumn = i1 % blockPerRow;
+    var blockIndex = blockRow * blockPerRow + blockColumn;
+    var i3 = blockIndex * 4 + blockRowOffset;
+
+    var value4 = list[i3];
+    if (lastBlockColumnOffset == 0 || offsetBlockColumn < blockPerRow - 1) {
+      resultData[i2++] = value4.x;
+      resultData[i2++] = value4.y;
+      resultData[i2++] = value4.z;
+      resultData[i2++] = value4.w;
+    } else {
+      switch (lastBlockColumnOffset) {
+        case 3:
+          resultData[i2++] = value4.x;
+          resultData[i2++] = value4.y;
+          resultData[i2++] = value4.z;
+          break;
+        case 2:
+          resultData[i2++] = value4.x;
+          resultData[i2++] = value4.y;
+          break;
+        case 1:
+          resultData[i2++] = value4.x;
+          break;
+      }
+    }
+
+    i1++;
+  }
+
+  var resultShape = resultDescriptor.shape;
+  var resultStride = _calculateDefaultStride(resultShape);
+
+  return new NDArrayImpl._(resultData, resultDescriptor, resultStride, 0);
 }
