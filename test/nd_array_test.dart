@@ -3,9 +3,9 @@
 
 import 'package:test/test.dart';
 
-import "package:tensor_math/tensor_math.dart";
+import "package:tensor_math_simd/tensor_math.dart";
 
-import "package:tensor_math/src/nd_array_impl.dart" show createTestNDArray;
+import "package:tensor_math_simd/src/nd_array_base.dart" show createTestNDArray;
 
 void main() {
   group('Array tests', () {
@@ -136,19 +136,24 @@ void main() {
               .reduceSum(reductionAxis: [2, 1]).toValue(),
           equals([6, 22]));
 
-      expect(createTestNDArray([2, 2, 2]).reduceMean().toValue(), equals(3.5));
       expect(
-          createTestNDArray([2, 2, 2]).reduceMean(reductionAxis: [0]).toValue(),
+          createTestNDArray([2, 2, 2], dataType: NDDataType.float32)
+              .reduceMean()
+              .toValue(),
+          equals(3.5));
+      expect(
+          createTestNDArray([2, 2, 2], dataType: NDDataType.float32)
+              .reduceMean(reductionAxis: [0]).toValue(),
           equals([
             [2.0, 3.0],
             [4.0, 5.0]
           ]));
       expect(
-          createTestNDArray([2, 2, 2])
+          createTestNDArray([2, 2, 2], dataType: NDDataType.float32)
               .reduceMean(reductionAxis: [0, 1]).toValue(),
           equals([3.0, 4.0]));
       expect(
-          createTestNDArray([2, 2, 2])
+          createTestNDArray([2, 2, 2], dataType: NDDataType.float32)
               .reduceMean(reductionAxis: [2, 1]).toValue(),
           equals([1.5, 5.5]));
     });
@@ -193,7 +198,7 @@ void main() {
           ]));
 
       expect(
-          createTestNDArray([2, 2, 2])
+          createTestNDArray([2, 2, 2], dataType: NDDataType.float32)
               .reduceMean(keepDimensions: true)
               .toValue(),
           equals([
@@ -202,7 +207,7 @@ void main() {
             ]
           ]));
       expect(
-          createTestNDArray([2, 2, 2])
+          createTestNDArray([2, 2, 2], dataType: NDDataType.float32)
               .reduceMean(reductionAxis: [0], keepDimensions: true).toValue(),
           equals([
             [
@@ -211,7 +216,7 @@ void main() {
             ]
           ]));
       expect(
-          createTestNDArray([2, 2, 2]).reduceMean(
+          createTestNDArray([2, 2, 2], dataType: NDDataType.float32).reduceMean(
               reductionAxis: [0, 1], keepDimensions: true).toValue(),
           equals([
             [
@@ -219,7 +224,7 @@ void main() {
             ]
           ]));
       expect(
-          createTestNDArray([2, 2, 2]).reduceMean(
+          createTestNDArray([2, 2, 2], dataType: NDDataType.float32).reduceMean(
               reductionAxis: [2, 1], keepDimensions: true).toValue(),
           equals([
             [

@@ -25,12 +25,21 @@ class NDDescriptor implements NDObject {
   NDDescriptor get descriptor => this;
 
   bool isCompatibleWith(NDDescriptor descriptor2) =>
-      dataType == descriptor2.dataType &&
-      shape.isMergeableWith(descriptor2.shape);
+      dataType.isCompatibleWith(descriptor2.dataType) &&
+      shape.isCompatibleWith(descriptor2.shape);
+
+  @override
+  // ignore: hash_and_equals
+  bool operator ==(other) => other is NDDescriptor
+      ? dataType == other.dataType && shape == other.shape
+      : false;
 
   NDDescriptor mergeWith(NDDescriptor descriptor2) => new NDDescriptor(
       shape: shape.mergeWith(descriptor2.shape),
       dataType: dataType.mergeWith(descriptor2.dataType));
+
+  @override
+  NDDescriptor normalize({covariant NDDescriptor reuse}) => descriptor;
 
   @override
   NDDescriptor cast(NDDataType toDataType, {covariant NDDescriptor reuse}) {
@@ -101,9 +110,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor matMul(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) != NDArray(${descriptor2.dataType}): supported operation only with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     } else if (!dataType.isNumeric) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only numeric data type");
@@ -126,9 +135,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor isEqual(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (this.dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) == NDArray(${descriptor2.dataType}): supported only comparison with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     }
 
     return new NDDescriptor(
@@ -139,9 +148,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor isGreater(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (this.dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) > NDArray(${descriptor2.dataType}): supported only comparison with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     }
 
     return new NDDescriptor(
@@ -152,9 +161,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor isGreaterOrEqual(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (this.dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) >= NDArray(${descriptor2.dataType}): supported only comparison with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     }
 
     return new NDDescriptor(
@@ -165,9 +174,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor isLess(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (this.dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) < NDArray(${descriptor2.dataType}): supported only comparison with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     }
 
     return new NDDescriptor(
@@ -178,9 +187,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor isLessOrEqual(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (this.dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) <= NDArray(${descriptor2.dataType}): supported only comparison with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     }
 
     return new NDDescriptor(
@@ -191,9 +200,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor isNotEqual(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (this.dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) != NDArray(${descriptor2.dataType}): supported only comparison with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     }
 
     return new NDDescriptor(
@@ -208,9 +217,10 @@ class NDDescriptor implements NDObject {
     if (!this.dataType.isBoolean) {
       throw new UnsupportedError(
           "Select on NDArray(${this.dataType}) condition: supported only ${NDDataType.boolean}");
-    } else if (thenDescriptor.dataType != elseDescriptor.dataType) {
+    } else if (!thenDescriptor.dataType
+        .isCompatibleWith(elseDescriptor.dataType)) {
       throw new UnsupportedError(
-          "NDArray(${thenDescriptor.dataType}) != NDArray(${elseDescriptor.dataType}): supported select only with the same data type");
+          "NDArray(${thenDescriptor.dataType}) is not compatible with NDArray(${elseDescriptor.dataType})");
     }
 
     return new NDDescriptor(
@@ -363,9 +373,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor sub(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) != NDArray(${descriptor2.dataType}): supported operation only with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     } else if (!dataType.isNumeric) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only numeric data type");
@@ -377,9 +387,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor mul(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) != NDArray(${descriptor2.dataType}): supported operation only with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     } else if (!dataType.isNumeric) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only numeric data type");
@@ -391,9 +401,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor add(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) != NDArray(${descriptor2.dataType}): supported operation only with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     } else if (!dataType.isNumeric) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only numeric data type");
@@ -405,9 +415,9 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor div(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (dataType != descriptor2.dataType) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
-          "NDArray($dataType) != NDArray(${descriptor2.dataType}): supported operation only with the same data type");
+          "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     } else if (!dataType.isFloat) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only float data type");

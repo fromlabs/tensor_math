@@ -3,7 +3,11 @@
 
 import "dart:math";
 
+import 'package:collection/collection.dart';
+
 import "nd_data_type.dart";
+
+final _iterableEquality = new IterableEquality<int>();
 
 class NDShape {
   final List<int> dimensions;
@@ -37,7 +41,7 @@ class NDShape {
 
   int operator [](int axe) => get(axe);
 
-  bool isMergeableWith(NDShape shape2) {
+  bool isCompatibleWith(NDShape shape2) {
     if (isUnknownDimension || shape2.isUnknownDimension) {
       return true;
     } else if (dimension != shape2.dimension) {
@@ -59,6 +63,12 @@ class NDShape {
     }
     return true;
   }
+
+  @override
+  // ignore: hash_and_equals
+  bool operator ==(other) => other is NDShape
+      ? _iterableEquality.equals(dimensions, other.dimensions)
+      : false;
 
   NDShape matMul(covariant NDShape shape2) => _matMul(shape2);
 
@@ -230,9 +240,7 @@ class NDShape {
         return new NDShape(resultDimensions);
       }
     } else if (shape2.dimension == null) {
-      if (dimension == null) {
-        return this;
-      } else if (dimension < 2) {
+      if (dimension < 2) {
         throw new ArgumentError("Shape dimension must be almost 2: $this");
       } else {
         var resultDimensions = new List(dimension);

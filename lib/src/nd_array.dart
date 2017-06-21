@@ -5,47 +5,34 @@ import "nd_object.dart";
 
 import "nd_shape.dart";
 import "nd_data_type.dart";
-import "nd_array_impl.dart";
+import "nd_array_base.dart";
 
-export "nd_array_impl.dart" show adds, toNDArray;
+export "nd_array_base.dart" show adds, toNDArray;
 
 abstract class NDArray implements NDObject {
   factory NDArray(value, {NDDataType dataType, NDArray reuse}) =>
-      new NDArrayImpl(value, dataType, reuse);
+      new NDArrayBase(value, dataType, reuse);
 
   factory NDArray.zeros(List<int> dimensions,
-      {NDDataType dataType, NDArray reuse}) {
-    var shape = new NDShape(dimensions);
-
-    return new NDArrayImpl(new List.filled(shape.length, 0), dataType, reuse)
-        .reshape(newDimensions: dimensions);
-  }
+          {NDDataType dataType, NDArray reuse}) =>
+      new NDArrayBase.filled(dimensions, 0, dataType, reuse);
 
   factory NDArray.ones(List<int> dimensions,
-      {NDDataType dataType, NDArray reuse}) {
-    var shape = new NDShape(dimensions);
+          {NDDataType dataType, NDArray reuse}) =>
+      new NDArrayBase.filled(dimensions, 1, dataType, reuse);
 
-    return new NDArrayImpl(new List.filled(shape.length, 1), dataType, reuse)
-        .reshape(newDimensions: dimensions);
-  }
-
-  factory NDArray.filled(List<int> dimensions, dynamic value,
-      {NDDataType dataType, NDArray reuse}) {
-    var shape = new NDShape(dimensions);
-
-    return new NDArrayImpl(
-            new List.filled(shape.length, value), dataType, reuse)
-        .reshape(newDimensions: dimensions);
-  }
+  factory NDArray.filled(List<int> dimensions, dynamic fillValue,
+          {NDDataType dataType, NDArray reuse}) =>
+      new NDArrayBase.filled(dimensions, fillValue, dataType, reuse);
 
   factory NDArray.generate(List<int> dimensions, dynamic generator(int index),
-      {NDDataType dataType, NDArray reuse}) {
-    var shape = new NDShape(dimensions);
+          {NDDataType dataType, NDArray reuse}) =>
+      new NDArrayBase.generate(dimensions, generator, dataType, reuse);
 
-    return new NDArrayImpl(
-            new List.generate(shape.length, generator), dataType, reuse)
-        .reshape(newDimensions: dimensions);
-  }
+  bool get isNormalized;
+
+  @override
+  NDArray normalize({covariant NDArray reuse});
 
   dynamic toValue();
 

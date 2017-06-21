@@ -2,9 +2,7 @@
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
 import "dart:typed_data";
-import "dart:math" as math;
 
-import "package:meta/meta.dart";
 import "package:collection/collection.dart";
 
 import 'nd_descriptor.dart';
@@ -12,176 +10,121 @@ import 'nd_shape.dart';
 import 'nd_data_type.dart';
 import "nd_array.dart";
 
-NDArray createTestNDArray(List<int> dimensions, {NDDataType dataType}) =>
-    new NDArray.generate(dimensions, (index) => index, dataType: dataType);
+import "nd_array_base.dart";
 
-NDArray adds(Iterable values, {NDDataType dataType, NDArray reuse}) {
-  // TODO versione ottimizzata di adds
-
-  // TODO sfruttare reuse se possibile
-
-  var arrays = values
-      .map<NDArray>((value) => toNDArray(value, dataType: dataType))
-      .toList();
-
-  if (arrays.length > 1) {
-    return arrays.reduce((total, element) => total + element);
-  } else {
-    return arrays.first;
-  }
-}
-
-NDArray toNDArray(value, {NDDataType dataType}) {
-  if (value is NDArray) {
-    if (dataType != null && value.dataType != dataType) {
-      throw new UnsupportedError(
-          "NDArray(${value.dataType}) != NDArray($dataType)");
-    }
-
-    return value;
-  } else {
-    return new NDArray(value, dataType: dataType);
-  }
-}
-
-final _iterableEquality = new IterableEquality<dynamic>();
-
-class NDArrayImpl implements NDArray {
-  @override
-  final NDDescriptor descriptor;
-
+class NDArrayImpl extends NDArrayBase {
   final List _data;
 
-  final List<int> _stride;
+  final _DataInfo _dataInfo;
 
-  final int _offset;
-
-  factory NDArrayImpl(value, NDDataType dataType, NDArray reuse) {
-    var shape = _calculateShape(value);
-    var newDataType = dataType ?? _calculateDataType(value);
-    var descriptor = new NDDescriptor(shape: shape, dataType: newDataType);
-    var stride = _calculateDefaultStride(shape);
+  factory NDArrayImpl(value, NDDescriptor descriptor, NDArray reuse) {
+    var dataInfo = _createNormalizedDataInfo(descriptor.shape);
 
     var data = _createData(descriptor, reuse);
 
     _loadData(value, data, descriptor);
 
-    return new NDArrayImpl._(data, descriptor, stride, 0);
+    return new NDArrayImpl._(data, descriptor, dataInfo);
   }
 
-  NDArrayImpl._(this._data, this.descriptor, this._stride, this._offset);
+  factory NDArrayImpl.filled(
+          fillValue, NDDescriptor descriptor, NDArray reuse) =>
+      new NDArrayImpl.generate((index) => fillValue, descriptor, reuse);
+
+  factory NDArrayImpl.generate(
+      generator(int index), NDDescriptor descriptor, NDArray reuse) {
+    var dataInfo = _createNormalizedDataInfo(descriptor.shape);
+
+    var data = _createData(descriptor, reuse);
+
+    _generateData(generator, data, descriptor);
+
+    return new NDArrayImpl._(data, descriptor, dataInfo);
+  }
+
+  factory NDArrayImpl.castFrom(
+      NDArrayBase fromArray, NDDataType toDataType, NDArray reuse) {
+    var resultDescriptor = fromArray.descriptor.cast(toDataType);
+
+    var dataInfo = _createNormalizedDataInfo(resultDescriptor.shape);
+
+    var data = _createData(resultDescriptor, reuse);
+
+    _castData(fromArray, data, resultDescriptor);
+
+    return new NDArrayImpl._(data, resultDescriptor, dataInfo);
+  }
+
+  NDArrayImpl._(this._data, NDDescriptor descriptor, this._dataInfo)
+      : super.raw(descriptor);
 
   @override
-  NDDataType get dataType => descriptor.dataType;
+  Iterable get valueIterable =>
+      _createValueIterable(_data, descriptor, _dataInfo);
 
   @override
-  NDShape get shape => descriptor.shape;
-
-  @override
-  dynamic toValue() => _toValue();
-
-  @override
-  E toScalar<E>() {
+  dynamic toValue() {
     if (shape.isScalar) {
-      return toValue();
+      return _data[_dataInfo.offset];
     } else {
-      throw new StateError("Not a scalar (shape: $shape)");
+      var shapeIndex = 0;
+      var dimensionValues = new List(shape.dimension);
+      var dimensionIndexes = new List(shape.dimension);
+      var dataIndexes = new List(shape.dimension);
+      var dataIndex = dataIndexes[shapeIndex] = _dataInfo.offset;
+      var resultValues =
+          dimensionValues[shapeIndex] = new List(shape[shapeIndex]);
+      var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+      var i = 0;
+      while (i < shape.length) {
+        if (dimensionIndex < shape[shapeIndex]) {
+          if (shapeIndex == shape.dimension - 1) {
+            var axeDimension = shape[shapeIndex];
+            var axeStride = _dataInfo.stride[shapeIndex];
+            while (dimensionIndex < axeDimension) {
+              resultValues[dimensionIndex++] = _data[dataIndex];
+              dataIndex += axeStride;
+              i++;
+            }
+          } else {
+            shapeIndex++;
+            dimensionValues[shapeIndex] = new List(shape[shapeIndex]);
+            resultValues =
+                resultValues[dimensionIndex] = dimensionValues[shapeIndex];
+            dataIndexes[shapeIndex] = dataIndex;
+            dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+          }
+        } else {
+          shapeIndex--;
+          dataIndex = dataIndexes[shapeIndex] =
+              dataIndexes[shapeIndex] + _dataInfo.stride[shapeIndex];
+          resultValues = dimensionValues[shapeIndex];
+          dimensionIndex =
+              dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
+        }
+      }
+      return dimensionValues[0];
     }
   }
 
   @override
-  List<E> toVector<E>() {
-    if (shape.isVector) {
-      return toValue();
-    } else {
-      throw new StateError("Not a vector (shape: $shape)");
-    }
-  }
+  bool get isNormalized => _dataInfo == _createNormalizedDataInfo(shape);
 
   @override
-  List<List<E>> toMatrix<E>() {
-    if (shape.isMatrix) {
-      return toValue();
-    } else {
-      throw new StateError("Not a matrix (shape: $shape)");
-    }
-  }
-
-  @override
-  List<List<List<E>>> toTensor3D<E>() {
-    if (shape.isTensor3D) {
-      return toValue();
-    } else {
-      throw new StateError("Not a 3-dimensional tensor (shape: $shape)");
-    }
-  }
-
-  @override
-  List<List<List<List<E>>>> toTensor4D<E>() {
-    if (shape.isTensor4D) {
-      return toValue();
-    } else {
-      throw new StateError("Not a 4-dimensional tensor (shape: $shape)");
-    }
-  }
-
-  @override
-  NDArray cast(NDDataType toDataType, {NDArray reuse}) {
-    var resultDescriptor = descriptor.cast(toDataType);
-
-    if (dataType == toDataType) {
+  NDArray normalize({NDArray reuse}) {
+    if (isNormalized) {
       return this;
-    } else if ((dataType.isFloat && toDataType.isFloat) ||
-        (dataType.isInteger && toDataType.isInteger)) {
-      return _elementWiseUnaryOperation(
-          resultDescriptor, reuse, (num value) => value);
-    } else if (dataType.isFloat && toDataType.isInteger) {
-      return _elementWiseUnaryOperation(
-          resultDescriptor, reuse, (double value) => value.toInt());
-    } else if (dataType.isInteger && toDataType.isFloat) {
-      return _elementWiseUnaryOperation(
-          resultDescriptor, reuse, (int value) => value.toDouble());
-    } else if (dataType.isNumeric && toDataType.isBoolean) {
-      return _elementWiseUnaryOperation(
-          resultDescriptor, reuse, (num value) => value != 0);
-    } else if (dataType.isBoolean && dataType.isFloat) {
-      return _elementWiseUnaryOperation(
-          resultDescriptor, reuse, (bool value) => value ? 1.0 : 0.0);
-    } else if (dataType.isBoolean && toDataType.isInteger) {
-      return _elementWiseUnaryOperation(
-          resultDescriptor, reuse, (bool value) => value ? 1 : 0);
     } else {
-      throw new StateError("DEAD CODE");
+      var resultDescriptor = descriptor;
+
+      var resultDataInfo = _createNormalizedDataInfo(resultDescriptor.shape);
+
+      var resultData = elementWiseUnaryOperationInternal(
+          resultDescriptor, reuse, (value) => value)._data;
+
+      return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
     }
   }
-
-  @override
-  NDArray abs({NDArray reuse}) => _elementWiseUnaryOperation(
-      descriptor.abs(), reuse, (value) => value.abs());
-
-  @override
-  NDArray exp({NDArray reuse}) => _elementWiseUnaryOperation(
-      descriptor.exp(), reuse, (value) => math.exp(value));
-
-  @override
-  NDArray inv({NDArray reuse}) =>
-      _elementWiseUnaryOperation(descriptor.inv(), reuse, (value) => 1 / value);
-
-  @override
-  NDArray log({NDArray reuse}) => _elementWiseUnaryOperation(
-      descriptor.log(), reuse, (value) => math.log(value));
-
-  @override
-  NDArray neg({NDArray reuse}) =>
-      _elementWiseUnaryOperation(descriptor.neg(), reuse, (value) => -value);
-
-  @override
-  NDArray sign({NDArray reuse}) => _elementWiseUnaryOperation(
-      descriptor.sign(), reuse, (value) => value.sign());
-
-  @override
-  NDArray not({NDArray reuse}) =>
-      _elementWiseUnaryOperation(descriptor.not(), reuse, (value) => !value);
 
   @override
   NDArray reshape({List<int> newDimensions, NDArray reuse}) {
@@ -190,14 +133,39 @@ class NDArrayImpl implements NDArray {
     } else {
       var resultDescriptor = descriptor.reshape(newDimensions: newDimensions);
 
-      var identity =
-          _elementWiseUnaryOperation(resultDescriptor, reuse, (value) => value);
+      var resultDataInfo = _createNormalizedDataInfo(resultDescriptor.shape);
 
-      var resultStride = _calculateDefaultStride(resultDescriptor.shape);
+      var resultData;
+      if (isNormalized) {
+        resultData = _data;
+      } else {
+        resultData = elementWiseUnaryOperationInternal(
+            resultDescriptor, reuse, (value) => value)._data;
+      }
 
-      return new NDArrayImpl._(
-          identity._data, resultDescriptor, resultStride, 0);
+      return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
     }
+  }
+
+  @override
+  NDArray transpose({List<int> permutationAxis, NDArray reuse}) {
+    var resultDescriptor =
+        descriptor.transpose(permutationAxis: permutationAxis);
+
+    var newPermutationAxis = permutationAxis ??
+        new List.generate(
+            shape.dimension, (index) => shape.dimension - index - 1);
+
+    var resultStride = new List(shape.dimension);
+
+    for (var i = 0; i < newPermutationAxis.length; i++) {
+      var permutationAxe = newPermutationAxis[i];
+      resultStride[i] = _dataInfo.stride[permutationAxe];
+    }
+
+    var resultDataInfo = new _DataInfo(resultStride, _dataInfo.offset);
+
+    return new NDArrayImpl._(_data, resultDescriptor, resultDataInfo);
   }
 
   @override
@@ -205,15 +173,15 @@ class NDArrayImpl implements NDArray {
     var resultDescriptor = descriptor.tile(multiplies);
     var resultShape = resultDescriptor.shape;
     var resultData = _createData(resultDescriptor, reuse);
-    var resultStride = _calculateDefaultStride(resultShape);
+    var resultDataInfo = _createNormalizedDataInfo(resultShape);
 
     var shapeIndex = 0;
     var dimensionIndexes = new List(resultShape.dimension);
     var dimensionSourceIndexes = new List(resultShape.dimension);
     var data1Indexes = new List(resultShape.dimension);
     var startData1Indexes = new List(resultShape.dimension);
-    var stride1 = _stride;
-    var data1Index = data1Indexes[shapeIndex] = _offset;
+    var stride1 = _dataInfo.stride;
+    var data1Index = data1Indexes[shapeIndex] = _dataInfo.offset;
     var startData1Index = startData1Indexes[shapeIndex] = data1Index;
     var resultDataIndex = 0;
     var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
@@ -253,47 +221,24 @@ class NDArrayImpl implements NDArray {
       }
     }
 
-    return new NDArrayImpl._(resultData, resultDescriptor, resultStride, 0);
-  }
-
-  @override
-  NDArray transpose({List<int> permutationAxis, NDArray reuse}) {
-    var resultDescriptor =
-        descriptor.transpose(permutationAxis: permutationAxis);
-
-    var newPermutationAxis = permutationAxis ??
-        new List.generate(
-            shape.dimension, (index) => shape.dimension - index - 1);
-
-    var resultStride = new List(shape.dimension);
-
-    for (var i = 0; i < newPermutationAxis.length; i++) {
-      var permutationAxe = newPermutationAxis[i];
-      resultStride[i] = _stride[permutationAxe];
-    }
-
-    return new NDArrayImpl._(_data, resultDescriptor, resultStride, _offset);
+    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
   }
 
   @override
   NDArray matMul(value2, {NDArray reuse}) {
     NDArrayImpl array2 = toNDArray(value2, dataType: dataType);
 
-    if (dataType == NDDataType.float32) {
-      return matMulFloat32x4(this, array2);
-    }
-
     var resultDescriptor = descriptor.matMul(array2.descriptor);
     var resultShape = resultDescriptor.shape;
     var resultData = _createData(resultDescriptor, reuse);
-    var resultStride = _calculateDefaultStride(resultShape);
+    var resultDataInfo = _createNormalizedDataInfo(resultShape);
 
     var shapeIndex = 0;
     var dimensionIndexes = new List(resultShape.dimension);
     var data1Indexes = new List(resultShape.dimension);
-    var data1Index = data1Indexes[shapeIndex] = _offset;
+    var data1Index = data1Indexes[shapeIndex] = _dataInfo.offset;
     var data2Indexes = new List(resultShape.dimension);
-    var data2Index = data2Indexes[shapeIndex] = array2._offset;
+    var data2Index = data2Indexes[shapeIndex] = array2._dataInfo.offset;
     var resultDataIndex = 0;
     var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
     while (resultDataIndex < resultData.length) {
@@ -302,10 +247,10 @@ class NDArrayImpl implements NDArray {
           var shapeDimension1 = shape[shapeIndex];
           var shapeDimensionInternal = shape[shapeIndex + 1];
           var shapeDimension2 = array2.shape[shapeIndex + 1];
-          var stride1 = _stride[shapeIndex];
-          var stride1Internal = _stride[shapeIndex + 1];
-          var stride2Internal = array2._stride[shapeIndex];
-          var stride2 = array2._stride[shapeIndex + 1];
+          var stride1 = _dataInfo.stride[shapeIndex];
+          var stride1Internal = _dataInfo.stride[shapeIndex + 1];
+          var stride2Internal = array2._dataInfo.stride[shapeIndex];
+          var stride2 = array2._dataInfo.stride[shapeIndex + 1];
 
           for (var row1Index = 0, rowData1Index = data1Index;
               row1Index < shapeDimension1;
@@ -337,410 +282,45 @@ class NDArrayImpl implements NDArray {
       } else {
         shapeIndex--;
         data1Index = data1Indexes[shapeIndex] =
-            data1Indexes[shapeIndex] + _stride[shapeIndex];
+            data1Indexes[shapeIndex] + _dataInfo.stride[shapeIndex];
         data2Index = data2Indexes[shapeIndex] =
-            data2Indexes[shapeIndex] + array2._stride[shapeIndex];
+            data2Indexes[shapeIndex] + array2._dataInfo.stride[shapeIndex];
         dimensionIndex =
             dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
       }
     }
 
-    return new NDArrayImpl._(resultData, resultDescriptor, resultStride, 0);
-  }
-
-  @override
-  NDArray reduceSum(
-      {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
-    var resultDescriptor = descriptor.reduceSum(
-        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
-
-    var total;
-
-    return _reduceOperation(
-        reductionAxis, keepDimensions, resultDescriptor, reuse,
-        initReduction: () {
-          total = 0;
-        },
-        onValueToReduce: (int valueIndex, value) {
-          total += value;
-        },
-        reduce: () => total);
-  }
-
-  @override
-  NDArray reduceMean(
-      {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
-    var resultDescriptor = descriptor.reduceMean(
-        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
-
-    var total;
-    var count;
-
-    return _reduceOperation(
-        reductionAxis, keepDimensions, resultDescriptor, reuse,
-        initReduction: () {
-          total = 0;
-          count = 0;
-        },
-        onValueToReduce: (int valueIndex, value) {
-          total += value;
-          count++;
-        },
-        reduce: () => total / count);
-  }
-
-  @override
-  NDArray reduceMax(
-      {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
-    var resultDescriptor = descriptor.reduceMax(
-        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
-
-    var maxValue;
-
-    return _reduceOperation(
-        reductionAxis, keepDimensions, resultDescriptor, reuse,
-        initReduction: () {
-          maxValue = null;
-        },
-        onValueToReduce: (int valueIndex, value) {
-          if (maxValue == null || value > maxValue) {
-            maxValue = value;
-          }
-        },
-        reduce: () => maxValue);
-  }
-
-  @override
-  NDArray reduceAny(
-      {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
-    var resultDescriptor = descriptor.reduceAny(
-        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
-
-    bool total;
-
-    return _reduceOperation(
-        reductionAxis, keepDimensions, resultDescriptor, reuse,
-        initReduction: () {
-          total = false;
-        },
-        onValueToReduce: (int valueIndex, bool value) {
-          total = total || value;
-        },
-        reduce: () => total);
-  }
-
-  @override
-  NDArray argMax({int axis, NDArray reuse}) {
-    if (axis != null) {
-      var resultDescriptor = descriptor.argMax(axis: axis);
-
-      var maxValueIndex;
-      var maxValue;
-
-      return _reduceOperation([axis], false, resultDescriptor, reuse,
-          initReduction: () {
-            maxValueIndex = null;
-            maxValue = null;
-          },
-          onValueToReduce: (int valueIndex, value) {
-            if (maxValue == null || value > maxValue) {
-              maxValueIndex = valueIndex;
-              maxValue = value;
-            }
-          },
-          reduce: () => maxValueIndex);
-    } else {
-      return reshape(newDimensions: [-1]).argMax(axis: 0, reuse: reuse);
-    }
-  }
-
-  @override
-  NDArray add(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.add(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 + value2);
-  }
-
-  @override
-  NDArray div(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.div(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 / value2);
-  }
-
-  @override
-  NDArray isGreater(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.isGreater(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 > value2);
-  }
-
-  @override
-  NDArray isGreaterOrEqual(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.isGreaterOrEqual(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 >= value2);
-  }
-
-  @override
-  NDArray isLess(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.isLess(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 < value2);
-  }
-
-  @override
-  NDArray isLessOrEqual(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.isLessOrEqual(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 <= value2);
-  }
-
-  @override
-  NDArray mul(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.mul(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 * value2);
-  }
-
-  @override
-  NDArray isEqual(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.isEqual(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 == value2);
-  }
-
-  @override
-  NDArray isNotEqual(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.isNotEqual(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 != value2);
-  }
-
-  @override
-  NDArray sub(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.sub(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 - value2);
-  }
-
-  @override
-  NDArray operator *(value2) => mul(value2);
-
-  @override
-  NDArray operator +(value2) => add(value2);
-
-  @override
-  NDArray operator -() => neg();
-
-  @override
-  NDArray operator -(value2) => sub(value2);
-
-  @override
-  NDArray operator /(value2) => div(value2);
-
-  @override
-  NDArray operator <(value2) => isLess(value2);
-
-  @override
-  NDArray operator <=(value2) => isLessOrEqual(value2);
-
-  @override
-  NDArray operator >(value2) => isGreater(value2);
-
-  @override
-  NDArray operator >=(value2) => isGreaterOrEqual(value2);
-
-  @override
-  NDArray select(thenValue, elseValue, {NDDataType dataType, NDArray reuse}) {
-    var thenArray = toNDArray(thenValue, dataType: dataType);
-    var elseArray = toNDArray(elseValue, dataType: dataType);
-
-    return _elementWiseTernaryOperation(
-        thenArray,
-        elseArray,
-        descriptor.select(thenArray.descriptor, elseArray.descriptor),
-        reuse,
-        (value1, value2, value3) => value1 ? value2 : value3);
-  }
-
-  @override
-  NDArray elementWiseUnaryOperation(
-          {NDDataType resultDataType,
-          covariant NDArray reuse,
-          unaryOperation(value)}) =>
-      _elementWiseUnaryOperation(
-          descriptor.elementWiseUnaryOperation(resultDataType: resultDataType),
-          reuse,
-          unaryOperation);
-
-  @override
-  NDArray elementWiseBinaryOperation(covariant NDArray value2,
-      {NDDataType dataType2,
-      @required NDDataType resultDataType,
-      covariant NDArray reuse,
-      binaryOperation(value1, value2)}) {
-    var array2 = toNDArray(value2, dataType: dataType2);
-
-    return _elementWiseBinaryOperation(
-        array2,
-        descriptor.elementWiseBinaryOperation(array2.descriptor,
-            resultDataType: resultDataType),
-        reuse,
-        binaryOperation);
-  }
-
-  @override
-  NDArray elementWiseTernaryOperation(
-      covariant NDArray value2, covariant NDArray value3,
-      {NDDataType dataType2,
-      NDDataType dataType3,
-      NDDataType resultDataType,
-      covariant NDArray reuse,
-      ternaryOperation(value1, value2, value3)}) {
-    var array2 = toNDArray(value2, dataType: dataType2);
-    var array3 = toNDArray(value3, dataType: dataType3);
-
-    return _elementWiseTernaryOperation(
-        array2,
-        array3,
-        descriptor.elementWiseTernaryOperation(
-            array2.descriptor, array3.descriptor,
-            resultDataType: resultDataType),
-        reuse,
-        ternaryOperation);
-  }
-
-  @override
-  NDArray reduceOperation(
-      {List<int> reductionAxis,
-      bool keepDimensions = false,
-      NDDataType resultDataType,
-      covariant NDArray reuse,
-      @required void initReduction(),
-      @required void onValueToReduce(int valueIndex, value),
-      @required dynamic reduce()}) {
-    var resultDescriptor = descriptor.reduceOperation(
-        reductionAxis: reductionAxis,
-        keepDimensions: keepDimensions,
-        resultDataType: resultDataType);
-
-    return _reduceOperation(
-        reductionAxis, keepDimensions, resultDescriptor, reuse,
-        initReduction: initReduction,
-        onValueToReduce: onValueToReduce,
-        reduce: reduce);
+    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
   }
 
   @override
   String toString() =>
-      "<value: ${_toValue()}, shape: $shape, dataType: $dataType, stride: $_stride, offset: $_offset>";
+      "<value: ${toValue()}, shape: $shape, dataType: $dataType, stride: $_dataInfo.stride, offset: $_dataInfo.offset>";
 
-  dynamic _toValue() {
-    if (shape.isScalar) {
-      return _data[_offset];
-    } else {
-      var shapeIndex = 0;
-      var dimensionValues = new List(shape.dimension);
-      var dimensionIndexes = new List(shape.dimension);
-      var dataIndexes = new List(shape.dimension);
-      var dataIndex = dataIndexes[shapeIndex] = _offset;
-      var resultValues =
-          dimensionValues[shapeIndex] = new List(shape[shapeIndex]);
-      var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-      var i = 0;
-      while (i < shape.length) {
-        if (dimensionIndex < shape[shapeIndex]) {
-          if (shapeIndex == shape.dimension - 1) {
-            // TODO ciclo while interno
-            resultValues[dimensionIndex] = _data[dataIndex];
-            dataIndex += _stride[shapeIndex];
-            dimensionIndex++;
-            i++;
-          } else {
-            shapeIndex++;
-            dimensionValues[shapeIndex] = new List(shape[shapeIndex]);
-            resultValues =
-                resultValues[dimensionIndex] = dimensionValues[shapeIndex];
-            dataIndexes[shapeIndex] = dataIndex;
-            dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-          }
-        } else {
-          shapeIndex--;
-          dataIndex = dataIndexes[shapeIndex] =
-              dataIndexes[shapeIndex] + _stride[shapeIndex];
-          resultValues = dimensionValues[shapeIndex];
-          dimensionIndex =
-              dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
-        }
-      }
-      return dimensionValues[0];
-    }
-  }
-
-  NDArrayImpl _elementWiseUnaryOperation(
+  @override
+  NDArrayImpl elementWiseUnaryOperationInternal(
       NDDescriptor resultDescriptor, NDArray reuse, unaryOperation(value)) {
     var resultData = _createData(resultDescriptor, reuse);
-    var resultStride;
+    var resultDataInfo;
 
     if (shape.isScalar) {
-      resultStride = _stride;
+      resultDataInfo = new _DataInfo(_dataInfo.stride, 0);
 
-      resultData[0] = unaryOperation(_data[_offset]);
+      resultData[0] = unaryOperation(_data[_dataInfo.offset]);
     } else {
-      resultStride = _calculateDefaultStride(shape);
+      resultDataInfo = _createNormalizedDataInfo(resultDescriptor.shape);
 
       var shapeIndex = 0;
       var dimensionIndexes = new List(shape.dimension);
       var dataIndexes = new List(shape.dimension);
-      var dataIndex = dataIndexes[shapeIndex] = _offset;
+      var dataIndex = dataIndexes[shapeIndex] = _dataInfo.offset;
       var resultDataIndex = 0;
       var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
       while (resultDataIndex < resultData.length) {
         if (dimensionIndex < shape[shapeIndex]) {
           if (shapeIndex == shape.dimension - 1) {
             var axeDimension = shape[shapeIndex];
-            var axeStride = _stride[shapeIndex];
+            var axeStride = _dataInfo.stride[shapeIndex];
             while (dimensionIndex++ < axeDimension) {
               resultData[resultDataIndex++] = unaryOperation(_data[dataIndex]);
               dataIndex += axeStride;
@@ -753,41 +333,42 @@ class NDArrayImpl implements NDArray {
         } else {
           shapeIndex--;
           dataIndex = dataIndexes[shapeIndex] =
-              dataIndexes[shapeIndex] + _stride[shapeIndex];
+              dataIndexes[shapeIndex] + _dataInfo.stride[shapeIndex];
           dimensionIndex =
               dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
         }
       }
     }
 
-    return new NDArrayImpl._(resultData, resultDescriptor, resultStride, 0);
+    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
   }
 
-  NDArrayImpl _elementWiseBinaryOperation(
-      NDArrayImpl array2,
+  @override
+  NDArrayImpl elementWiseBinaryOperationInternal(
+      covariant NDArrayImpl array2,
       NDDescriptor resultDescriptor,
       NDArray reuse,
       binaryOperation(value1, value2)) {
     var resultShape = resultDescriptor.shape;
     var resultData = _createData(resultDescriptor, reuse);
-    var resultStride;
+    var resultDataInfo;
 
     if (resultShape.isScalar) {
-      resultStride = _stride;
+      resultDataInfo = new _DataInfo(_dataInfo.stride, 0);
 
-      resultData[0] =
-          binaryOperation(_data[_offset], array2._data[array2._offset]);
+      resultData[0] = binaryOperation(
+          _data[_dataInfo.offset], array2._data[array2._dataInfo.offset]);
     } else {
-      resultStride = _calculateDefaultStride(resultShape);
+      resultDataInfo = _createNormalizedDataInfo(resultShape);
 
       var shapeIndex = 0;
       var dimensionIndexes = new List(resultShape.dimension);
       var data1Indexes = new List(resultShape.dimension);
       var stride1 = _calculateBroadcastedStride(resultShape, this);
-      var data1Index = data1Indexes[shapeIndex] = _offset;
+      var data1Index = data1Indexes[shapeIndex] = _dataInfo.offset;
       var data2Indexes = new List(resultShape.dimension);
       var stride2 = _calculateBroadcastedStride(resultShape, array2);
-      var data2Index = data2Indexes[shapeIndex] = array2._offset;
+      var data2Index = data2Indexes[shapeIndex] = array2._dataInfo.offset;
       var resultDataIndex = 0;
       var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
       while (resultDataIndex < resultData.length) {
@@ -816,43 +397,45 @@ class NDArrayImpl implements NDArray {
       }
     }
 
-    return new NDArrayImpl._(resultData, resultDescriptor, resultStride, 0);
+    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
   }
 
-  NDArrayImpl _elementWiseTernaryOperation(
-      NDArrayImpl array2,
-      NDArrayImpl array3,
+  @override
+  NDArrayImpl elementWiseTernaryOperationInternal(
+      covariant NDArrayImpl array2,
+      covariant NDArrayImpl array3,
       NDDescriptor resultDescriptor,
       NDArray reuse,
       ternaryOperation(value1, value2, value3)) {
     var resultShape = resultDescriptor.shape;
     var resultData = _createData(resultDescriptor, reuse);
-    var resultStride;
-    var resultOffset = 0;
+    var resultDataInfo;
 
     if (resultShape.isScalar) {
-      resultStride = _stride;
+      resultDataInfo = new _DataInfo(_dataInfo.stride, 0);
 
-      resultData[0] = ternaryOperation(_data[_offset],
-          array2._data[array2._offset], array3._data[array3._offset]);
+      resultData[0] = ternaryOperation(
+          _data[_dataInfo.offset],
+          array2._data[array2._dataInfo.offset],
+          array3._data[array3._dataInfo.offset]);
     } else {
-      resultStride = _calculateDefaultStride(resultShape);
+      resultDataInfo = _createNormalizedDataInfo(resultShape);
 
       var shapeIndex = 0;
       var dimensionIndexes = new List(resultShape.dimension);
       var data1Indexes = new List(resultShape.dimension);
       var stride1 = _calculateBroadcastedStride(resultShape, this);
       var data1Delta = stride1[shapeIndex];
-      var data1Index = data1Indexes[shapeIndex] = _offset;
+      var data1Index = data1Indexes[shapeIndex] = _dataInfo.offset;
       var data2Indexes = new List(resultShape.dimension);
       var stride2 = _calculateBroadcastedStride(resultShape, array2);
       var data2Delta = stride2[shapeIndex];
-      var data2Index = data2Indexes[shapeIndex] = array2._offset;
+      var data2Index = data2Indexes[shapeIndex] = array2._dataInfo.offset;
       var data3Indexes = new List(resultShape.dimension);
       var stride3 = _calculateBroadcastedStride(resultShape, array3);
       var data3Delta = stride3[shapeIndex];
-      var data3Index = data3Indexes[shapeIndex] = array3._offset;
-      var resultDataIndex = resultOffset;
+      var data3Index = data3Indexes[shapeIndex] = array3._dataInfo.offset;
+      var resultDataIndex = 0;
       var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
       while (resultDataIndex < resultData.length) {
         if (dimensionIndex < resultShape[shapeIndex]) {
@@ -890,11 +473,11 @@ class NDArrayImpl implements NDArray {
       }
     }
 
-    return new NDArrayImpl._(
-        resultData, resultDescriptor, resultStride, resultOffset);
+    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
   }
 
-  NDArray _reduceOperation(List<int> reductionAxis, bool keepDimensions,
+  @override
+  NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
       {void initReduction(),
       void onValueToReduce(int valueIndex, value),
@@ -905,7 +488,7 @@ class NDArrayImpl implements NDArray {
     if (newReductionAxis.isNotEmpty) {
       var resultShape = resultDescriptor.shape;
       var resultData = _createData(resultDescriptor, reuse);
-      var resultStride = _calculateDefaultStride(resultShape);
+      var resultDataInfo = _createNormalizedDataInfo(resultShape);
 
       var shapeIndex = 0;
       var permutedIndexes = new List(shape.dimension);
@@ -921,7 +504,8 @@ class NDArrayImpl implements NDArray {
       }
       var dimensionIndexes = new List(shape.dimension);
       var dataIndexes = new List(shape.dimension);
-      var dataIndex = dataIndexes[permutedIndexes[shapeIndex]] = _offset;
+      var dataIndex =
+          dataIndexes[permutedIndexes[shapeIndex]] = _dataInfo.offset;
       var resultDataIndex = 0;
       var dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
 
@@ -936,7 +520,7 @@ class NDArrayImpl implements NDArray {
           if (shapeIndex == shape.dimension - 1) {
             onValueToReduce(dimensionIndex, _data[dataIndex]);
 
-            dataIndex += _stride[permutedIndexes[shapeIndex]];
+            dataIndex += _dataInfo.stride[permutedIndexes[shapeIndex]];
             dimensionIndex++;
           } else {
             shapeIndex++;
@@ -953,57 +537,30 @@ class NDArrayImpl implements NDArray {
           if (shapeIndex >= 0) {
             dataIndex = dataIndexes[permutedIndexes[shapeIndex]] =
                 dataIndexes[permutedIndexes[shapeIndex]] +
-                    _stride[permutedIndexes[shapeIndex]];
+                    _dataInfo.stride[permutedIndexes[shapeIndex]];
             dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] =
                 dimensionIndexes[permutedIndexes[shapeIndex]] + 1;
           }
         }
       }
 
-      return new NDArrayImpl._(resultData, resultDescriptor, resultStride, 0);
+      return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
     } else {
       return this;
     }
   }
 }
 
-NDShape _calculateShape(value) {
-  var dimensions = [];
-  dynamic element = value;
-  while (element is List) {
-    dimensions.add(element.length);
-    element = element[0];
-  }
-  return new NDShape(dimensions);
-}
+final _iterableEquality = new IterableEquality<dynamic>();
 
-NDDataType _calculateDataType(value) {
-  dynamic firstValue = value;
-  while (firstValue is List) {
-    firstValue = firstValue[0];
-  }
-
-  if (firstValue is double) {
-    return NDDataType.float32;
-  } else if (firstValue is int) {
-    return NDDataType.int32;
-  } else if (firstValue is bool) {
-    return NDDataType.boolean;
-  } else if (firstValue is String) {
-    return NDDataType.string;
-  } else {
-    return NDDataType.generic;
-  }
-}
-
-List<int> _calculateDefaultStride(NDShape shape) {
+_DataInfo _createNormalizedDataInfo(NDShape shape) {
   List<int> stride = new List(shape.dimension);
   var factor = 1;
   for (var i = shape.dimension - 1; i >= 0; i--) {
     stride[i] = factor;
     factor *= shape[i];
   }
-  return stride;
+  return new _DataInfo(stride, 0);
 }
 
 void _loadData(value, List data, NDDescriptor descriptor) {
@@ -1052,6 +609,65 @@ void _loadConvertedData(
   }
 }
 
+void _generateData(generator(int index), List data, NDDescriptor descriptor) {
+  if (descriptor.dataType.isFloat) {
+    _generateConvertedData(
+        generator, data, descriptor, (num value) => value.toDouble());
+  } else if (descriptor.dataType.isInteger) {
+    _generateConvertedData(
+        generator, data, descriptor, (num value) => value.toInt());
+  } else {
+    _generateConvertedData(generator, data, descriptor, (value) => value);
+  }
+}
+
+void _generateConvertedData(generator(int index), List data,
+    NDDescriptor descriptor, dynamic converter(value)) {
+  for (var index = 0; index < descriptor.shape.length; index++) {
+    data[index] = converter(generator(index));
+  }
+}
+
+void _castData(NDArrayBase fromArray, List data, NDDescriptor descriptor) {
+  if ((fromArray.dataType.isFloat && descriptor.dataType.isFloat) ||
+      (fromArray.dataType.isInteger && descriptor.dataType.isInteger)) {
+    return _castConvertedData(
+        fromArray, data, descriptor, (num value) => value);
+  } else if (fromArray.dataType.isFloat && descriptor.dataType.isInteger) {
+    return _castConvertedData(
+        fromArray, data, descriptor, (double value) => value.toInt());
+  } else if (fromArray.dataType.isInteger && descriptor.dataType.isFloat) {
+    return _castConvertedData(
+        fromArray, data, descriptor, (int value) => value.toDouble());
+  } else if (fromArray.dataType.isNumeric && descriptor.dataType.isBoolean) {
+    return _castConvertedData(
+        fromArray, data, descriptor, (num value) => value != 0);
+  } else if (fromArray.dataType.isBoolean && descriptor.dataType.isFloat) {
+    return _castConvertedData(
+        fromArray, data, descriptor, (bool value) => value ? 1.0 : 0.0);
+  } else if (fromArray.dataType.isBoolean && descriptor.dataType.isInteger) {
+    return _castConvertedData(
+        fromArray, data, descriptor, (bool value) => value ? 1 : 0);
+  } else {
+    throw new StateError("DEAD CODE");
+  }
+}
+
+void _castConvertedData(NDArrayBase fromArray, List data,
+    NDDescriptor descriptor, dynamic converter(value)) {
+  var valueIterator = fromArray.valueIterable.iterator;
+
+  var shape = descriptor.shape;
+  if (shape.isScalar) {
+    data[0] = converter((valueIterator..moveNext()).current);
+  } else {
+    var dataIndex = 0;
+    while (valueIterator.moveNext()) {
+      data[dataIndex++] = converter(valueIterator.current);
+    }
+  }
+}
+
 List<int> _calculateBroadcastedStride(
         NDShape broadcastedShape, NDArrayImpl array) =>
     new List.generate(broadcastedShape.dimension, (index) {
@@ -1059,7 +675,7 @@ List<int> _calculateBroadcastedStride(
       if (index < dimensionDelta || array.shape[index - dimensionDelta] == 1) {
         return 0;
       } else {
-        return array._stride[index - dimensionDelta];
+        return array._dataInfo.stride[index - dimensionDelta];
       }
     }, growable: false);
 
@@ -1068,9 +684,7 @@ List _createData(NDDescriptor descriptor, NDArrayImpl reuse) {
     throw new ArgumentError.value(descriptor.dataType.toString(), "data type");
   }
 
-  if (reuse != null &&
-      reuse.dataType == descriptor.dataType &&
-      reuse._data.length == descriptor.shape.length) {
+  if (reuse != null && reuse.descriptor == descriptor) {
     return reuse._data;
   } else {
     switch (descriptor.dataType) {
@@ -1109,248 +723,59 @@ List _createData(NDDescriptor descriptor, NDArrayImpl reuse) {
   }
 }
 
-// TODO ottimizzare le matematiche
-
-// TODO supporto dimensioni > 2
-
-NDArray matMulFloat32x4(NDArray array1, NDArray array2) {
-  var resultDescriptor = array1.descriptor.matMul(array2.descriptor);
-
-  var list1 = _toFloat32x4ListHBlock(array1);
-
-  var list2 = _toFloat32x4ListVBlock(array2);
-
-  var resultList =
-      _matMulFloat32x4Internal(list1, array1.shape, list2, array2.shape);
-
-  return _fromFloat32x4ListHBlock(resultList, resultDescriptor);
-}
-
-Float32x4List _matMulFloat32x4Internal(
-    Float32x4List list1, NDShape shape1, Float32x4List list2, NDShape shape2) {
-  var rows1 = _toCeil4(shape1[shape1.dimension - 2]);
-  var columns1 = _toCeil4(shape1[shape1.dimension - 1]);
-  var rows2 = _toCeil4(shape2[shape2.dimension - 2]);
-  var columns2 = _toCeil4(shape2[shape2.dimension - 1]);
-
-  var resultList = new Float32x4List(rows1 * columns2 ~/ 4);
-
-  var blockPerRow1 = columns1 >> 2;
-  var blockPerColumn2 = rows2 >> 2;
-  var resultBlockPerRow = columns2 >> 2;
-
-  for (var row1 = 0; row1 < rows1; row1 += 4) {
-    var blockRow1 = row1 ~/ 4;
-    var blockOffset1 = row1 % 4;
-
-    for (var column2 = 0; column2 < columns2; column2 += 4) {
-      var blockColumn2 = column2 ~/ 4;
-
-      var result0 = new Float32x4.zero();
-      var result1 = new Float32x4.zero();
-      var result2 = new Float32x4.zero();
-      var result3 = new Float32x4.zero();
-
-      for (var i = 0; i < columns1; i += 4) {
-        var blockColumn1 = i ~/ 4;
-        var blockIndex1 = blockRow1 * blockPerRow1 + blockColumn1;
-        var i10 = blockIndex1 * 4 + blockOffset1;
-
-        var blockRow2 = i ~/ 4;
-        var blockOffset2 = i % 4;
-        var blockIndex2 = blockColumn2 * blockPerColumn2 + blockRow2;
-        var i20 = blockIndex2 * 4 + blockOffset2;
-
-        var b0 = list2[i20++];
-        var b1 = list2[i20++];
-        var b2 = list2[i20++];
-        var b3 = list2[i20++];
-
-        var a0 = list1[i10++];
-        result0 += a0.shuffle(Float32x4.XXXX) * b0 +
-            a0.shuffle(Float32x4.YYYY) * b1 +
-            a0.shuffle(Float32x4.ZZZZ) * b2 +
-            a0.shuffle(Float32x4.WWWW) * b3;
-
-        var a1 = list1[i10++];
-        result1 += a1.shuffle(Float32x4.XXXX) * b0 +
-            a1.shuffle(Float32x4.YYYY) * b1 +
-            a1.shuffle(Float32x4.ZZZZ) * b2 +
-            a1.shuffle(Float32x4.WWWW) * b3;
-
-        var a2 = list1[i10++];
-        result2 += a2.shuffle(Float32x4.XXXX) * b0 +
-            a2.shuffle(Float32x4.YYYY) * b1 +
-            a2.shuffle(Float32x4.ZZZZ) * b2 +
-            a2.shuffle(Float32x4.WWWW) * b3;
-
-        var a3 = list1[i10++];
-        result3 += a3.shuffle(Float32x4.XXXX) * b0 +
-            a3.shuffle(Float32x4.YYYY) * b1 +
-            a3.shuffle(Float32x4.ZZZZ) * b2 +
-            a3.shuffle(Float32x4.WWWW) * b3;
+Iterable<num> _createValueIterable(
+    List _data, NDDescriptor descriptor, _DataInfo dataInfo) sync* {
+  if (descriptor.shape.isScalar) {
+    yield _data[dataInfo.offset];
+  } else {
+    var shapeIndex = 0;
+    var dimensionIndexes = new List(descriptor.shape.dimension);
+    var dataIndexes = new List(descriptor.shape.dimension);
+    var dataIndex = dataIndexes[shapeIndex] = dataInfo.offset;
+    var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+    var i = 0;
+    while (i < descriptor.shape.length) {
+      if (dimensionIndex < descriptor.shape[shapeIndex]) {
+        if (shapeIndex == descriptor.shape.dimension - 1) {
+          var axeDimension = descriptor.shape[shapeIndex];
+          var axeStride = dataInfo.stride[shapeIndex];
+          while (dimensionIndex < axeDimension) {
+            yield _data[dataIndex];
+            dimensionIndex++;
+            dataIndex += axeStride;
+            i++;
+          }
+        } else {
+          shapeIndex++;
+          dataIndexes[shapeIndex] = dataIndex;
+          dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+        }
+      } else {
+        shapeIndex--;
+        dataIndex = dataIndexes[shapeIndex] =
+            dataIndexes[shapeIndex] + dataInfo.stride[shapeIndex];
+        dimensionIndex =
+            dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
       }
-
-      var resultBlockIndex = blockRow1 * resultBlockPerRow + blockColumn2;
-
-      var ir0 = resultBlockIndex * 4 + blockOffset1;
-      resultList[ir0++] = result0;
-      resultList[ir0++] = result1;
-      resultList[ir0++] = result2;
-      resultList[ir0++] = result3;
     }
   }
-
-  return resultList;
 }
 
-int _toCeil4(int value) => 4 * (value / 4).ceil();
+class _DataInfo {
+  final List<int> stride;
 
-Float32x4List _toFloat32x4ListHBlock(NDArrayImpl array) {
-  var blockPerColumn = (array.shape[array.shape.dimension - 2] / 4).ceil();
-  var blockPerRow = (array.shape[array.shape.dimension - 1] / 4).ceil();
-  var lastBlockColumnOffset = array.shape[array.shape.dimension - 1] % 4;
+  final int offset;
 
-  var data = new Float32x4List(4 * blockPerColumn * blockPerRow);
+  _DataInfo(this.stride, this.offset);
 
-  var values = array.reshape(newDimensions: [-1]).toVector();
-
-  var i1 = 0;
-  var i2 = 0;
-  while (i2 < values.length) {
-    var offsetBlockColumn = i1 % blockPerRow;
-
-    var value4;
-    if (lastBlockColumnOffset == 0 || offsetBlockColumn < blockPerRow - 1) {
-      value4 =
-          new Float32x4(values[i2++], values[i2++], values[i2++], values[i2++]);
+  @override
+  // ignore: hash_and_equals
+  bool operator ==(other) {
+    if (other is _DataInfo) {
+      return offset == other.offset &&
+          _iterableEquality.equals(stride, other.stride);
     } else {
-      switch (lastBlockColumnOffset) {
-        case 3:
-          value4 = new Float32x4(values[i2++], values[i2++], values[i2++], 0.0);
-          break;
-        case 2:
-          value4 = new Float32x4(values[i2++], values[i2++], 0.0, 0.0);
-          break;
-        case 1:
-          value4 = new Float32x4(values[i2++], 0.0, 0.0, 0.0);
-          break;
-      }
+      return false;
     }
-
-    var index = i1 ~/ blockPerRow;
-    var blockRow = index ~/ 4;
-    var blockRowOffset = index % 4;
-    var blockColumn = i1 % blockPerRow;
-    var blockIndex = blockRow * blockPerRow + blockColumn;
-    var i3 = blockIndex * 4 + blockRowOffset;
-
-    data[i3] = value4;
-
-    i1++;
   }
-
-  return data;
-}
-
-Float32x4List _toFloat32x4ListVBlock(NDArrayImpl array) {
-  var blockPerColumn = (array.shape[array.shape.dimension - 2] / 4).ceil();
-  var blockPerRow = (array.shape[array.shape.dimension - 1] / 4).ceil();
-  var lastBlockColumnOffset = array.shape[array.shape.dimension - 1] % 4;
-
-  var data = new Float32x4List(4 * blockPerColumn * blockPerRow);
-
-  var values = array.reshape(newDimensions: [-1]).toVector();
-
-  var i1 = 0;
-  var i2 = 0;
-  while (i2 < values.length) {
-    var offsetBlockColumn = i1 % blockPerRow;
-
-    var value4;
-    if (lastBlockColumnOffset == 0 || offsetBlockColumn < blockPerRow - 1) {
-      value4 =
-          new Float32x4(values[i2++], values[i2++], values[i2++], values[i2++]);
-    } else {
-      switch (lastBlockColumnOffset) {
-        case 3:
-          value4 = new Float32x4(values[i2++], values[i2++], values[i2++], 0.0);
-          break;
-        case 2:
-          value4 = new Float32x4(values[i2++], values[i2++], 0.0, 0.0);
-          break;
-        case 1:
-          value4 = new Float32x4(values[i2++], 0.0, 0.0, 0.0);
-          break;
-      }
-    }
-
-    var index = i1 ~/ blockPerRow;
-    var blockRow = index ~/ 4;
-    var blockRowOffset = index % 4;
-    var blockColumn = i1 % blockPerRow;
-    var blockIndex = blockColumn * blockPerColumn + blockRow;
-    var i3 = blockIndex * 4 + blockRowOffset;
-
-    data[i3] = value4;
-
-    i1++;
-  }
-
-  return data;
-}
-
-NDArray _fromFloat32x4ListHBlock(
-    Float32x4List list, NDDescriptor resultDescriptor) {
-  var resultData = new Float32List(
-      resultDescriptor.shape[resultDescriptor.shape.dimension - 2] *
-          resultDescriptor.shape[resultDescriptor.shape.dimension - 1]);
-
-  var blockPerRow =
-      (resultDescriptor.shape[resultDescriptor.shape.dimension - 1] / 4).ceil();
-  var lastBlockColumnOffset =
-      resultDescriptor.shape[resultDescriptor.shape.dimension - 1] % 4;
-
-  var i1 = 0;
-  var i2 = 0;
-  while (i2 < resultData.length) {
-    var offsetBlockColumn = i1 % blockPerRow;
-
-    var index = i1 ~/ blockPerRow;
-    var blockRow = index ~/ 4;
-    var blockRowOffset = index % 4;
-    var blockColumn = i1 % blockPerRow;
-    var blockIndex = blockRow * blockPerRow + blockColumn;
-    var i3 = blockIndex * 4 + blockRowOffset;
-
-    var value4 = list[i3];
-    if (lastBlockColumnOffset == 0 || offsetBlockColumn < blockPerRow - 1) {
-      resultData[i2++] = value4.x;
-      resultData[i2++] = value4.y;
-      resultData[i2++] = value4.z;
-      resultData[i2++] = value4.w;
-    } else {
-      switch (lastBlockColumnOffset) {
-        case 3:
-          resultData[i2++] = value4.x;
-          resultData[i2++] = value4.y;
-          resultData[i2++] = value4.z;
-          break;
-        case 2:
-          resultData[i2++] = value4.x;
-          resultData[i2++] = value4.y;
-          break;
-        case 1:
-          resultData[i2++] = value4.x;
-          break;
-      }
-    }
-
-    i1++;
-  }
-
-  var resultShape = resultDescriptor.shape;
-  var resultStride = _calculateDefaultStride(resultShape);
-
-  return new NDArrayImpl._(resultData, resultDescriptor, resultStride, 0);
 }

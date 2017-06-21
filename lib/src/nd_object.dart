@@ -14,6 +14,8 @@ abstract class NDObject {
 
   NDShape get shape;
 
+  NDObject normalize({NDObject reuse});
+
   NDObject cast(NDDataType toDataType, {NDObject reuse});
 
   NDObject reshape({List<int> newDimensions, NDObject reuse});

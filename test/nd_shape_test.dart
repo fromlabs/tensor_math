@@ -3,7 +3,7 @@
 
 import 'package:test/test.dart';
 
-import "package:tensor_math/tensor_math.dart";
+import "package:tensor_math_simd/tensor_math.dart";
 
 void main() {
   group('Shape tests', () {

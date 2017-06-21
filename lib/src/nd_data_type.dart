@@ -1,8 +1,13 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+enum BlockOrientation { horizontal, vertical }
+
 class NDDataType {
   final int depth;
+  final int blockDepth;
+  final int blockSize;
+  final BlockOrientation blockOrientation;
 
   final bool isFloat;
   final bool isInteger;
@@ -14,6 +19,13 @@ class NDDataType {
 
   static const NDDataType float32 =
       const NDDataType._(isFloat: true, depth: 32);
+  static const NDDataType float32HBlocked =
+      const NDDataType._(isFloat: true, depth: 32, blockDepth: 2);
+  static const NDDataType float32VBlocked = const NDDataType._(
+      isFloat: true,
+      depth: 32,
+      blockDepth: 2,
+      blockOrientation: BlockOrientation.vertical);
   static const NDDataType float64 =
       const NDDataType._(isFloat: true, depth: 64);
   static const NDDataType int8 = const NDDataType._(isInteger: true, depth: 8);
@@ -43,26 +55,34 @@ class NDDataType {
       this.isInteger = false,
       this.isBoolean = false,
       this.isClamped = false,
-      this.isGeneric,
+      this.isGeneric = false,
       this.isString = false,
       this.isUnsigned = false,
-      this.depth = null});
+      this.depth,
+      this.blockDepth = 0,
+      this.blockOrientation = BlockOrientation.horizontal})
+      : this.blockSize = 1 << blockDepth;
 
   bool get isUnknown => this == unknown;
 
   bool get isNumeric => isFloat || isInteger;
+
+  bool get isBlocked => blockSize > 1;
+
+  bool get isHBlocked =>
+      isBlocked && blockOrientation == BlockOrientation.horizontal;
+
+  bool get isVBlocked =>
+      isBlocked && blockOrientation == BlockOrientation.vertical;
 
   bool isCastableTo(NDDataType toDataType) =>
       this == toDataType ||
       (isNumeric && toDataType.isNumeric) ||
       (isNumeric && toDataType.isBoolean) ||
       (isBoolean && toDataType.isNumeric);
-/*
+
   bool isCompatibleWith(NDDataType dataType2) =>
-      this == dataType2 ||
-      (isInteger && dataType2.isInteger) ||
-      (isFloat && dataType2.isFloat);
-*/
+      isUnknown || dataType2.isUnknown || this == dataType2;
 
   NDDataType mergeWith(NDDataType dataType2) {
     if (isUnknown) {
@@ -81,6 +101,10 @@ class NDDataType {
     switch (this) {
       case float32:
         return "float32";
+      case float32HBlocked:
+        return "float32HBlocked";
+      case float32VBlocked:
+        return "float32VBlocked";
       case float64:
         return "float64";
       case uint8:
