@@ -1,91 +1,64 @@
-import "dart:math" as math;
-
-import "package:collection/collection.dart";
+import 'package:collection/collection.dart';
 
 import "package:tensor_math_simd/tensor_math.dart" as tm;
 
-final equality = new DeepCollectionEquality();
+import "package:tensor_math_simd/src/nd_array_blocked_impl.dart";
+
+final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  test([3, 5, 11, 13]);
+  functionalTest();
 
-  test([3, 5, 4, 8]);
-
-  test([5, 11, 13]);
-
-  test([11, 13]);
+  performanceTest();
 }
 
-void test(List<int> shape) {
-  print(equality.equals(
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32)
-          .toValue(),
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32HBlocked)
-          .cast(tm.NDDataType.float32)
-          .toValue()));
+void functionalTest() {
+  var shape = [5, 3, 11, 13];
 
-  print(equality.equals(
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32)
-          .toValue(),
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32VBlocked)
-          .cast(tm.NDDataType.float32)
-          .toValue()));
+  NDArrayBlockedImpl fromArray = new tm.NDArray.generate(
+      shape, (index) => index + 1,
+      dataType: tm.NDDataType.float32HBlocked);
 
-  print(equality.equals(
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32HBlocked)
-          .toValue(),
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32)
-          .cast(tm.NDDataType.float32HBlocked)
-          .toValue()));
+  NDArrayBlockedImpl toArray = fromArray.cast(tm.NDDataType.float32VBlocked);
 
-  print(equality.equals(
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32VBlocked)
-          .toValue(),
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32)
-          .cast(tm.NDDataType.float32VBlocked)
-          .toValue()));
+  if (!iterableEquality.equals(fromArray.toValue(), toArray.toValue())) {
+    throw new StateError(
+        "not equals: ${fromArray.toValue()} ${toArray.toValue()}");
+  }
 
-  print(equality.equals(
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.int32)
-          .toValue(),
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32HBlocked)
-          .cast(tm.NDDataType.int32)
-          .toValue()));
+  fromArray = new tm.NDArray.generate(shape, (index) => index + 1,
+      dataType: tm.NDDataType.float32VBlocked);
 
-  print(equality.equals(
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.int32)
-          .toValue(),
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32VBlocked)
-          .cast(tm.NDDataType.int32)
-          .toValue()));
+  toArray = fromArray.cast(tm.NDDataType.float32HBlocked);
 
-  print(equality.equals(
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32HBlocked)
-          .toValue(),
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.int32)
-          .cast(tm.NDDataType.float32HBlocked)
-          .toValue()));
+  if (!iterableEquality.equals(fromArray.toValue(), toArray.toValue())) {
+    throw new StateError(
+        "not equals: ${fromArray.toValue()} ${toArray.toValue()}");
+  }
+}
 
-  print(equality.equals(
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32VBlocked)
-          .toValue(),
-      new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.int32)
-          .cast(tm.NDDataType.float32VBlocked)
-          .toValue()));
+void performanceTest() {
+  test([10, 10, 10, 10], tm.NDDataType.float32HBlocked,
+      tm.NDDataType.float32VBlocked, 10000);
+
+  test([10, 10, 10, 10], tm.NDDataType.float32VBlocked,
+      tm.NDDataType.float32HBlocked, 10000);
+}
+
+void allPerformanceTest() {}
+
+void test(
+    List<int> shape, tm.NDDataType fromType, tm.NDDataType toType, int steps) {
+  var watch = new Stopwatch();
+  watch.start();
+
+  var array =
+      new tm.NDArray.generate(shape, (index) => index + 1, dataType: fromType);
+
+  for (var i = 0; i < steps; i++) {
+    array.cast(toType);
+  }
+
+  print(
+      "Elapsed in ${watch.elapsedMilliseconds} ms with a throughput ${1000 * steps / watch.elapsedMilliseconds} 1/s");
 }

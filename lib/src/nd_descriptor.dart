@@ -110,7 +110,13 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor matMul(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
+    if (this.dataType.isBlocked) {
+      if (this.dataType != NDDataType.float32HBlocked ||
+          descriptor2.dataType != NDDataType.float32VBlocked) {
+        throw new UnsupportedError(
+            "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
+      }
+    } else if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     } else if (!dataType.isNumeric) {

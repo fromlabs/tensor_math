@@ -149,23 +149,28 @@ class NDArrayImpl extends NDArrayBase {
 
   @override
   NDArray transpose({List<int> permutationAxis, NDArray reuse}) {
-    var resultDescriptor =
-        descriptor.transpose(permutationAxis: permutationAxis);
+    if (permutationAxis != null &&
+        !permutationAxis.every((index) => permutationAxis[index] == index)) {
+      var resultDescriptor =
+          descriptor.transpose(permutationAxis: permutationAxis);
 
-    var newPermutationAxis = permutationAxis ??
-        new List.generate(
-            shape.dimension, (index) => shape.dimension - index - 1);
+      var newPermutationAxis = permutationAxis ??
+          new List.generate(
+              shape.dimension, (index) => shape.dimension - index - 1);
 
-    var resultStride = new List(shape.dimension);
+      var resultStride = new List(shape.dimension);
 
-    for (var i = 0; i < newPermutationAxis.length; i++) {
-      var permutationAxe = newPermutationAxis[i];
-      resultStride[i] = _dataInfo.stride[permutationAxe];
+      for (var i = 0; i < newPermutationAxis.length; i++) {
+        var permutationAxe = newPermutationAxis[i];
+        resultStride[i] = _dataInfo.stride[permutationAxe];
+      }
+
+      var resultDataInfo = new _DataInfo(resultStride, _dataInfo.offset);
+
+      return new NDArrayImpl._(_data, resultDescriptor, resultDataInfo);
+    } else {
+      return this;
     }
-
-    var resultDataInfo = new _DataInfo(resultStride, _dataInfo.offset);
-
-    return new NDArrayImpl._(_data, resultDescriptor, resultDataInfo);
   }
 
   @override
