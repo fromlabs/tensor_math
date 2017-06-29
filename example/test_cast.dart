@@ -39,10 +39,10 @@ void functionalTest() {
 
 void performanceTest() {
   test([10, 10, 10, 10], tm.NDDataType.float32HBlocked,
-      tm.NDDataType.float32VBlocked, 10000);
+      tm.NDDataType.float32VBlocked, 1000000);
 
   test([10, 10, 10, 10], tm.NDDataType.float32VBlocked,
-      tm.NDDataType.float32HBlocked, 10000);
+      tm.NDDataType.float32HBlocked, 1000000);
 }
 
 void allPerformanceTest() {}

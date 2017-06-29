@@ -7,14 +7,14 @@ import "package:tensor_math_simd/src/nd_array_blocked_impl.dart";
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  functionalTest();
+  //functionalTest();
 
-  //performanceTest();
+  performanceTest();
 }
 
 void functionalTest() {
-  var shape1 = [8, 4];
-  var shape2 = [4, 8];
+  var shape1 = [2, 2, 11, 13];
+  var shape2 = [2, 2, 13, 15];
 
   var shapeLength2 = shape2.reduce((v1, v2) => v1 * v2);
   var expectedValue = new tm.NDArray.generate(shape1, (index) => index + 1,
@@ -36,6 +36,8 @@ void functionalTest() {
 
 void performanceTest() {
   test1([10, 10, 5, 13], [10, 10, 13, 7], 10000);
+
+  test2([10, 10, 5, 13], [10, 10, 13, 7], 100000);
 }
 
 void test1(List<int> shape1, List<int> shape2, int steps) {

@@ -458,43 +458,6 @@ abstract class NDArrayBase implements NDArray {
       return reshape(newDimensions: [-1]).argMax(axis: 0, reuse: reuse);
     }
   }
-/*
-  @override
-  NDArray cast(NDDataType toDataType, {NDArray reuse}) {
-    var resultDescriptor = descriptor.cast(toDataType);
-
-    if (dataType == toDataType) {
-      return this;
-    } else if (!dataType.isBlocked && toDataType.isBlocked) {
-      // TODO conversione da non blocked a blocked
-      throw new UnimplementedError("conversione da non blocked a blocked");
-    } else if (dataType.isBlocked && !toDataType.isBlocked) {
-      // TODO conversione da non blocked a blocked
-      throw new UnimplementedError("conversione da blocked a non blocked");
-    } else if ((dataType.isFloat && toDataType.isFloat) ||
-        (dataType.isInteger && toDataType.isInteger)) {
-      return elementWiseUnaryOperationInternal(
-          resultDescriptor, reuse, (num value) => value);
-    } else if (dataType.isFloat && toDataType.isInteger) {
-      return elementWiseUnaryOperationInternal(
-          resultDescriptor, reuse, (double value) => value.toInt());
-    } else if (dataType.isInteger && toDataType.isFloat) {
-      return elementWiseUnaryOperationInternal(
-          resultDescriptor, reuse, (int value) => value.toDouble());
-    } else if (dataType.isNumeric && toDataType.isBoolean) {
-      return elementWiseUnaryOperationInternal(
-          resultDescriptor, reuse, (num value) => value != 0);
-    } else if (dataType.isBoolean && dataType.isFloat) {
-      return elementWiseUnaryOperationInternal(
-          resultDescriptor, reuse, (bool value) => value ? 1.0 : 0.0);
-    } else if (dataType.isBoolean && toDataType.isInteger) {
-      return elementWiseUnaryOperationInternal(
-          resultDescriptor, reuse, (bool value) => value ? 1 : 0);
-    } else {
-      throw new StateError("DEAD CODE");
-    }
-  }
-*/
 
   @override
   NDArray cast(NDDataType toDataType, {NDArray reuse}) =>

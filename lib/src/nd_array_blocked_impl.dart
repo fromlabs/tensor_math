@@ -210,18 +210,10 @@ class NDArrayBlockedImpl extends NDArrayBase {
   }
 
   @override
-  bool get isNormalized =>
-      _dataInfo == _createNormalizedDataInfo(shape, _matrixInfo);
+  bool get isNormalized => true;
 
   @override
-  NDArray normalize({NDArray reuse}) {
-    if (isNormalized) {
-      return this;
-    } else {
-      return elementWiseUnaryOperationInternal(
-          descriptor, reuse, (value) => value);
-    }
-  }
+  NDArray normalize({NDArray reuse}) => this;
 
   @override
   NDArray reshape({List<int> newDimensions, NDArray reuse}) {
@@ -232,8 +224,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
       var resultDescriptor = descriptor.reshape(newDimensions: newDimensions);
 
-      if (isNormalized &&
-          newDimensions[shape.dimension - 2] ==
+      if (newDimensions[shape.dimension - 2] ==
               shape.dimensions[shape.dimension - 2] &&
           newDimensions[shape.dimension - 1] ==
               shape.dimensions[shape.dimension - 1]) {
@@ -262,42 +253,34 @@ class NDArrayBlockedImpl extends NDArrayBase {
           new List.generate(
               shape.dimension, (index) => shape.dimension - index - 1);
 
-      if (newPermutationAxis[shape.dimension - 2] == shape.dimension - 2 &&
-          newPermutationAxis[shape.dimension - 1] == shape.dimension - 1) {
-        var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
+      var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
 
-        var resultHeadStride = new List(shape.dimension - 2);
+      var sourceHeadStride = new List(shape.dimension - 2);
+      for (var i = 0; i < newPermutationAxis.length - 2; i++) {
+        var permutationAxe = newPermutationAxis[i];
+        sourceHeadStride[i] = _dataInfo.headStride[permutationAxe];
+      }
 
-        for (var i = 0; i < newPermutationAxis.length - 2; i++) {
-          var permutationAxe = newPermutationAxis[i];
-          resultHeadStride[i] = _dataInfo.headStride[permutationAxe];
+      var resultDataInfo =
+          _createNormalizedDataInfo(resultDescriptor.shape, resultMatrixInfo);
+
+      var resultData = _createData(
+          resultDescriptor, resultDataInfo, resultMatrixInfo, reuse);
+
+      var matrixUnchanged =
+          newPermutationAxis[shape.dimension - 2] == shape.dimension - 2 &&
+              newPermutationAxis[shape.dimension - 1] == shape.dimension - 1;
+
+      if (matrixUnchanged ||
+          newPermutationAxis[shape.dimension - 2] == shape.dimension - 1 &&
+              newPermutationAxis[shape.dimension - 1] == shape.dimension - 2) {
+        if (matrixUnchanged) {
+          _transposeData(this, sourceHeadStride, resultData, resultDescriptor,
+              resultDataInfo, resultMatrixInfo);
+        } else {
+          _transposeSwitchedData(this, sourceHeadStride, resultData,
+              resultDescriptor, resultDataInfo, resultMatrixInfo);
         }
-
-        var resultDataInfo =
-            new _DataInfo(resultHeadStride, _dataInfo.dataLength);
-
-        return new NDArrayBlockedImpl._(
-            _data, resultDescriptor, resultDataInfo, resultMatrixInfo);
-      } else if (newPermutationAxis[shape.dimension - 2] ==
-              shape.dimension - 1 &&
-          newPermutationAxis[shape.dimension - 1] == shape.dimension - 2) {
-        var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
-
-        var resultHeadStride = new List(shape.dimension - 2);
-
-        for (var i = 0; i < newPermutationAxis.length - 2; i++) {
-          var permutationAxe = newPermutationAxis[i];
-          resultHeadStride[i] = _dataInfo.headStride[permutationAxe];
-        }
-
-        var resultDataInfo =
-            new _DataInfo(resultHeadStride, _dataInfo.dataLength);
-
-        var resultData = _createData(
-            resultDescriptor, resultDataInfo, resultMatrixInfo, reuse);
-
-        _transposeBlockedData(this, resultData, resultDescriptor,
-            resultDataInfo, resultMatrixInfo);
 
         return new NDArrayBlockedImpl._(
             resultData, resultDescriptor, resultDataInfo, resultMatrixInfo);
@@ -746,6 +729,14 @@ class NDArrayBlockedImpl extends NDArrayBase {
       {void initReduction(),
       void onValueToReduce(int valueIndex, value),
       reduce()}) {
+    var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
+
+    var resultDataInfo =
+        _createNormalizedDataInfo(resultDescriptor.shape, resultMatrixInfo);
+
+    var resultData =
+        _createData(resultDescriptor, resultDataInfo, resultMatrixInfo, reuse);
+
     // TODO to implement NDArrayBlockedImpl.reduceOperationInternal
     throw new UnimplementedError(
         "to implement NDArrayBlockedImpl.reduceOperationInternal: $this");
@@ -1046,59 +1037,137 @@ void _loadData(value, Float32x4List data, NDDescriptor descriptor,
   }
 }
 
-void _transposeBlockedData(
-    NDArrayBlockedImpl fromArray,
+void _transposeData(
+    NDArrayBlockedImpl sourceArray,
+    List sourceHeadStride,
     Float32x4List resultData,
     NDDescriptor resultDescriptor,
     _DataInfo resultDataInfo,
     _MatrixInfo resultMatrixInfo) {
-  // TODO gestire ciclo esterno stando attenti agli stride
+  var dimension1s = sourceArray.dataType.isHBlocked
+      ? sourceArray._matrixInfo.blockRows
+      : sourceArray._matrixInfo.blockColumns;
+  var dimension2s = sourceArray.dataType.isHBlocked
+      ? sourceArray._matrixInfo.blockColumns
+      : sourceArray._matrixInfo.blockRows;
 
-  var multiplier;
-  if (resultDescriptor.shape.dimension > 2) {
-    multiplier = resultDescriptor.shape.length ~/
-        (resultMatrixInfo.rows * resultMatrixInfo.columns);
-  } else {
-    multiplier = 1;
+  var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
+  var sourceDataIndexes = new List(resultDescriptor.shape.dimension - 1);
+  var targetDataIndexes = new List(resultDescriptor.shape.dimension - 1);
+
+  var shapeIndex = 0;
+  dimensionIndexes[0] = 0;
+  var sourceDataIndex = 0;
+  sourceDataIndexes[0] = 0;
+  var targetDataIndex = 0;
+  targetDataIndexes[0] = 0;
+
+  while (shapeIndex >= 0) {
+    if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+      for (var dimension1 = 0; dimension1 < dimension1s; dimension1++) {
+        for (var dimension2 = 0; dimension2 < dimension2s; dimension2++) {
+          resultData[targetDataIndex++] = sourceArray._data[sourceDataIndex++];
+          resultData[targetDataIndex++] = sourceArray._data[sourceDataIndex++];
+          resultData[targetDataIndex++] = sourceArray._data[sourceDataIndex++];
+          resultData[targetDataIndex++] = sourceArray._data[sourceDataIndex++];
+        }
+      }
+
+      shapeIndex--;
+    } else {
+      if (dimensionIndexes[shapeIndex] < resultDescriptor.shape[shapeIndex]) {
+        sourceDataIndex = sourceDataIndexes[shapeIndex];
+        targetDataIndex = targetDataIndexes[shapeIndex];
+
+        dimensionIndexes[shapeIndex]++;
+        sourceDataIndexes[shapeIndex] =
+            sourceDataIndex + sourceHeadStride[shapeIndex];
+        targetDataIndexes[shapeIndex] =
+            targetDataIndex + resultDataInfo.headStride[shapeIndex];
+
+        shapeIndex++;
+
+        dimensionIndexes[shapeIndex] = 0;
+        sourceDataIndexes[shapeIndex] = sourceDataIndex;
+        targetDataIndexes[shapeIndex] = targetDataIndex;
+      } else {
+        shapeIndex--;
+      }
+    }
   }
+}
 
-  var dimension1s = fromArray.dataType.isHBlocked
-      ? fromArray._matrixInfo.blockRows
-      : fromArray._matrixInfo.blockColumns;
-  var dimension2s = fromArray.dataType.isHBlocked
-      ? fromArray._matrixInfo.blockColumns
-      : fromArray._matrixInfo.blockRows;
+void _transposeSwitchedData(
+    NDArrayBlockedImpl sourceArray,
+    List sourceHeadStride,
+    Float32x4List resultData,
+    NDDescriptor resultDescriptor,
+    _DataInfo resultDataInfo,
+    _MatrixInfo resultMatrixInfo) {
+  var dimension1s = sourceArray.dataType.isHBlocked
+      ? sourceArray._matrixInfo.blockRows
+      : sourceArray._matrixInfo.blockColumns;
+  var dimension2s = sourceArray.dataType.isHBlocked
+      ? sourceArray._matrixInfo.blockColumns
+      : sourceArray._matrixInfo.blockRows;
 
   var delta1 = (dimension1s - 1) << resultDescriptor.dataType.blockDepth;
 
   var delta2 =
       resultDescriptor.dataType.blockSize - resultMatrixInfo.dataLength;
 
-  var delta3 = -(delta1 + delta2);
+  var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
+  var sourceDataIndexes = new List(resultDescriptor.shape.dimension - 1);
+  var targetDataIndexes = new List(resultDescriptor.shape.dimension - 1);
 
+  var shapeIndex = 0;
+  dimensionIndexes[0] = 0;
   var sourceDataIndex = 0;
+  sourceDataIndexes[0] = 0;
   var targetDataIndex = 0;
+  targetDataIndexes[0] = 0;
 
-  for (var iteration = 0; iteration < multiplier; iteration++) {
-    for (var dimension1 = 0; dimension1 < dimension1s; dimension1++) {
-      for (var dimension2 = 0; dimension2 < dimension2s; dimension2++) {
-        var a0 = fromArray._data[sourceDataIndex++];
-        var a1 = fromArray._data[sourceDataIndex++];
-        var a2 = fromArray._data[sourceDataIndex++];
-        var a3 = fromArray._data[sourceDataIndex++];
+  while (shapeIndex >= 0) {
+    if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+      for (var dimension1 = 0; dimension1 < dimension1s; dimension1++) {
+        for (var dimension2 = 0; dimension2 < dimension2s; dimension2++) {
+          var a0 = sourceArray._data[sourceDataIndex++];
+          var a1 = sourceArray._data[sourceDataIndex++];
+          var a2 = sourceArray._data[sourceDataIndex++];
+          var a3 = sourceArray._data[sourceDataIndex++];
 
-        resultData[targetDataIndex++] = new Float32x4(a0.x, a1.x, a2.x, a3.x);
-        resultData[targetDataIndex++] = new Float32x4(a0.y, a1.y, a2.y, a3.y);
-        resultData[targetDataIndex++] = new Float32x4(a0.z, a1.z, a2.z, a3.z);
-        resultData[targetDataIndex++] = new Float32x4(a0.w, a1.w, a2.w, a3.w);
+          resultData[targetDataIndex++] = new Float32x4(a0.x, a1.x, a2.x, a3.x);
+          resultData[targetDataIndex++] = new Float32x4(a0.y, a1.y, a2.y, a3.y);
+          resultData[targetDataIndex++] = new Float32x4(a0.z, a1.z, a2.z, a3.z);
+          resultData[targetDataIndex++] = new Float32x4(a0.w, a1.w, a2.w, a3.w);
 
-        targetDataIndex += delta1;
+          targetDataIndex += delta1;
+        }
+
+        targetDataIndex += delta2;
       }
 
-      targetDataIndex += delta2;
-    }
+      shapeIndex--;
+    } else {
+      if (dimensionIndexes[shapeIndex] < resultDescriptor.shape[shapeIndex]) {
+        sourceDataIndex = sourceDataIndexes[shapeIndex];
+        targetDataIndex = targetDataIndexes[shapeIndex];
 
-    targetDataIndex += delta3;
+        dimensionIndexes[shapeIndex]++;
+        sourceDataIndexes[shapeIndex] =
+            sourceDataIndex + sourceHeadStride[shapeIndex];
+        targetDataIndexes[shapeIndex] =
+            targetDataIndex + resultDataInfo.headStride[shapeIndex];
+
+        shapeIndex++;
+
+        dimensionIndexes[shapeIndex] = 0;
+        sourceDataIndexes[shapeIndex] = sourceDataIndex;
+        targetDataIndexes[shapeIndex] = targetDataIndex;
+      } else {
+        shapeIndex--;
+      }
+    }
   }
 }
 
@@ -1109,62 +1178,105 @@ void _matMulBlockedData(
     NDDescriptor resultDescriptor,
     _DataInfo resultDataInfo,
     _MatrixInfo resultMatrixInfo) {
-  // TODO gestire ciclo esterno stando attenti agli stride
+  var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
+  var sourceDataIndexes1 = new List(resultDescriptor.shape.dimension - 1);
+  var sourceDataIndexes2 = new List(resultDescriptor.shape.dimension - 1);
+  var targetDataIndexes = new List(resultDescriptor.shape.dimension - 1);
 
+  var shapeIndex = 0;
+  dimensionIndexes[0] = 0;
   var sourceDataIndex1 = 0;
+  sourceDataIndexes1[0] = 0;
   var sourceDataIndex2 = 0;
+  sourceDataIndexes2[0] = 0;
   var targetDataIndex = 0;
+  targetDataIndexes[0] = 0;
 
-  // TODO aggiustare gli indici ad ogni iterazione
+  while (shapeIndex >= 0) {
+    if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+      var initialSourceDataIndex2 = sourceDataIndex2;
 
-  for (var row1 = 0;
-      row1 < array1._matrixInfo.dataRows;
-      row1 += array1.dataType.blockSize) {
-    for (var column2 = 0;
-        column2 < array2._matrixInfo.dataColumns;
-        column2 += array2.dataType.blockSize) {
-      var result0 = new Float32x4.zero();
-      var result1 = new Float32x4.zero();
-      var result2 = new Float32x4.zero();
-      var result3 = new Float32x4.zero();
+      for (var row1 = 0;
+          row1 < array1._matrixInfo.dataRows;
+          row1 += array1.dataType.blockSize) {
+        var initialSourceDataIndex1 = sourceDataIndex1;
 
-      for (var i = 0;
-          i < array1._matrixInfo.dataColumns;
-          i += array1.dataType.blockSize) {
-        var b0 = array2._data[sourceDataIndex2++];
-        var b1 = array2._data[sourceDataIndex2++];
-        var b2 = array2._data[sourceDataIndex2++];
-        var b3 = array2._data[sourceDataIndex2++];
+        sourceDataIndex2 = initialSourceDataIndex2;
 
-        var a0 = array1._data[sourceDataIndex1++];
-        result0 += a0.shuffle(Float32x4.XXXX) * b0 +
-            a0.shuffle(Float32x4.YYYY) * b1 +
-            a0.shuffle(Float32x4.ZZZZ) * b2 +
-            a0.shuffle(Float32x4.WWWW) * b3;
+        for (var column2 = 0;
+            column2 < array2._matrixInfo.dataColumns;
+            column2 += array2.dataType.blockSize) {
+          sourceDataIndex1 = initialSourceDataIndex1;
 
-        var a1 = array1._data[sourceDataIndex1++];
-        result1 += a1.shuffle(Float32x4.XXXX) * b0 +
-            a1.shuffle(Float32x4.YYYY) * b1 +
-            a1.shuffle(Float32x4.ZZZZ) * b2 +
-            a1.shuffle(Float32x4.WWWW) * b3;
+          var result0 = new Float32x4.zero();
+          var result1 = new Float32x4.zero();
+          var result2 = new Float32x4.zero();
+          var result3 = new Float32x4.zero();
 
-        var a2 = array1._data[sourceDataIndex1++];
-        result2 += a2.shuffle(Float32x4.XXXX) * b0 +
-            a2.shuffle(Float32x4.YYYY) * b1 +
-            a2.shuffle(Float32x4.ZZZZ) * b2 +
-            a2.shuffle(Float32x4.WWWW) * b3;
+          for (var i = 0;
+              i < array1._matrixInfo.dataColumns;
+              i += array1.dataType.blockSize) {
+            var b0 = array2._data[sourceDataIndex2++];
+            var b1 = array2._data[sourceDataIndex2++];
+            var b2 = array2._data[sourceDataIndex2++];
+            var b3 = array2._data[sourceDataIndex2++];
 
-        var a3 = array1._data[sourceDataIndex1++];
-        result3 += a3.shuffle(Float32x4.XXXX) * b0 +
-            a3.shuffle(Float32x4.YYYY) * b1 +
-            a3.shuffle(Float32x4.ZZZZ) * b2 +
-            a3.shuffle(Float32x4.WWWW) * b3;
+            var a0 = array1._data[sourceDataIndex1++];
+            result0 += a0.shuffle(Float32x4.XXXX) * b0 +
+                a0.shuffle(Float32x4.YYYY) * b1 +
+                a0.shuffle(Float32x4.ZZZZ) * b2 +
+                a0.shuffle(Float32x4.WWWW) * b3;
+
+            var a1 = array1._data[sourceDataIndex1++];
+            result1 += a1.shuffle(Float32x4.XXXX) * b0 +
+                a1.shuffle(Float32x4.YYYY) * b1 +
+                a1.shuffle(Float32x4.ZZZZ) * b2 +
+                a1.shuffle(Float32x4.WWWW) * b3;
+
+            var a2 = array1._data[sourceDataIndex1++];
+            result2 += a2.shuffle(Float32x4.XXXX) * b0 +
+                a2.shuffle(Float32x4.YYYY) * b1 +
+                a2.shuffle(Float32x4.ZZZZ) * b2 +
+                a2.shuffle(Float32x4.WWWW) * b3;
+
+            var a3 = array1._data[sourceDataIndex1++];
+            result3 += a3.shuffle(Float32x4.XXXX) * b0 +
+                a3.shuffle(Float32x4.YYYY) * b1 +
+                a3.shuffle(Float32x4.ZZZZ) * b2 +
+                a3.shuffle(Float32x4.WWWW) * b3;
+          }
+
+          resultData[targetDataIndex++] = result0;
+          resultData[targetDataIndex++] = result1;
+          resultData[targetDataIndex++] = result2;
+          resultData[targetDataIndex++] = result3;
+        }
       }
 
-      resultData[targetDataIndex++] = result0;
-      resultData[targetDataIndex++] = result1;
-      resultData[targetDataIndex++] = result2;
-      resultData[targetDataIndex++] = result3;
+      shapeIndex--;
+    } else {
+      if (dimensionIndexes[shapeIndex] < resultDescriptor.shape[shapeIndex]) {
+        sourceDataIndex1 = sourceDataIndexes1[shapeIndex];
+        sourceDataIndex2 = sourceDataIndexes2[shapeIndex];
+        targetDataIndex = targetDataIndexes[shapeIndex];
+
+        dimensionIndexes[shapeIndex]++;
+        sourceDataIndexes1[shapeIndex] =
+            sourceDataIndex1 + array1._dataInfo.headStride[shapeIndex];
+        sourceDataIndexes2[shapeIndex] =
+            sourceDataIndex2 + array2._dataInfo.headStride[shapeIndex];
+        targetDataIndexes[shapeIndex] =
+            targetDataIndex + resultDataInfo.headStride[shapeIndex];
+
+        shapeIndex++;
+
+        dimensionIndexes[shapeIndex] = 0;
+        sourceDataIndexes1[shapeIndex] = sourceDataIndex1;
+        sourceDataIndexes2[shapeIndex] = sourceDataIndex2;
+        targetDataIndexes[shapeIndex] = targetDataIndex;
+      } else {
+        shapeIndex--;
+      }
     }
   }
 }
@@ -1283,8 +1395,6 @@ void _castBlockedData(
     NDDescriptor resultDescriptor,
     _DataInfo resultDataInfo,
     _MatrixInfo resultMatrixInfo) {
-  // TODO gestire ciclo esterno stando attenti agli stride
-
   var multiplier;
   if (resultDescriptor.shape.dimension > 2) {
     multiplier = resultDescriptor.shape.length ~/
@@ -2182,249 +2292,3 @@ class _DataInfo {
     }
   }
 }
-
-// TODO ottimizzare le matematiche
-
-/*
-NDArray matMulFloat32x4(NDArray array1, NDArray array2) {
-  var resultDescriptor = array1.descriptor.matMul(array2.descriptor);
-
-  var list1 = _toFloat32x4ListHBlock(array1);
-
-  var list2 = _toFloat32x4ListVBlock(array2);
-
-  var resultList =
-      _matMulFloat32x4Internal(list1, array1.shape, list2, array2.shape);
-
-  return _fromFloat32x4ListHBlock(resultList, resultDescriptor);
-}
-
-Float32x4List _matMulFloat32x4Internal(
-    Float32x4List list1, NDShape shape1, Float32x4List list2, NDShape shape2) {
-  var rows1 = _toCeil4(shape1[shape1.dimension - 2]);
-  var columns1 = _toCeil4(shape1[shape1.dimension - 1]);
-  var rows2 = _toCeil4(shape2[shape2.dimension - 2]);
-  var columns2 = _toCeil4(shape2[shape2.dimension - 1]);
-
-  var resultList = new Float32x4List(rows1 * columns2 ~/ 4);
-
-  var blockPerRow1 = columns1 >> 2;
-  var blockPerColumn2 = rows2 >> 2;
-  var resultBlockPerRow = columns2 >> 2;
-
-  for (var row1 = 0; row1 < rows1; row1 += 4) {
-    var blockRow1 = row1 ~/ 4;
-    var blockOffset1 = row1 % 4;
-
-    for (var column2 = 0; column2 < columns2; column2 += 4) {
-      var blockColumn2 = column2 ~/ 4;
-
-      var result0 = new Float32x4.zero();
-      var result1 = new Float32x4.zero();
-      var result2 = new Float32x4.zero();
-      var result3 = new Float32x4.zero();
-
-      for (var i = 0; i < columns1; i += 4) {
-        var blockColumn1 = i ~/ 4;
-        var blockIndex1 = blockRow1 * blockPerRow1 + blockColumn1;
-        var i10 = blockIndex1 * 4 + blockOffset1;
-
-        var blockRow2 = i ~/ 4;
-        var blockOffset2 = i % 4;
-        var blockIndex2 = blockColumn2 * blockPerColumn2 + blockRow2;
-        var i20 = blockIndex2 * 4 + blockOffset2;
-
-        var b0 = list2[i20++];
-        var b1 = list2[i20++];
-        var b2 = list2[i20++];
-        var b3 = list2[i20++];
-
-        var a0 = list1[i10++];
-        result0 += a0.shuffle(Float32x4.XXXX) * b0 +
-            a0.shuffle(Float32x4.YYYY) * b1 +
-            a0.shuffle(Float32x4.ZZZZ) * b2 +
-            a0.shuffle(Float32x4.WWWW) * b3;
-
-        var a1 = list1[i10++];
-        result1 += a1.shuffle(Float32x4.XXXX) * b0 +
-            a1.shuffle(Float32x4.YYYY) * b1 +
-            a1.shuffle(Float32x4.ZZZZ) * b2 +
-            a1.shuffle(Float32x4.WWWW) * b3;
-
-        var a2 = list1[i10++];
-        result2 += a2.shuffle(Float32x4.XXXX) * b0 +
-            a2.shuffle(Float32x4.YYYY) * b1 +
-            a2.shuffle(Float32x4.ZZZZ) * b2 +
-            a2.shuffle(Float32x4.WWWW) * b3;
-
-        var a3 = list1[i10++];
-        result3 += a3.shuffle(Float32x4.XXXX) * b0 +
-            a3.shuffle(Float32x4.YYYY) * b1 +
-            a3.shuffle(Float32x4.ZZZZ) * b2 +
-            a3.shuffle(Float32x4.WWWW) * b3;
-      }
-
-      var resultBlockIndex = blockRow1 * resultBlockPerRow + blockColumn2;
-
-      var ir0 = resultBlockIndex * 4 + blockOffset1;
-      resultList[ir0++] = result0;
-      resultList[ir0++] = result1;
-      resultList[ir0++] = result2;
-      resultList[ir0++] = result3;
-    }
-  }
-
-  return resultList;
-}
-
-int _toCeil4(int value) => 4 * (value / 4).ceil();
-
-Float32x4List _toFloat32x4ListHBlock(NDArrayImpl array) {
-  var blockPerColumn = (array.shape[array.shape.dimension - 2] / 4).ceil();
-  var blockPerRow = (array.shape[array.shape.dimension - 1] / 4).ceil();
-  var lastBlockColumnOffset = array.shape[array.shape.dimension - 1] % 4;
-
-  var data = new Float32x4List(4 * blockPerColumn * blockPerRow);
-
-  var values = array.reshape(newDimensions: [-1]).toVector();
-
-  var i1 = 0;
-  var i2 = 0;
-  while (i2 < values.length) {
-    var offsetBlockColumn = i1 % blockPerRow;
-
-    var value4;
-    if (lastBlockColumnOffset == 0 || offsetBlockColumn < blockPerRow - 1) {
-      value4 =
-          new Float32x4(values[i2++], values[i2++], values[i2++], values[i2++]);
-    } else {
-      switch (lastBlockColumnOffset) {
-        case 3:
-          value4 = new Float32x4(values[i2++], values[i2++], values[i2++], 0.0);
-          break;
-        case 2:
-          value4 = new Float32x4(values[i2++], values[i2++], 0.0, 0.0);
-          break;
-        case 1:
-          value4 = new Float32x4(values[i2++], 0.0, 0.0, 0.0);
-          break;
-      }
-    }
-
-    var index = i1 ~/ blockPerRow;
-    var blockRow = index ~/ 4;
-    var blockRowOffset = index % 4;
-    var blockColumn = i1 % blockPerRow;
-    var blockIndex = blockRow * blockPerRow + blockColumn;
-    var i3 = blockIndex * 4 + blockRowOffset;
-
-    data[i3] = value4;
-
-    i1++;
-  }
-
-  return data;
-}
-
-Float32x4List _toFloat32x4ListVBlock(NDArrayImpl array) {
-  var blockPerColumn = (array.shape[array.shape.dimension - 2] / 4).ceil();
-  var blockPerRow = (array.shape[array.shape.dimension - 1] / 4).ceil();
-  var lastBlockColumnOffset = array.shape[array.shape.dimension - 1] % 4;
-
-  var data = new Float32x4List(4 * blockPerColumn * blockPerRow);
-
-  var values = array.reshape(newDimensions: [-1]).toVector();
-
-  var i1 = 0;
-  var i2 = 0;
-  while (i2 < values.length) {
-    var offsetBlockColumn = i1 % blockPerRow;
-
-    var value4;
-    if (lastBlockColumnOffset == 0 || offsetBlockColumn < blockPerRow - 1) {
-      value4 =
-          new Float32x4(values[i2++], values[i2++], values[i2++], values[i2++]);
-    } else {
-      switch (lastBlockColumnOffset) {
-        case 3:
-          value4 = new Float32x4(values[i2++], values[i2++], values[i2++], 0.0);
-          break;
-        case 2:
-          value4 = new Float32x4(values[i2++], values[i2++], 0.0, 0.0);
-          break;
-        case 1:
-          value4 = new Float32x4(values[i2++], 0.0, 0.0, 0.0);
-          break;
-      }
-    }
-
-    var index = i1 ~/ blockPerRow;
-    var blockRow = index ~/ 4;
-    var blockRowOffset = index % 4;
-    var blockColumn = i1 % blockPerRow;
-    var blockIndex = blockColumn * blockPerColumn + blockRow;
-    var i3 = blockIndex * 4 + blockRowOffset;
-
-    data[i3] = value4;
-
-    i1++;
-  }
-
-  return data;
-}
-
-NDArray _fromFloat32x4ListHBlock(
-    Float32x4List list, NDDescriptor resultDescriptor) {
-  var resultData = new Float32List(
-      resultDescriptor.shape[resultDescriptor.shape.dimension - 2] *
-          resultDescriptor.shape[resultDescriptor.shape.dimension - 1]);
-
-  var blockPerRow =
-      (resultDescriptor.shape[resultDescriptor.shape.dimension - 1] / 4).ceil();
-  var lastBlockColumnOffset =
-      resultDescriptor.shape[resultDescriptor.shape.dimension - 1] % 4;
-
-  var i1 = 0;
-  var i2 = 0;
-  while (i2 < resultData.length) {
-    var offsetBlockColumn = i1 % blockPerRow;
-
-    var index = i1 ~/ blockPerRow;
-    var blockRow = index ~/ 4;
-    var blockRowOffset = index % 4;
-    var blockColumn = i1 % blockPerRow;
-    var blockIndex = blockRow * blockPerRow + blockColumn;
-    var i3 = blockIndex * 4 + blockRowOffset;
-
-    var value4 = list[i3];
-    if (lastBlockColumnOffset == 0 || offsetBlockColumn < blockPerRow - 1) {
-      resultData[i2++] = value4.x;
-      resultData[i2++] = value4.y;
-      resultData[i2++] = value4.z;
-      resultData[i2++] = value4.w;
-    } else {
-      switch (lastBlockColumnOffset) {
-        case 3:
-          resultData[i2++] = value4.x;
-          resultData[i2++] = value4.y;
-          resultData[i2++] = value4.z;
-          break;
-        case 2:
-          resultData[i2++] = value4.x;
-          resultData[i2++] = value4.y;
-          break;
-        case 1:
-          resultData[i2++] = value4.x;
-          break;
-      }
-    }
-
-    i1++;
-  }
-
-  var resultShape = resultDescriptor.shape;
-  var resultStride = _calculateDefaultStride(resultShape);
-
-  return new NDArrayImpl._(resultData, resultDescriptor, resultStride, 0);
-}
-*/

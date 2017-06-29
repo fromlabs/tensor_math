@@ -14,12 +14,7 @@ void main() {
 
 void functionalTest() {
   var shape = [2, 2, 5, 13];
-  var permutationAxis = [0, 1, 3, 2];
-  permutationAxis = [1, 0, 3, 2];
-
-  var initialValue = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32)
-      .toValue();
+  var permutationAxis = [1, 0, 3, 2];
 
   var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
           dataType: tm.NDDataType.float32)
