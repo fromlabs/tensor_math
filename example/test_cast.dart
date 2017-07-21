@@ -9,11 +9,11 @@ final iterableEquality = new DeepCollectionEquality();
 void main() {
   functionalTest();
 
-  performanceTest();
+  // performanceTest();
 }
 
 void functionalTest() {
-  var shape = [5, 3, 11, 13];
+  var shape = [2, 2, 11, 13];
 
   NDArrayBlockedImpl fromArray = new tm.NDArray.generate(
       shape, (index) => index + 1,

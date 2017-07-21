@@ -142,7 +142,14 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
           var value4 = _data[dataIndex];
 
-          switch (_matrixInfo.lastBlockColumnOffset) {
+          switch (_matrixInfo.lastBlockColumnCount) {
+            case 4:
+              rowValues[column] = value4.x;
+              rowValues[column + 1] = value4.y;
+              rowValues[column + 2] = value4.z;
+              rowValues[column + 3] = value4.w;
+
+              break;
             case 3:
               rowValues[column] = value4.x;
               rowValues[column + 1] = value4.y;
@@ -158,20 +165,11 @@ class NDArrayBlockedImpl extends NDArrayBase {
               rowValues[column] = value4.x;
 
               break;
-            case 0:
-              rowValues[column] = value4.x;
-              rowValues[column + 1] = value4.y;
-              rowValues[column + 2] = value4.z;
-              rowValues[column + 3] = value4.w;
-
-              break;
           }
 
           dataIndex += _matrixInfo.delta1;
 
-          i += _matrixInfo.lastBlockColumnOffset == 0
-              ? descriptor.dataType.blockSize
-              : _matrixInfo.lastBlockColumnOffset;
+          i += _matrixInfo.lastBlockColumnCount;
 
           if (row % descriptor.dataType.blockSize <
               descriptor.dataType.blockSize - 1) {
@@ -214,6 +212,24 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
   @override
   NDArray normalize({NDArray reuse}) => this;
+
+  NDArray identity({NDArray reuse}) {
+    var targetDescriptor = descriptor;
+
+    var targetMatrixInfo = new _MatrixInfo(targetDescriptor);
+
+    var targetDataInfo =
+        _createNormalizedDataInfo(targetDescriptor.shape, targetMatrixInfo);
+
+    var targetData =
+        _createData(targetDescriptor, targetDataInfo, targetMatrixInfo, reuse);
+
+    _identityData(
+        this, targetData, targetDescriptor, targetDataInfo, targetMatrixInfo);
+
+    return new NDArrayBlockedImpl._(
+        targetData, targetDescriptor, targetDataInfo, targetMatrixInfo);
+  }
 
   @override
   NDArray reshape({List<int> newDimensions, NDArray reuse}) {
@@ -285,6 +301,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
         return new NDArrayBlockedImpl._(
             resultData, resultDescriptor, resultDataInfo, resultMatrixInfo);
       } else {
+        // TODO ottimizzare con createTransposedValueIterable
         return cast(NDDataType.float32)
             .transpose(permutationAxis: newPermutationAxis)
             .cast(dataType, reuse: reuse);
@@ -343,7 +360,14 @@ class NDArrayBlockedImpl extends NDArrayBase {
           }
 
           var value4;
-          switch (resultMatrixInfo.lastBlockColumnOffset) {
+          switch (resultMatrixInfo.lastBlockColumnCount) {
+            case 4:
+              value4 = new Float32x4(
+                  unaryOperation((valueIterator..moveNext()).current),
+                  unaryOperation((valueIterator..moveNext()).current),
+                  unaryOperation((valueIterator..moveNext()).current),
+                  unaryOperation((valueIterator..moveNext()).current));
+              break;
             case 3:
               value4 = new Float32x4(
                   unaryOperation((valueIterator..moveNext()).current),
@@ -365,22 +389,13 @@ class NDArrayBlockedImpl extends NDArrayBase {
                   0.0,
                   0.0);
               break;
-            case 0:
-              value4 = new Float32x4(
-                  unaryOperation((valueIterator..moveNext()).current),
-                  unaryOperation((valueIterator..moveNext()).current),
-                  unaryOperation((valueIterator..moveNext()).current),
-                  unaryOperation((valueIterator..moveNext()).current));
-              break;
           }
 
           resultData[dataIndex] = value4;
 
           dataIndex += resultMatrixInfo.delta1;
 
-          i += resultMatrixInfo.lastBlockColumnOffset == 0
-              ? resultDescriptor.dataType.blockSize
-              : resultMatrixInfo.lastBlockColumnOffset;
+          i += resultMatrixInfo.lastBlockColumnCount;
 
           if (row % resultDescriptor.dataType.blockSize <
               resultDescriptor.dataType.blockSize - 1) {
@@ -472,7 +487,18 @@ class NDArrayBlockedImpl extends NDArrayBase {
           }
 
           var value4;
-          switch (resultMatrixInfo.lastBlockColumnOffset) {
+          switch (resultMatrixInfo.lastBlockColumnCount) {
+            case 4:
+              value4 = new Float32x4(
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current),
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current),
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current),
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current));
+              break;
             case 3:
               value4 = new Float32x4(
                   binaryOperation((valueIterator1..moveNext()).current,
@@ -500,26 +526,13 @@ class NDArrayBlockedImpl extends NDArrayBase {
                   0.0,
                   0.0);
               break;
-            case 0:
-              value4 = new Float32x4(
-                  binaryOperation((valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current),
-                  binaryOperation((valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current),
-                  binaryOperation((valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current),
-                  binaryOperation((valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current));
-              break;
           }
 
           resultData[dataIndex] = value4;
 
           dataIndex += resultMatrixInfo.delta1;
 
-          i += resultMatrixInfo.lastBlockColumnOffset == 0
-              ? resultDescriptor.dataType.blockSize
-              : resultMatrixInfo.lastBlockColumnOffset;
+          i += resultMatrixInfo.lastBlockColumnCount;
 
           if (row % resultDescriptor.dataType.blockSize <
               resultDescriptor.dataType.blockSize - 1) {
@@ -623,7 +636,26 @@ class NDArrayBlockedImpl extends NDArrayBase {
           }
 
           var value4;
-          switch (resultMatrixInfo.lastBlockColumnOffset) {
+          switch (resultMatrixInfo.lastBlockColumnCount) {
+            case 4:
+              value4 = new Float32x4(
+                  ternaryOperation(
+                      (valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current,
+                      (valueIterator3..moveNext()).current),
+                  ternaryOperation(
+                      (valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current,
+                      (valueIterator3..moveNext()).current),
+                  ternaryOperation(
+                      (valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current,
+                      (valueIterator3..moveNext()).current),
+                  ternaryOperation(
+                      (valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current,
+                      (valueIterator3..moveNext()).current));
+              break;
             case 3:
               value4 = new Float32x4(
                   ternaryOperation(
@@ -663,34 +695,13 @@ class NDArrayBlockedImpl extends NDArrayBase {
                   0.0,
                   0.0);
               break;
-            case 0:
-              value4 = new Float32x4(
-                  ternaryOperation(
-                      (valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current,
-                      (valueIterator3..moveNext()).current),
-                  ternaryOperation(
-                      (valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current,
-                      (valueIterator3..moveNext()).current),
-                  ternaryOperation(
-                      (valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current,
-                      (valueIterator3..moveNext()).current),
-                  ternaryOperation(
-                      (valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current,
-                      (valueIterator3..moveNext()).current));
-              break;
           }
 
           resultData[dataIndex] = value4;
 
           dataIndex += resultMatrixInfo.delta1;
 
-          i += resultMatrixInfo.lastBlockColumnOffset == 0
-              ? resultDescriptor.dataType.blockSize
-              : resultMatrixInfo.lastBlockColumnOffset;
+          i += resultMatrixInfo.lastBlockColumnCount;
 
           if (row % resultDescriptor.dataType.blockSize <
               resultDescriptor.dataType.blockSize - 1) {
@@ -727,19 +738,36 @@ class NDArrayBlockedImpl extends NDArrayBase {
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
       {void initReduction(),
-      void onValueToReduce(int valueIndex, value),
+      void onValueToReduce(
+          int reductionAxeIndex, int dimensionIndex, value, int valueCount),
       reduce()}) {
-    var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
+    if (keepDimensions) {
+      throw new UnimplementedError();
+    }
 
-    var resultDataInfo =
-        _createNormalizedDataInfo(resultDescriptor.shape, resultMatrixInfo);
+    var newReductionAxis =
+        convertToValidReductionAxis(reductionAxis, shape.dimension);
 
-    var resultData =
-        _createData(resultDescriptor, resultDataInfo, resultMatrixInfo, reuse);
+    if (newReductionAxis.isNotEmpty) {
+      var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
 
-    // TODO to implement NDArrayBlockedImpl.reduceOperationInternal
-    throw new UnimplementedError(
-        "to implement NDArrayBlockedImpl.reduceOperationInternal: $this");
+      var resultDataInfo =
+          _createNormalizedDataInfo(resultDescriptor.shape, resultMatrixInfo);
+
+      var resultData = _createData(
+          resultDescriptor, resultDataInfo, resultMatrixInfo, reuse);
+
+      _reduceData(this, reductionAxis, keepDimensions, resultData,
+          resultDescriptor, resultDataInfo, resultMatrixInfo,
+          initReduction: initReduction,
+          onValueToReduce: onValueToReduce,
+          reduce: reduce);
+
+      return new NDArrayBlockedImpl._(
+          resultData, resultDescriptor, resultDataInfo, resultMatrixInfo);
+    } else {
+      return this;
+    }
   }
 
   @override
@@ -757,8 +785,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
     var resultData =
         _createData(resultDescriptor, resultDataInfo, resultMatrixInfo, reuse);
 
-    _matMulBlockedData(this, array2, resultData, resultDescriptor,
-        resultDataInfo, resultMatrixInfo);
+    _matMulData(this, array2, resultData, resultDescriptor, resultDataInfo,
+        resultMatrixInfo);
 
     return new NDArrayBlockedImpl._(
         resultData, resultDescriptor, resultDataInfo, resultMatrixInfo);
@@ -814,7 +842,14 @@ class NDArrayBlockedImpl extends NDArrayBase {
           }
 
           var value4;
-          switch (resultMatrixInfo.lastBlockColumnOffset) {
+          switch (resultMatrixInfo.lastBlockColumnCount) {
+            case 4:
+              value4 = new Float32x4(
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current);
+              break;
             case 3:
               value4 = new Float32x4(
                   (valueIterator..moveNext()).current,
@@ -830,22 +865,13 @@ class NDArrayBlockedImpl extends NDArrayBase {
               value4 = new Float32x4(
                   (valueIterator..moveNext()).current, 0.0, 0.0, 0.0);
               break;
-            case 0:
-              value4 = new Float32x4(
-                  (valueIterator..moveNext()).current,
-                  (valueIterator..moveNext()).current,
-                  (valueIterator..moveNext()).current,
-                  (valueIterator..moveNext()).current);
-              break;
           }
 
           resultData[dataIndex] = value4;
 
           dataIndex += resultMatrixInfo.delta1;
 
-          i += resultMatrixInfo.lastBlockColumnOffset == 0
-              ? resultDescriptor.dataType.blockSize
-              : resultMatrixInfo.lastBlockColumnOffset;
+          i += resultMatrixInfo.lastBlockColumnCount;
 
           if (row % resultDescriptor.dataType.blockSize <
               resultDescriptor.dataType.blockSize - 1) {
@@ -974,7 +1000,14 @@ void _loadData(value, Float32x4List data, NDDescriptor descriptor,
         }
 
         var value4;
-        switch (matrixInfo.lastBlockColumnOffset) {
+        switch (matrixInfo.lastBlockColumnCount) {
+          case 4:
+            value4 = new Float32x4(
+                rowValues[column].toDouble(),
+                rowValues[column + 1].toDouble(),
+                rowValues[column + 2].toDouble(),
+                rowValues[column + 3].toDouble());
+            break;
           case 3:
             value4 = new Float32x4(
                 rowValues[column].toDouble(),
@@ -989,22 +1022,13 @@ void _loadData(value, Float32x4List data, NDDescriptor descriptor,
           case 1:
             value4 = new Float32x4(rowValues[column].toDouble(), 0.0, 0.0, 0.0);
             break;
-          case 0:
-            value4 = new Float32x4(
-                rowValues[column].toDouble(),
-                rowValues[column + 1].toDouble(),
-                rowValues[column + 2].toDouble(),
-                rowValues[column + 3].toDouble());
-            break;
         }
 
         data[dataIndex] = value4;
 
         dataIndex += matrixInfo.delta1;
 
-        i += matrixInfo.lastBlockColumnOffset == 0
-            ? descriptor.dataType.blockSize
-            : matrixInfo.lastBlockColumnOffset;
+        i += matrixInfo.lastBlockColumnCount;
 
         if (row % descriptor.dataType.blockSize <
             descriptor.dataType.blockSize - 1) {
@@ -1032,6 +1056,440 @@ void _loadData(value, Float32x4List data, NDDescriptor descriptor,
         dataIndexes[shapeIndex] = dataIndex;
       } else {
         shapeIndex--;
+      }
+    }
+  }
+}
+
+void _reduceData(
+    NDArrayBlockedImpl sourceArray,
+    List<int> reductionAxis,
+    bool keepDimensions,
+    Float32x4List targetData,
+    NDDescriptor targetDescriptor,
+    _DataInfo targetDataInfo,
+    _MatrixInfo targetMatrixInfo,
+    {void initReduction(),
+    void onValueToReduce(
+        int reductionAxeIndex, int dimensionIndex, value, int valueCount),
+    dynamic reduce()}) {
+  // TODO supponiamo le reductionAxis in ordine
+
+  var sourceDimensions = new List.from(sourceArray.descriptor.shape.dimensions
+      .sublist(0, sourceArray.descriptor.shape.dimension - 2));
+  var targetDimensions = new List.from(targetDescriptor.shape.dimensions
+      .sublist(0, targetDescriptor.shape.dimension - 2));
+
+  var sourceStrides = new List.from(sourceArray._dataInfo.headStride);
+  var targetStrides = new List.from(targetDataInfo.headStride);
+
+  var sourceRowIndex;
+  var sourceColumnIndex;
+
+  var axis = new Set<int>.from(reductionAxis);
+  if (axis.contains(sourceArray.descriptor.shape.dimension - 1)) {
+    throw new UnimplementedError();
+  }
+
+  var targetPermutedIndexes;
+
+  if (sourceArray.dataType.isHBlocked) {
+    sourceRowIndex = sourceDimensions.length;
+    sourceDimensions.add(sourceArray._matrixInfo.blockRows);
+    sourceColumnIndex = sourceDimensions.length;
+    sourceDimensions.add(sourceArray._matrixInfo.blockColumns);
+    sourceDimensions.add(sourceArray.descriptor.dataType.blockSize);
+    sourceStrides.add(sourceArray._matrixInfo.dataColumns);
+    sourceStrides.add(sourceArray.descriptor.dataType.blockSize);
+    sourceStrides.add(1);
+    targetDimensions.add(targetMatrixInfo.blockRows);
+    targetDimensions.add(targetMatrixInfo.blockColumns);
+    targetDimensions.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(targetMatrixInfo.dataColumns);
+    targetStrides.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(1);
+
+    targetPermutedIndexes =
+        new List.generate(targetDimensions.length, (index) => index);
+
+    if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
+      axis.add(sourceArray.descriptor.shape.dimension);
+
+      var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+      targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+          targetPermutedIndexes[targetPermutedIndexes.length - 2];
+      targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
+      targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
+    }
+  } else {
+    sourceColumnIndex = sourceDimensions.length;
+    sourceDimensions.add(sourceArray._matrixInfo.blockColumns);
+    sourceRowIndex = sourceDimensions.length;
+    sourceDimensions.add(sourceArray._matrixInfo.blockRows);
+    sourceDimensions.add(targetDescriptor.dataType.blockSize);
+    sourceStrides.add(sourceArray._matrixInfo.dataRows);
+    sourceStrides.add(sourceArray.descriptor.dataType.blockSize);
+    sourceStrides.add(1);
+    targetDimensions.add(targetMatrixInfo.blockColumns);
+    targetDimensions.add(targetMatrixInfo.blockRows);
+    targetDimensions.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(targetMatrixInfo.dataRows);
+    targetStrides.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(1);
+
+    targetPermutedIndexes =
+        new List.generate(targetDimensions.length, (index) => index);
+
+    if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
+      axis.remove(sourceArray.descriptor.shape.dimension - 2);
+      axis.add(sourceArray.descriptor.shape.dimension - 1);
+      axis.add(sourceArray.descriptor.shape.dimension);
+
+      var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+      targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+          targetPermutedIndexes[targetPermutedIndexes.length - 2];
+      targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
+      targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
+    }
+  }
+
+  var newReductionAxis = axis.toList(growable: false);
+
+  var sourcePermutedIndexes = new List.generate(
+      sourceArray.descriptor.shape.dimension + 1, (index) => index,
+      growable: true);
+
+  sourcePermutedIndexes = sourcePermutedIndexes
+      .where((index) => !axis.contains(index))
+      .toList(growable: true);
+
+  sourcePermutedIndexes.addAll(newReductionAxis);
+  sourcePermutedIndexes.add(sourcePermutedIndexes.length);
+
+  print("newReductionAxis: $newReductionAxis");
+  print("sourceShape: ${sourceArray.descriptor.shape}");
+  print("sourceDimensions: $sourceDimensions");
+  print("sourceStrides: $sourceStrides");
+  print("sourcePermutedIndexes: $sourcePermutedIndexes");
+  print("sourceRowIndex: $sourceRowIndex");
+  print("sourceColumnIndex: $sourceColumnIndex");
+  print("targetShape: ${targetDescriptor.shape}");
+  print("targetDimensions: $targetDimensions");
+  print("targetStrides: $targetStrides");
+  print("targetPermutedIndexes: $targetPermutedIndexes");
+
+  var sourceDimensionIndexes = new List(sourceDimensions.length + 1);
+  var targetDimensionIndexes = new List(targetDimensions.length + 1);
+  var sourceDataIndexes = new List(sourceDimensions.length + 1);
+  var targetDataIndexes = new List(targetDimensions.length + 1);
+
+  var shapeIndex = 0;
+  sourceDimensionIndexes[sourcePermutedIndexes[0]] = 0;
+  targetDimensionIndexes[targetPermutedIndexes[0]] = 0;
+  var sourceDataIndex = 0;
+  var targetDataIndex = 0;
+  sourceDataIndexes[sourcePermutedIndexes[0]] = 0;
+  targetDataIndexes[targetPermutedIndexes[0]] = 0;
+
+  // TODO reduce delle colonne
+
+  var lastRow = false;
+  var lastColumn = false;
+  var blockColumnCount;
+  while (shapeIndex >= 0) {
+    if (shapeIndex == sourceDimensions.length) {
+      // print("REDUCE: ${sourceDimensionIndexes.sublist(0, shapeIndex).map((index) => index - 1)}: $sourceDataIndex:$lastRow:$lastColumn");
+
+      shapeIndex--;
+
+      onValueToReduce(
+          sourcePermutedIndexes[shapeIndex],
+          sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] - 1,
+          sourceArray._data[sourceDataIndex],
+          blockColumnCount);
+    } else {
+      var dimension;
+      if (sourcePermutedIndexes[shapeIndex] == sourceDimensions.length - 1) {
+        if (lastRow) {
+          dimension = sourceArray._matrixInfo.lastBlockRowCount;
+        } else {
+          dimension = sourceDimensions[sourcePermutedIndexes[shapeIndex]];
+        }
+
+        if (lastColumn) {
+          blockColumnCount = sourceArray._matrixInfo.lastBlockColumnCount;
+        } else {
+          blockColumnCount =
+              sourceDimensions[sourcePermutedIndexes[shapeIndex]];
+        }
+      } else {
+        dimension = sourceDimensions[sourcePermutedIndexes[shapeIndex]];
+      }
+
+      if (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] <
+          dimension) {
+        if (shapeIndex < sourceDimensions.length - newReductionAxis.length) {
+          targetDataIndex =
+              targetDataIndexes[targetPermutedIndexes[shapeIndex]];
+
+          targetDataIndexes[targetPermutedIndexes[shapeIndex]] =
+              targetDataIndex +
+                  targetStrides[targetPermutedIndexes[shapeIndex]];
+        }
+
+        if (sourcePermutedIndexes[shapeIndex] == sourceRowIndex) {
+          lastRow =
+              (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] ==
+                  sourceDimensions[sourcePermutedIndexes[shapeIndex]] - 1);
+        } else if (sourcePermutedIndexes[shapeIndex] == sourceColumnIndex) {
+          lastColumn =
+              (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] ==
+                  sourceDimensions[sourcePermutedIndexes[shapeIndex]] - 1);
+        }
+
+        sourceDataIndex = sourceDataIndexes[sourcePermutedIndexes[shapeIndex]];
+
+        sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]]++;
+        sourceDataIndexes[sourcePermutedIndexes[shapeIndex]] =
+            sourceDataIndex + sourceStrides[sourcePermutedIndexes[shapeIndex]];
+
+        shapeIndex++;
+
+        if (shapeIndex < sourceDimensions.length - newReductionAxis.length) {
+          targetDataIndexes[targetPermutedIndexes[shapeIndex]] =
+              targetDataIndex;
+        }
+
+        sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] = 0;
+        sourceDataIndexes[sourcePermutedIndexes[shapeIndex]] = sourceDataIndex;
+
+        if (shapeIndex == sourceDimensions.length - newReductionAxis.length) {
+          initReduction();
+        }
+      } else {
+        shapeIndex--;
+
+        if (shapeIndex ==
+            sourceDimensions.length - newReductionAxis.length - 1) {
+          var reducedValue = reduce();
+
+          targetData[targetDataIndex] = reducedValue;
+        }
+      }
+    }
+  }
+}
+
+void _identityData(
+    NDArrayBlockedImpl sourceArray,
+    Float32x4List targetData,
+    NDDescriptor targetDescriptor,
+    _DataInfo targetDataInfo,
+    _MatrixInfo targetMatrixInfo) {
+  var targetStrides = new List.from(targetDataInfo.headStride);
+
+  var targetDimensions = new List.from(targetDescriptor.shape.dimensions
+      .sublist(0, targetDescriptor.shape.dimension - 2));
+
+  if (sourceArray.dataType.isHBlocked) {
+    targetStrides.add(targetMatrixInfo.dataColumns);
+    targetStrides.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(1);
+    targetDimensions.add(targetMatrixInfo.blockRows);
+    targetDimensions.add(targetMatrixInfo.blockColumns);
+    targetDimensions.add(targetDescriptor.dataType.blockSize);
+  } else {
+    targetStrides.add(targetMatrixInfo.dataRows);
+    targetStrides.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(1);
+    targetDimensions.add(targetMatrixInfo.blockColumns);
+    targetDimensions.add(targetMatrixInfo.blockRows);
+    targetDimensions.add(targetDescriptor.dataType.blockSize);
+  }
+
+  print("targetShape: ${targetDescriptor.shape}");
+  print("targetDimensions: $targetDimensions");
+  print("targetStrides: $targetStrides");
+
+  var targetDimensionIndexes = new List(targetDimensions.length + 1);
+  var targetDataIndexes = new List(targetDimensions.length + 1);
+
+  var targetShapeIndex = 0;
+  targetDimensionIndexes[0] = 0;
+  var targetDataIndex = 0;
+  targetDataIndexes[0] = 0;
+
+  var sourceDataIndex = 0;
+
+  while (targetShapeIndex >= 0) {
+    if (targetDimensionIndexes[targetShapeIndex] <
+        targetDimensions[targetShapeIndex]) {
+      targetDataIndex = targetDataIndexes[targetShapeIndex];
+
+      targetDimensionIndexes[targetShapeIndex]++;
+      targetDataIndexes[targetShapeIndex] =
+          targetDataIndex + targetStrides[targetShapeIndex];
+
+      targetShapeIndex++;
+
+      targetDimensionIndexes[targetShapeIndex] = 0;
+      targetDataIndexes[targetShapeIndex] = targetDataIndex;
+    } else {
+      targetShapeIndex--;
+    }
+
+    if (targetShapeIndex == targetDimensions.length) {
+      print(
+          "${targetDimensionIndexes.sublist(0, targetShapeIndex).map((index) => index - 1)}: $targetDataIndex");
+
+      targetData[targetDataIndex] = sourceArray._data[sourceDataIndex++];
+
+      targetShapeIndex--;
+    } else {
+      if (targetDimensionIndexes[targetShapeIndex] <
+          targetDimensions[targetShapeIndex]) {
+        targetDataIndex = targetDataIndexes[targetShapeIndex];
+
+        targetDimensionIndexes[targetShapeIndex]++;
+        targetDataIndexes[targetShapeIndex] =
+            targetDataIndex + targetStrides[targetShapeIndex];
+
+        targetShapeIndex++;
+
+        targetDimensionIndexes[targetShapeIndex] = 0;
+        targetDataIndexes[targetShapeIndex] = targetDataIndex;
+      } else {
+        targetShapeIndex--;
+      }
+    }
+  }
+}
+
+void _identityDataOld(
+    NDArrayBlockedImpl sourceArray,
+    Float32x4List targetData,
+    NDDescriptor targetDescriptor,
+    _DataInfo targetDataInfo,
+    _MatrixInfo targetMatrixInfo) {
+  var targetStrides = new List.from(targetDataInfo.headStride);
+
+  var targetDimensions = new List.from(targetDescriptor.shape.dimensions
+      .sublist(0, targetDescriptor.shape.dimension - 2));
+
+  if (sourceArray.dataType.isHBlocked) {
+    targetStrides.add(targetMatrixInfo.dataColumns);
+    targetStrides.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(1);
+    targetDimensions.add(targetMatrixInfo.blockRows);
+    targetDimensions.add(targetMatrixInfo.blockColumns);
+    targetDimensions.add(targetDescriptor.dataType.blockSize);
+  } else {
+    targetStrides.add(targetMatrixInfo.dataRows);
+    targetStrides.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(1);
+    targetDimensions.add(targetMatrixInfo.blockColumns);
+    targetDimensions.add(targetMatrixInfo.blockRows);
+    targetDimensions.add(targetDescriptor.dataType.blockSize);
+  }
+
+  print("targetShape: ${targetDescriptor.shape}");
+  print("targetDimensions: $targetDimensions");
+  print("targetStrides: $targetStrides");
+
+  var targetDimensionIndexes = new List(targetDimensions.length + 1);
+  var targetDataIndexes = new List(targetDimensions.length + 1);
+
+  var targetShapeIndex = 0;
+  targetDimensionIndexes[0] = 0;
+  var targetDataIndex = 0;
+  targetDataIndexes[0] = 0;
+
+  var sourceDataIndex = 0;
+
+  while (targetShapeIndex >= 0) {
+    if (targetShapeIndex == targetDimensions.length) {
+      print(
+          "${targetDimensionIndexes.sublist(0, targetShapeIndex).map((index) => index - 1)}: $targetDataIndex");
+
+      targetData[targetDataIndex] = sourceArray._data[sourceDataIndex++];
+
+      targetShapeIndex--;
+    } else {
+      if (targetDimensionIndexes[targetShapeIndex] <
+          targetDimensions[targetShapeIndex]) {
+        targetDataIndex = targetDataIndexes[targetShapeIndex];
+
+        targetDimensionIndexes[targetShapeIndex]++;
+        targetDataIndexes[targetShapeIndex] =
+            targetDataIndex + targetStrides[targetShapeIndex];
+
+        targetShapeIndex++;
+
+        targetDimensionIndexes[targetShapeIndex] = 0;
+        targetDataIndexes[targetShapeIndex] = targetDataIndex;
+      } else {
+        targetShapeIndex--;
+      }
+    }
+  }
+}
+
+void _loopExample(
+    NDArrayBlockedImpl sourceArray,
+    List targetData,
+    NDDescriptor targetDescriptor,
+    _DataInfo targetDataInfo,
+    _MatrixInfo targetMatrixInfo) {
+  var targetStrides = new List.from(targetDataInfo.headStride);
+
+  var targetDimensions = new List.from(targetDescriptor.shape.dimensions
+      .sublist(0, targetDescriptor.shape.dimension - 2));
+
+  if (sourceArray.dataType.isHBlocked) {
+    targetStrides.add(targetMatrixInfo.dataColumns);
+    targetStrides.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(1);
+    targetDimensions.add(targetMatrixInfo.blockRows);
+    targetDimensions.add(targetMatrixInfo.blockColumns);
+    targetDimensions.add(targetDescriptor.dataType.blockSize);
+  } else {
+    targetStrides.add(targetMatrixInfo.dataRows);
+    targetStrides.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(1);
+    targetDimensions.add(targetMatrixInfo.blockColumns);
+    targetDimensions.add(targetMatrixInfo.blockRows);
+    targetDimensions.add(targetDescriptor.dataType.blockSize);
+  }
+
+  var targetDimensionIndexes = new List(targetDimensions.length + 1);
+  var targetDataIndexes = new List(targetDimensions.length + 1);
+
+  var targetShapeIndex = 0;
+  targetDimensionIndexes[0] = 0;
+  var sourceDataIndex = 0;
+  var targetDataIndex = 0;
+  targetDataIndexes[0] = 0;
+
+  while (targetShapeIndex >= 0) {
+    if (targetShapeIndex == targetDimensions.length) {
+      targetData[targetDataIndex] = sourceArray._data[sourceDataIndex++];
+
+      targetShapeIndex--;
+    } else {
+      if (targetDimensionIndexes[targetShapeIndex] <
+          targetDimensions[targetShapeIndex]) {
+        targetDataIndex = targetDataIndexes[targetShapeIndex];
+
+        targetDimensionIndexes[targetShapeIndex]++;
+        targetDataIndexes[targetShapeIndex] =
+            targetDataIndex + targetStrides[targetShapeIndex];
+
+        targetShapeIndex++;
+
+        targetDimensionIndexes[targetShapeIndex] = 0;
+        targetDataIndexes[targetShapeIndex] = targetDataIndex;
+      } else {
+        targetShapeIndex--;
       }
     }
   }
@@ -1171,7 +1629,7 @@ void _transposeSwitchedData(
   }
 }
 
-void _matMulBlockedData(
+void _matMulData(
     NDArrayBlockedImpl array1,
     NDArrayBlockedImpl array2,
     List resultData,
@@ -1315,7 +1773,14 @@ void _generateData(generator(int index), Float32x4List data,
         }
 
         var value4;
-        switch (matrixInfo.lastBlockColumnOffset) {
+        switch (matrixInfo.lastBlockColumnCount) {
+          case 4:
+            value4 = new Float32x4(
+                generator(i).toDouble(),
+                generator(i + 1).toDouble(),
+                generator(i + 2).toDouble(),
+                generator(i + 3).toDouble());
+            break;
           case 3:
             value4 = new Float32x4(generator(i).toDouble(),
                 generator(i + 1).toDouble(), generator(i + 2).toDouble(), 0.0);
@@ -1327,22 +1792,13 @@ void _generateData(generator(int index), Float32x4List data,
           case 1:
             value4 = new Float32x4(generator(i).toDouble(), 0.0, 0.0, 0.0);
             break;
-          case 0:
-            value4 = new Float32x4(
-                generator(i).toDouble(),
-                generator(i + 1).toDouble(),
-                generator(i + 2).toDouble(),
-                generator(i + 3).toDouble());
-            break;
         }
 
         data[dataIndex] = value4;
 
         dataIndex += matrixInfo.delta1;
 
-        i += matrixInfo.lastBlockColumnOffset == 0
-            ? descriptor.dataType.blockSize
-            : matrixInfo.lastBlockColumnOffset;
+        i += matrixInfo.lastBlockColumnCount;
 
         if (row % descriptor.dataType.blockSize <
             descriptor.dataType.blockSize - 1) {
@@ -1481,7 +1937,14 @@ void _castConvertedData(
         }
 
         var value4;
-        switch (resultMatrixInfo.lastBlockColumnOffset) {
+        switch (resultMatrixInfo.lastBlockColumnCount) {
+          case 4:
+            value4 = new Float32x4(
+                converter((valueIterator..moveNext()).current),
+                converter((valueIterator..moveNext()).current),
+                converter((valueIterator..moveNext()).current),
+                converter((valueIterator..moveNext()).current));
+            break;
           case 3:
             value4 = new Float32x4(
                 converter((valueIterator..moveNext()).current),
@@ -1500,22 +1963,13 @@ void _castConvertedData(
             value4 = new Float32x4(
                 converter((valueIterator..moveNext()).current), 0.0, 0.0, 0.0);
             break;
-          case 0:
-            value4 = new Float32x4(
-                converter((valueIterator..moveNext()).current),
-                converter((valueIterator..moveNext()).current),
-                converter((valueIterator..moveNext()).current),
-                converter((valueIterator..moveNext()).current));
-            break;
         }
 
         resultData[dataIndex] = value4;
 
         dataIndex += resultMatrixInfo.delta1;
 
-        i += resultMatrixInfo.lastBlockColumnOffset == 0
-            ? resultDescriptor.dataType.blockSize
-            : resultMatrixInfo.lastBlockColumnOffset;
+        i += resultMatrixInfo.lastBlockColumnCount;
 
         if (row % resultDescriptor.dataType.blockSize <
             resultDescriptor.dataType.blockSize - 1) {
@@ -1600,7 +2054,14 @@ Iterable<num> _createHeadTiledValueIterable(
 
         var value4 = array._data[dataIndex];
 
-        switch (array._matrixInfo.lastBlockColumnOffset) {
+        switch (array._matrixInfo.lastBlockColumnCount) {
+          case 4:
+            yield value4.x;
+            yield value4.y;
+            yield value4.z;
+            yield value4.w;
+
+            break;
           case 3:
             yield value4.x;
             yield value4.y;
@@ -1616,20 +2077,11 @@ Iterable<num> _createHeadTiledValueIterable(
             yield value4.x;
 
             break;
-          case 0:
-            yield value4.x;
-            yield value4.y;
-            yield value4.z;
-            yield value4.w;
-
-            break;
         }
 
         dataIndex += array._matrixInfo.delta1;
 
-        i += array._matrixInfo.lastBlockColumnOffset == 0
-            ? array.dataType.blockSize
-            : array._matrixInfo.lastBlockColumnOffset;
+        i += array._matrixInfo.lastBlockColumnCount;
 
         if (row % array.dataType.blockSize < array.dataType.blockSize - 1) {
           dataIndex += array._matrixInfo.delta2;
@@ -1724,7 +2176,14 @@ Iterable<num> _createFullTiledValueIterable(
 
             var value4 = array._data[dataIndex];
 
-            switch (array._matrixInfo.lastBlockColumnOffset) {
+            switch (array._matrixInfo.lastBlockColumnCount) {
+              case 4:
+                yield value4.x;
+                yield value4.y;
+                yield value4.z;
+                yield value4.w;
+
+                break;
               case 3:
                 yield value4.x;
                 yield value4.y;
@@ -1740,20 +2199,11 @@ Iterable<num> _createFullTiledValueIterable(
                 yield value4.x;
 
                 break;
-              case 0:
-                yield value4.x;
-                yield value4.y;
-                yield value4.z;
-                yield value4.w;
-
-                break;
             }
 
             dataIndex += array._matrixInfo.delta1;
 
-            i += array._matrixInfo.lastBlockColumnOffset == 0
-                ? array.dataType.blockSize
-                : array._matrixInfo.lastBlockColumnOffset;
+            i += array._matrixInfo.lastBlockColumnCount;
 
             if (row % array.dataType.blockSize < array.dataType.blockSize - 1) {
               dataIndex += array._matrixInfo.delta2;
@@ -1870,7 +2320,14 @@ Iterable<num> _createHeadBroadcastedValueIterable(
 
           var value4 = array._data[dataIndex];
 
-          switch (array._matrixInfo.lastBlockColumnOffset) {
+          switch (array._matrixInfo.lastBlockColumnCount) {
+            case 4:
+              yield value4.x;
+              yield value4.y;
+              yield value4.z;
+              yield value4.w;
+
+              break;
             case 3:
               yield value4.x;
               yield value4.y;
@@ -1886,20 +2343,11 @@ Iterable<num> _createHeadBroadcastedValueIterable(
               yield value4.x;
 
               break;
-            case 0:
-              yield value4.x;
-              yield value4.y;
-              yield value4.z;
-              yield value4.w;
-
-              break;
           }
 
           dataIndex += array._matrixInfo.delta1;
 
-          i += array._matrixInfo.lastBlockColumnOffset == 0
-              ? array.dataType.blockSize
-              : array._matrixInfo.lastBlockColumnOffset;
+          i += array._matrixInfo.lastBlockColumnCount;
 
           if (row % array.dataType.blockSize < array.dataType.blockSize - 1) {
             dataIndex += array._matrixInfo.delta2;
@@ -2008,7 +2456,14 @@ Iterable<num> _createFullBroadcastedValueIterable(
 
               var value4 = array._data[dataIndex];
 
-              switch (array._matrixInfo.lastBlockColumnOffset) {
+              switch (array._matrixInfo.lastBlockColumnCount) {
+                case 4:
+                  yield value4.x;
+                  yield value4.y;
+                  yield value4.z;
+                  yield value4.w;
+
+                  break;
                 case 3:
                   yield value4.x;
                   yield value4.y;
@@ -2024,20 +2479,11 @@ Iterable<num> _createFullBroadcastedValueIterable(
                   yield value4.x;
 
                   break;
-                case 0:
-                  yield value4.x;
-                  yield value4.y;
-                  yield value4.z;
-                  yield value4.w;
-
-                  break;
               }
 
               dataIndex += array._matrixInfo.delta1;
 
-              i += array._matrixInfo.lastBlockColumnOffset == 0
-                  ? array.dataType.blockSize
-                  : array._matrixInfo.lastBlockColumnOffset;
+              i += array._matrixInfo.lastBlockColumnCount;
 
               if (row % array.dataType.blockSize <
                   array.dataType.blockSize - 1) {
@@ -2121,7 +2567,14 @@ Iterable<num> _createValueIterable(NDArrayBlockedImpl array) sync* {
 
         var value4 = array._data[dataIndex];
 
-        switch (array._matrixInfo.lastBlockColumnOffset) {
+        switch (array._matrixInfo.lastBlockColumnCount) {
+          case 4:
+            yield value4.x;
+            yield value4.y;
+            yield value4.z;
+            yield value4.w;
+
+            break;
           case 3:
             yield value4.x;
             yield value4.y;
@@ -2137,20 +2590,11 @@ Iterable<num> _createValueIterable(NDArrayBlockedImpl array) sync* {
             yield value4.x;
 
             break;
-          case 0:
-            yield value4.x;
-            yield value4.y;
-            yield value4.z;
-            yield value4.w;
-
-            break;
         }
 
         dataIndex += array._matrixInfo.delta1;
 
-        i += array._matrixInfo.lastBlockColumnOffset == 0
-            ? array.dataType.blockSize
-            : array._matrixInfo.lastBlockColumnOffset;
+        i += array._matrixInfo.lastBlockColumnCount;
 
         if (row % array.dataType.blockSize < array.dataType.blockSize - 1) {
           dataIndex += array._matrixInfo.delta2;
@@ -2194,9 +2638,9 @@ class _MatrixInfo {
 
   final int dataLength;
 
-  final int lastBlockRowOffset;
+  final int lastBlockRowCount;
 
-  final int lastBlockColumnOffset;
+  final int lastBlockColumnCount;
 
   final int delta1;
 
@@ -2222,6 +2666,13 @@ class _MatrixInfo {
         rows & (descriptor.dataType.blockSize - 1); // equal to % 4
     var lastBlockColumnOffset =
         columns & (descriptor.dataType.blockSize - 1); // equal to % 4
+
+    var lastBlockRowCount = lastBlockRowOffset == 0
+        ? descriptor.dataType.blockSize
+        : lastBlockRowOffset;
+    var lastBlockColumnCount = lastBlockColumnOffset == 0
+        ? descriptor.dataType.blockSize
+        : lastBlockColumnOffset;
 
     var delta1;
     if (descriptor.dataType.isHBlocked) {
@@ -2252,8 +2703,8 @@ class _MatrixInfo {
         dataRows,
         dataColumns,
         dataLength,
-        lastBlockRowOffset,
-        lastBlockColumnOffset,
+        lastBlockRowCount,
+        lastBlockColumnCount,
         delta1,
         delta2,
         delta3);
@@ -2267,8 +2718,8 @@ class _MatrixInfo {
       this.dataRows,
       this.dataColumns,
       this.dataLength,
-      this.lastBlockRowOffset,
-      this.lastBlockColumnOffset,
+      this.lastBlockRowCount,
+      this.lastBlockColumnCount,
       this.delta1,
       this.delta2,
       this.delta3);

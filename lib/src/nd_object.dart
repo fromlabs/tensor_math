@@ -115,9 +115,14 @@ abstract class NDObject {
   NDObject reduceOperation(
       {List<int> reductionAxis,
       bool keepDimensions = false,
-      @required NDDataType resultDataType,
+      @required
+          NDDataType resultDataType,
       NDObject reuse,
-      @required void initReduction(),
-      @required void onValueToReduce(int valueIndex, value),
-      @required dynamic reduce()});
+      @required
+          void initReduction(),
+      @required
+          void onValueToReduce(
+              int reductionAxeIndex, int dimensionIndex, value, int valueCount),
+      @required
+          dynamic reduce()});
 }

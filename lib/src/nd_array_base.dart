@@ -3,6 +3,7 @@
 
 import "dart:math" as math;
 
+import 'dart:typed_data';
 import "package:meta/meta.dart";
 
 import 'nd_descriptor.dart';
@@ -121,7 +122,8 @@ abstract class NDArrayBase implements NDArray {
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
       {void initReduction(),
-      void onValueToReduce(int valueIndex, value),
+      void onValueToReduce(
+          int reductionAxeIndex, int dimensionIndex, value, int valueCount),
       dynamic reduce()});
 
   @override
@@ -361,12 +363,20 @@ abstract class NDArrayBase implements NDArray {
 
     var total;
 
+    var initTotal;
+    if (dataType == NDDataType.float32HBlocked || dataType == NDDataType.float32VBlocked) {
+      initTotal = new Float32x4.zero();
+    } else {
+      initTotal = 0;
+    }
+
     return reduceOperationInternal(
         reductionAxis, keepDimensions, resultDescriptor, reuse,
         initReduction: () {
-          total = 0;
+          total = initTotal;
         },
-        onValueToReduce: (int valueIndex, value) {
+        onValueToReduce:
+            (int reductionAxeIndex, int dimensionIndex, value, int valueCount) {
           total += value;
         },
         reduce: () => total);
@@ -387,7 +397,8 @@ abstract class NDArrayBase implements NDArray {
           total = 0;
           count = 0;
         },
-        onValueToReduce: (int valueIndex, value) {
+        onValueToReduce:
+            (int reductionAxeIndex, int dimensionIndex, value, int valueCount) {
           total += value;
           count++;
         },
@@ -407,7 +418,8 @@ abstract class NDArrayBase implements NDArray {
         initReduction: () {
           maxValue = null;
         },
-        onValueToReduce: (int valueIndex, value) {
+        onValueToReduce:
+            (int reductionAxeIndex, int dimensionIndex, value, int valueCount) {
           if (maxValue == null || value > maxValue) {
             maxValue = value;
           }
@@ -428,7 +440,8 @@ abstract class NDArrayBase implements NDArray {
         initReduction: () {
           total = false;
         },
-        onValueToReduce: (int valueIndex, bool value) {
+        onValueToReduce: (int reductionAxeIndex, int dimensionIndex, bool value,
+            int valueCount) {
           total = total || value;
         },
         reduce: () => total);
@@ -447,9 +460,10 @@ abstract class NDArrayBase implements NDArray {
             maxValueIndex = null;
             maxValue = null;
           },
-          onValueToReduce: (int valueIndex, value) {
+          onValueToReduce: (int reductionAxeIndex, int dimensionIndex, value,
+              int valueCount) {
             if (maxValue == null || value > maxValue) {
-              maxValueIndex = valueIndex;
+              maxValueIndex = dimensionIndex;
               maxValue = value;
             }
           },
@@ -516,9 +530,13 @@ abstract class NDArrayBase implements NDArray {
       bool keepDimensions = false,
       NDDataType resultDataType,
       covariant NDArray reuse,
-      @required void initReduction(),
-      @required void onValueToReduce(int valueIndex, value),
-      @required dynamic reduce()}) {
+      @required
+          void initReduction(),
+      @required
+          void onValueToReduce(
+              int reductionAxeIndex, int dimensionIndex, value, int valueCount),
+      @required
+          dynamic reduce()}) {
     var resultDescriptor = descriptor.reduceOperation(
         reductionAxis: reductionAxis,
         keepDimensions: keepDimensions,

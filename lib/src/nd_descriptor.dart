@@ -465,7 +465,8 @@ class NDDescriptor implements NDObject {
           @required NDDataType resultDataType,
           covariant NDDescriptor reuse,
           void initReduction(),
-          void onValueToReduce(int valueIndex, value),
+          void onValueToReduce(
+              int reductionAxeIndex, int dimensionIndex, value, int valueCount),
           dynamic reduce()}) =>
       this.reduce(
           reductionAxis: reductionAxis,

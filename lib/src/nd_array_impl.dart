@@ -485,10 +485,11 @@ class NDArrayImpl extends NDArrayBase {
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
       {void initReduction(),
-      void onValueToReduce(int valueIndex, value),
+      void onValueToReduce(
+          int reductionAxeIndex, int dimensionIndex, value, int valueCount),
       dynamic reduce()}) {
     var newReductionAxis =
-        reductionAxis ?? new List.generate(shape.dimension, (index) => index);
+        convertToValidReductionAxis(reductionAxis, shape.dimension);
 
     if (newReductionAxis.isNotEmpty) {
       var resultShape = resultDescriptor.shape;
@@ -523,7 +524,8 @@ class NDArrayImpl extends NDArrayBase {
           }
 
           if (shapeIndex == shape.dimension - 1) {
-            onValueToReduce(dimensionIndex, _data[dataIndex]);
+            onValueToReduce(permutedIndexes[shapeIndex], dimensionIndex,
+                _data[dataIndex], 1);
 
             dataIndex += _dataInfo.stride[permutedIndexes[shapeIndex]];
             dimensionIndex++;
