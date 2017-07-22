@@ -12,19 +12,26 @@ void main() {
   // performanceTest();
 }
 
-void functionalTest() {
-  var shape = [2, 6, 6];
-  var reductionAxis = [1];
+void functionalTest3() {
+  var shape = [2, 2, 6, 6];
+  var reductionAxis = [3];
 
   var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32)
+      dataType: tm.NDDataType.float32)
       .reduceSum(reductionAxis: reductionAxis)
       .toValue();
 
   var value = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32VBlocked);
+      dataType: tm.NDDataType.float32HBlocked)
+      .reduceSum(reductionAxis: reductionAxis)
+      .toValue();
 
-  value = value
+  if (!iterableEquality.equals(value, expectedValue)) {
+    throw new StateError("not equals: $value $expectedValue");
+  }
+
+  value = new tm.NDArray.generate(shape, (index) => index + 1,
+      dataType: tm.NDDataType.float32VBlocked)
       .reduceSum(reductionAxis: reductionAxis)
       .toValue();
 
@@ -33,7 +40,7 @@ void functionalTest() {
   }
 }
 
-void functionalTest3() {
+void functionalTest2() {
   var shape = [2, 2, 6, 6];
   var reductionAxis = [2];
 
@@ -61,27 +68,28 @@ void functionalTest3() {
   }
 }
 
-void functionalTest2() {
-  var shape = [2, 6, 6];
+void functionalTest1() {
+  var shape = [2, 2, 6, 6];
+  var reductionAxis = [0];
 
   var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32)
+      dataType: tm.NDDataType.float32)
+      .reduceSum(reductionAxis: reductionAxis)
       .toValue();
 
-  NDArrayBlockedImpl array = new tm.NDArray.generate(
-      shape, (index) => index + 1,
-      dataType: tm.NDDataType.float32HBlocked);
-
-  var value = array.identity().toValue();
+  var value = new tm.NDArray.generate(shape, (index) => index + 1,
+      dataType: tm.NDDataType.float32HBlocked)
+      .reduceSum(reductionAxis: reductionAxis)
+      .toValue();
 
   if (!iterableEquality.equals(value, expectedValue)) {
     throw new StateError("not equals: $value $expectedValue");
   }
 
-  array = new tm.NDArray.generate(shape, (index) => index + 1,
-      dataType: tm.NDDataType.float32VBlocked);
-
-  value = array.identity().toValue();
+  value = new tm.NDArray.generate(shape, (index) => index + 1,
+      dataType: tm.NDDataType.float32VBlocked)
+      .reduceSum(reductionAxis: reductionAxis)
+      .toValue();
 
   if (!iterableEquality.equals(value, expectedValue)) {
     throw new StateError("not equals: $value $expectedValue");
