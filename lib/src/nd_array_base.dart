@@ -12,7 +12,7 @@ import 'nd_data_type.dart';
 import "nd_array.dart";
 
 import "nd_array_impl.dart";
-import "nd_array_blocked_impl.dart";
+import "nd_array_blocked_impl2.dart";
 
 NDArray createTestNDArray(List<int> dimensions, {NDDataType dataType}) =>
     new NDArray.generate(dimensions, (index) => index, dataType: dataType);

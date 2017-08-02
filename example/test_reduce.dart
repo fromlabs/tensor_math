@@ -14,7 +14,7 @@ void main() {
 
 void functionalTest3() {
   var shape = [2, 2, 6, 6];
-  var reductionAxis = [3];
+  var reductionAxis = [2, 3];
 
   var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
       dataType: tm.NDDataType.float32)
