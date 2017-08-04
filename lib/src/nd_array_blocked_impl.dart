@@ -737,10 +737,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
   @override
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
-      {void initReduction(),
-      void onValueToReduce(
-          int reductionAxeIndex, int dimensionIndex, value, int valueCount),
-      reduce()}) {
+      {void begin(), void onValue(value, int valueCount), end()}) {
     if (keepDimensions) {
       throw new UnimplementedError();
     }
@@ -759,15 +756,35 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
       _reduceData(this, reductionAxis, keepDimensions, resultData,
           resultDescriptor, resultDataInfo, resultMatrixInfo,
-          initReduction: initReduction,
-          onValueToReduce: onValueToReduce,
-          reduce: reduce);
+          begin: begin, onValue: onValue, end: end);
 
       return new NDArrayBlockedImpl._(
           resultData, resultDescriptor, resultDataInfo, resultMatrixInfo);
     } else {
       return this;
     }
+  }
+
+  @override
+  NDArray argOperationInternal(
+      int axis, NDDescriptor resultDescriptor, NDArray reuse,
+      {void begin(),
+      void onValue(int axeIndex, int dimensionIndex, value, int valueCount),
+      end()}) {
+    var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
+
+    var resultDataInfo =
+        _createNormalizedDataInfo(resultDescriptor.shape, resultMatrixInfo);
+
+    var resultData =
+        _createData(resultDescriptor, resultDataInfo, resultMatrixInfo, reuse);
+
+    _argData(this, axis, resultData, resultDescriptor, resultDataInfo,
+        resultMatrixInfo,
+        begin: begin, onValue: onValue, end: end);
+
+    return new NDArrayBlockedImpl._(
+        resultData, resultDescriptor, resultDataInfo, resultMatrixInfo);
   }
 
   @override
@@ -1069,10 +1086,9 @@ void _reduceData(
     NDDescriptor targetDescriptor,
     _DataInfo targetDataInfo,
     _MatrixInfo targetMatrixInfo,
-    {void initReduction(),
-    void onValueToReduce(
-        int reductionAxeIndex, int dimensionIndex, value, int valueCount),
-    dynamic reduce()}) {
+    {void begin(),
+    void onValue(value, int valueCount),
+    dynamic end()}) {
   var sourceDimensions = new List.from(sourceArray.descriptor.shape.dimensions
       .sublist(0, sourceArray.descriptor.shape.dimension - 2));
   var targetDimensions = new List.from(targetDescriptor.shape.dimensions
@@ -1207,11 +1223,7 @@ void _reduceData(
 
       shapeIndex--;
 
-      onValueToReduce(
-          sourcePermutedIndexes[shapeIndex - 1],
-          sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex - 1]] - 1,
-          sourceArray._data[sourceDataIndex],
-          blockColumnCount);
+      onValue(sourceArray._data[sourceDataIndex], blockColumnCount);
     } else {
       var dimension;
       if (sourcePermutedIndexes[shapeIndex] == sourceDimensions.length - 1) {
@@ -1271,14 +1283,239 @@ void _reduceData(
         if (shapeIndex == sourceDimensions.length - newReductionAxis.length) {
           print("INIT REDUCTION");
 
-          initReduction();
+          begin();
         }
       } else {
         shapeIndex--;
 
         if (shapeIndex ==
             sourceDimensions.length - newReductionAxis.length - 1) {
-          var reducedValue = reduce();
+          var reducedValue = end();
+
+          print("$shapeIndex: REDUCE[$targetDataIndex]: $reducedValue");
+
+          // TODO se la riduzione è sull'ultima colonna: devo fare una ulteriore riduzione e devo impostare il target
+
+          // targetData[targetDataIndex] = reducedValue;
+        }
+      }
+    }
+  }
+}
+
+void _argData(
+    NDArrayBlockedImpl sourceArray,
+    int axis,
+    Float32x4List targetData,
+    NDDescriptor targetDescriptor,
+    _DataInfo targetDataInfo,
+    _MatrixInfo targetMatrixInfo,
+    {void begin(),
+    void onValue(int axeIndex, int dimensionIndex, value, int valueCount),
+    dynamic end()}) {
+  var sourceDimensions = new List.from(sourceArray.descriptor.shape.dimensions
+      .sublist(0, sourceArray.descriptor.shape.dimension - 2));
+  var targetDimensions = new List.from(targetDescriptor.shape.dimensions
+      .sublist(0, targetDescriptor.shape.dimension - 2));
+
+  var sourceStrides = new List.from(sourceArray._dataInfo.headStride);
+  var targetStrides = new List.from(targetDataInfo.headStride);
+
+  var sourceRowIndex;
+  var sourceColumnIndex;
+
+  var argAxis = new Set<int>();
+  argAxis.add(axis);
+
+  List<int> targetPermutedIndexes;
+
+  if (sourceArray.dataType.isHBlocked) {
+    sourceRowIndex = sourceDimensions.length;
+    sourceDimensions.add(sourceArray._matrixInfo.blockRows);
+    sourceColumnIndex = sourceDimensions.length;
+    sourceDimensions.add(sourceArray._matrixInfo.blockColumns);
+    sourceDimensions.add(sourceArray.descriptor.dataType.blockSize);
+    sourceStrides.add(sourceArray._matrixInfo.dataColumns);
+    sourceStrides.add(sourceArray.descriptor.dataType.blockSize);
+    sourceStrides.add(1);
+    targetDimensions.add(targetMatrixInfo.blockRows);
+    targetDimensions.add(targetMatrixInfo.blockColumns);
+    targetDimensions.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(targetMatrixInfo.dataColumns);
+    targetStrides.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(1);
+
+    targetPermutedIndexes =
+        new List.generate(targetDimensions.length, (index) => index);
+
+    if (axis == sourceArray.descriptor.shape.dimension - 2) {
+      argAxis.add(sourceArray.descriptor.shape.dimension);
+
+      var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+      targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+          targetPermutedIndexes[targetPermutedIndexes.length - 2];
+      targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
+      targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
+    }
+  } else {
+    sourceColumnIndex = sourceDimensions.length;
+    sourceDimensions.add(sourceArray._matrixInfo.blockColumns);
+    sourceRowIndex = sourceDimensions.length;
+    sourceDimensions.add(sourceArray._matrixInfo.blockRows);
+    sourceDimensions.add(targetDescriptor.dataType.blockSize);
+    sourceStrides.add(sourceArray._matrixInfo.dataRows);
+    sourceStrides.add(sourceArray.descriptor.dataType.blockSize);
+    sourceStrides.add(1);
+    targetDimensions.add(targetMatrixInfo.blockColumns);
+    targetDimensions.add(targetMatrixInfo.blockRows);
+    targetDimensions.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(targetMatrixInfo.dataRows);
+    targetStrides.add(targetDescriptor.dataType.blockSize);
+    targetStrides.add(1);
+
+    targetPermutedIndexes =
+        new List.generate(targetDimensions.length, (index) => index);
+
+    if (axis == sourceArray.descriptor.shape.dimension - 2) {
+      argAxis.remove(sourceArray.descriptor.shape.dimension - 2);
+      argAxis.add(sourceArray.descriptor.shape.dimension - 1);
+      argAxis.add(sourceArray.descriptor.shape.dimension);
+
+      var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+      targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+          targetPermutedIndexes[targetPermutedIndexes.length - 2];
+      targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
+      targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
+    }
+  }
+
+  var newArgAxis = argAxis.toList(growable: false);
+
+  var sourcePermutedIndexes = new List.generate(
+      sourceArray.descriptor.shape.dimension + 1, (index) => index,
+      growable: true);
+
+  sourcePermutedIndexes = sourcePermutedIndexes
+      .where((index) => axis != index)
+      .toList(growable: true);
+
+  sourcePermutedIndexes.addAll(newArgAxis);
+  sourcePermutedIndexes.add(sourcePermutedIndexes.length);
+
+  targetStrides.add(0);
+  targetPermutedIndexes = [2, 1, 3];
+
+  print("newArgAxis: $newArgAxis");
+  print("sourceShape: ${sourceArray.descriptor.shape}");
+  print("sourceDimensions: $sourceDimensions");
+  print("sourceStrides: $sourceStrides");
+  print("sourcePermutedIndexes: $sourcePermutedIndexes");
+  print("sourceRowIndex: $sourceRowIndex");
+  print("sourceColumnIndex: $sourceColumnIndex");
+  print("targetShape: ${targetDescriptor.shape}");
+  print("targetDimensions: $targetDimensions");
+  print("targetStrides: $targetStrides");
+  print("targetPermutedIndexes: $targetPermutedIndexes");
+
+  var sourceDimensionIndexes = new List(sourceDimensions.length + 1);
+  var targetDimensionIndexes = new List(targetDimensions.length + 1);
+  var sourceDataIndexes = new List(sourceDimensions.length + 1);
+  var targetDataIndexes = new List(targetDimensions.length + 1);
+
+  var shapeIndex = 0;
+  sourceDimensionIndexes[sourcePermutedIndexes[0]] = 0;
+  targetDimensionIndexes[targetPermutedIndexes[0]] = 0;
+  var sourceDataIndex = 0;
+  var targetDataIndex = 0;
+  sourceDataIndexes[sourcePermutedIndexes[0]] = 0;
+  targetDataIndexes[targetPermutedIndexes[0]] = 0;
+
+  // TODO reduce delle colonne
+
+  var lastRow = false;
+  var lastColumn = false;
+  var blockColumnCount;
+  while (shapeIndex >= 0) {
+    if (shapeIndex == sourceDimensions.length) {
+      print(
+          "ADD: ${sourceDimensionIndexes.sublist(0, shapeIndex).map((index) => index - 1)}: $sourceDataIndex:$lastRow:$lastColumn");
+
+      print(
+          "(${sourcePermutedIndexes[shapeIndex - 1]}, ${sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex - 1]] - 1}, ${sourceArray._data[sourceDataIndex]}, $blockColumnCount)");
+
+      shapeIndex--;
+
+      onValue(
+          sourcePermutedIndexes[shapeIndex - 1],
+          sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex - 1]] - 1,
+          sourceArray._data[sourceDataIndex],
+          blockColumnCount);
+    } else {
+      var dimension;
+      if (sourcePermutedIndexes[shapeIndex] == sourceDimensions.length - 1) {
+        if (lastRow) {
+          dimension = sourceArray._matrixInfo.lastBlockRowCount;
+        } else {
+          dimension = sourceDimensions[sourcePermutedIndexes[shapeIndex]];
+        }
+
+        if (lastColumn) {
+          blockColumnCount = sourceArray._matrixInfo.lastBlockColumnCount;
+        } else {
+          blockColumnCount =
+              sourceDimensions[sourcePermutedIndexes[shapeIndex]];
+        }
+      } else {
+        dimension = sourceDimensions[sourcePermutedIndexes[shapeIndex]];
+      }
+
+      if (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] <
+          dimension) {
+        if (shapeIndex < sourceDimensions.length - newArgAxis.length) {
+          targetDataIndex =
+              targetDataIndexes[targetPermutedIndexes[shapeIndex]];
+
+          targetDataIndexes[targetPermutedIndexes[shapeIndex]] =
+              targetDataIndex +
+                  targetStrides[targetPermutedIndexes[shapeIndex]];
+        }
+
+        if (sourcePermutedIndexes[shapeIndex] == sourceRowIndex) {
+          lastRow =
+              (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] ==
+                  sourceDimensions[sourcePermutedIndexes[shapeIndex]] - 1);
+        } else if (sourcePermutedIndexes[shapeIndex] == sourceColumnIndex) {
+          lastColumn =
+              (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] ==
+                  sourceDimensions[sourcePermutedIndexes[shapeIndex]] - 1);
+        }
+
+        sourceDataIndex = sourceDataIndexes[sourcePermutedIndexes[shapeIndex]];
+
+        sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]]++;
+        sourceDataIndexes[sourcePermutedIndexes[shapeIndex]] =
+            sourceDataIndex + sourceStrides[sourcePermutedIndexes[shapeIndex]];
+
+        shapeIndex++;
+
+        if (shapeIndex < sourceDimensions.length - newArgAxis.length) {
+          targetDataIndexes[targetPermutedIndexes[shapeIndex]] =
+              targetDataIndex;
+        }
+
+        sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] = 0;
+        sourceDataIndexes[sourcePermutedIndexes[shapeIndex]] = sourceDataIndex;
+
+        if (shapeIndex == sourceDimensions.length - newArgAxis.length) {
+          print("INIT REDUCTION");
+
+          begin();
+        }
+      } else {
+        shapeIndex--;
+
+        if (shapeIndex == sourceDimensions.length - newArgAxis.length - 1) {
+          var reducedValue = end();
 
           print("$shapeIndex: REDUCE[$targetDataIndex]: $reducedValue");
 
@@ -1545,10 +1782,6 @@ void _identityData(
     targetDimensions.add(targetDescriptor.dataType.blockSize);
   }
 
-  print("targetShape: ${targetDescriptor.shape}");
-  print("targetDimensions: $targetDimensions");
-  print("targetStrides: $targetStrides");
-
   var targetDimensionIndexes = new List(targetDimensions.length + 1);
   var targetDataIndexes = new List(targetDimensions.length + 1);
 
@@ -1577,9 +1810,6 @@ void _identityData(
     }
 
     if (targetShapeIndex == targetDimensions.length) {
-      print(
-          "${targetDimensionIndexes.sublist(0, targetShapeIndex).map((index) => index - 1)}: $targetDataIndex");
-
       targetData[targetDataIndex] = sourceArray._data[sourceDataIndex++];
 
       targetShapeIndex--;

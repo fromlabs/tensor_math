@@ -484,10 +484,7 @@ class NDArrayImpl extends NDArrayBase {
   @override
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
-      {void initReduction(),
-      void onValueToReduce(
-          int reductionAxeIndex, int dimensionIndex, value, int valueCount),
-      dynamic reduce()}) {
+      {void begin(), void onValue(value, int valueCount), dynamic end()}) {
     var newReductionAxis =
         convertToValidReductionAxis(reductionAxis, shape.dimension);
 
@@ -515,17 +512,16 @@ class NDArrayImpl extends NDArrayBase {
       var resultDataIndex = 0;
       var dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
 
-      initReduction();
+      begin();
 
       while (resultDataIndex < resultData.length) {
         if (dimensionIndex < shape[permutedIndexes[shapeIndex]]) {
           if (shapeIndex == shape.dimension - newReductionAxis.length - 1) {
-            initReduction();
+            begin();
           }
 
           if (shapeIndex == shape.dimension - 1) {
-            onValueToReduce(permutedIndexes[shapeIndex], dimensionIndex,
-                _data[dataIndex], 1);
+            onValue(_data[dataIndex], 1);
 
             dataIndex += _dataInfo.stride[permutedIndexes[shapeIndex]];
             dimensionIndex++;
@@ -538,7 +534,7 @@ class NDArrayImpl extends NDArrayBase {
           shapeIndex--;
 
           if (shapeIndex == shape.dimension - newReductionAxis.length - 1) {
-            resultData[resultDataIndex++] = reduce();
+            resultData[resultDataIndex++] = end();
           }
 
           if (shapeIndex >= 0) {
@@ -555,6 +551,71 @@ class NDArrayImpl extends NDArrayBase {
     } else {
       return this;
     }
+  }
+
+  @override
+  NDArray argOperationInternal(
+      axis, NDDescriptor resultDescriptor, NDArray reuse,
+      {void begin(),
+      void onValue(int axeIndex, int dimensionIndex, value, int valueCount),
+      dynamic end()}) {
+    var resultShape = resultDescriptor.shape;
+    var resultData = _createData(resultDescriptor, reuse);
+    var resultDataInfo = _createNormalizedDataInfo(resultShape);
+
+    var shapeIndex = 0;
+    var permutedIndexes = new List(shape.dimension);
+    var resultIndex = 0;
+    for (var i = 0; i < shape.dimension; i++) {
+      if (i != axis) {
+        permutedIndexes[resultIndex++] = i;
+      }
+    }
+    permutedIndexes[resultIndex++] = axis;
+
+    var dimensionIndexes = new List(shape.dimension);
+    var dataIndexes = new List(shape.dimension);
+    var dataIndex = dataIndexes[permutedIndexes[shapeIndex]] = _dataInfo.offset;
+    var resultDataIndex = 0;
+    var dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
+
+    begin();
+
+    while (resultDataIndex < resultData.length) {
+      if (dimensionIndex < shape[permutedIndexes[shapeIndex]]) {
+        if (shapeIndex == shape.dimension - 2) {
+          begin();
+        }
+
+        if (shapeIndex == shape.dimension - 1) {
+          onValue(
+              permutedIndexes[shapeIndex], dimensionIndex, _data[dataIndex], 1);
+
+          dataIndex += _dataInfo.stride[permutedIndexes[shapeIndex]];
+          dimensionIndex++;
+        } else {
+          shapeIndex++;
+          dataIndexes[permutedIndexes[shapeIndex]] = dataIndex;
+          dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
+        }
+      } else {
+        shapeIndex--;
+
+        if (shapeIndex == shape.dimension - 2) {
+          resultData[resultDataIndex++] = end();
+        }
+
+        if (shapeIndex >= 0) {
+          dataIndex = dataIndexes[permutedIndexes[shapeIndex]] =
+              dataIndexes[permutedIndexes[shapeIndex]] +
+                  _dataInfo.stride[permutedIndexes[shapeIndex]];
+          dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] =
+              dimensionIndexes[permutedIndexes[shapeIndex]] + 1;
+        }
+      }
+    }
+
+    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
   }
 }
 

@@ -9,10 +9,11 @@ import "package:tensor_math_simd/tensor_math.dart" as tm;
 
 void main() {
   group('Array tests', () {
-    test('Creating data tests', () {
+    test('Create tests', () {
       var test = (List<int> shape) {
-        var value =
-            new tm.NDArray.generate(shape, (index) => index + 1).toValue();
+        var value = new tm.NDArray.generate(shape, (index) => index + 1,
+                dataType: tm.NDDataType.float32)
+            .toValue();
 
         expect(
           new tm.NDArray(value, dataType: tm.NDDataType.float32).toValue(),
@@ -29,11 +30,12 @@ void main() {
             equals(value));
       };
 
-      var minDimension = 2;
+      test([]);
+
       var maxDimension = 4;
       var dimensionCount = 11;
 
-      for (var i = minDimension; i < maxDimension; i++) {
+      for (var i = 0; i < maxDimension; i++) {
         var combinations = math.pow(dimensionCount, i + 1);
         for (var i2 = 0; i2 < combinations; i2++) {
           var shape = new List(i + 1);
@@ -55,7 +57,7 @@ void main() {
       }
     });
 
-    test('Generate data tests', () {
+    test('Generate tests', () {
       var test = (List<int> shape) {
         var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
                 dataType: tm.NDDataType.float32)
@@ -72,9 +74,115 @@ void main() {
             equals(expectedValue));
       };
 
-      var minDimension = 2;
+      test([]);
+
       var maxDimension = 4;
       var dimensionCount = 11;
+
+      for (var i = 0; i < maxDimension; i++) {
+        var combinations = math.pow(dimensionCount, i + 1);
+        for (var i2 = 0; i2 < combinations; i2++) {
+          var shape = new List(i + 1);
+
+          var i3 = 0;
+          var index = i2;
+          var scale = combinations ~/ dimensionCount;
+
+          while (scale > 0) {
+            shape[i3] = (index ~/ scale) + 1;
+
+            i3++;
+            index = index % scale;
+            scale = scale ~/ dimensionCount;
+          }
+
+          test(shape);
+        }
+      }
+    });
+
+    test('Cast tests', () {
+      var test = (List<int> shape) {
+        var fArray = new tm.NDArray.generate(shape, (index) => index + 1,
+            dataType: tm.NDDataType.float32);
+        var iArray = new tm.NDArray.generate(shape, (index) => index + 1,
+            dataType: tm.NDDataType.int64);
+        var hArray = new tm.NDArray.generate(shape, (index) => index + 1,
+            dataType: tm.NDDataType.float32HBlocked);
+        var vArray = new tm.NDArray.generate(shape, (index) => index + 1,
+            dataType: tm.NDDataType.float32VBlocked);
+
+        var expectedFValue = fArray.toValue();
+        var expectedIValue = iArray.toValue();
+
+        expect(fArray.cast(tm.NDDataType.float32HBlocked).toValue(),
+            equals(expectedFValue));
+        expect(fArray.cast(tm.NDDataType.float32VBlocked).toValue(),
+            equals(expectedFValue));
+
+        expect(hArray.cast(tm.NDDataType.float32).toValue(),
+            equals(expectedFValue));
+        expect(hArray.cast(tm.NDDataType.float32VBlocked).toValue(),
+            equals(expectedFValue));
+        expect(
+            hArray.cast(tm.NDDataType.int64).toValue(), equals(expectedIValue));
+
+        expect(vArray.cast(tm.NDDataType.float32).toValue(),
+            equals(expectedFValue));
+        expect(vArray.cast(tm.NDDataType.float32HBlocked).toValue(),
+            equals(expectedFValue));
+        expect(
+            hArray.cast(tm.NDDataType.int64).toValue(), equals(expectedIValue));
+      };
+
+      var maxDimension = 4;
+      var dimensionCount = 11;
+
+      for (var i = 0; i < maxDimension; i++) {
+        var combinations = math.pow(dimensionCount, i + 1);
+        for (var i2 = 0; i2 < combinations; i2++) {
+          var shape = new List(i + 1);
+
+          var i3 = 0;
+          var index = i2;
+          var scale = combinations ~/ dimensionCount;
+
+          while (scale > 0) {
+            shape[i3] = (index ~/ scale) + 1;
+
+            i3++;
+            index = index % scale;
+            scale = scale ~/ dimensionCount;
+          }
+
+          test(shape);
+        }
+      }
+    });
+
+    test('Matmul tests', () {
+      var test = (List<int> shape1, List<int> shape2) {
+        var shapeLength2 = shape2.reduce((v1, v2) => v1 * v2);
+        var expectedValue = new tm.NDArray.generate(
+                shape1, (index) => index + 1, dataType: tm.NDDataType.float32)
+            .matMul(new tm.NDArray.generate(
+                shape2, (index) => shapeLength2 - index,
+                dataType: tm.NDDataType.float32))
+            .toValue();
+
+        expect(
+            new tm.NDArray.generate(shape1, (index) => index + 1,
+                    dataType: tm.NDDataType.float32HBlocked)
+                .matMul(new tm.NDArray.generate(
+                    shape2, (index) => shapeLength2 - index,
+                    dataType: tm.NDDataType.float32VBlocked))
+                .toValue(),
+            equals(expectedValue));
+      };
+
+      var minDimension = 2;
+      var maxDimension = 4;
+      var dimensionCount = 8;
 
       for (var i = minDimension; i < maxDimension; i++) {
         var combinations = math.pow(dimensionCount, i + 1);
@@ -93,7 +201,12 @@ void main() {
             scale = scale ~/ dimensionCount;
           }
 
-          test(shape);
+          for (var i3 = 1; i3 < dimensionCount; i3++) {
+            var shape2 = shape.sublist(0, shape.length - 2);
+            shape2.add(shape[shape.length - 1]);
+            shape2.add(i3);
+            test(shape, shape2);
+          }
         }
       }
     });
@@ -135,59 +248,6 @@ void main() {
         }
 
         test(shape);
-      }
-    });
-
-    test('Cast data tests', () {
-      var test = (List<int> shape) {
-        var array = new tm.NDArray.generate(shape, (index) => index + 1,
-            dataType: tm.NDDataType.float32);
-        var hArray = new tm.NDArray.generate(shape, (index) => index + 1,
-            dataType: tm.NDDataType.float32HBlocked);
-        var vArray = new tm.NDArray.generate(shape, (index) => index + 1,
-            dataType: tm.NDDataType.float32VBlocked);
-
-        var expectedValue = array.toValue();
-
-        expect(array.cast(tm.NDDataType.float32HBlocked).toValue(),
-            equals(expectedValue));
-        expect(array.cast(tm.NDDataType.float32VBlocked).toValue(),
-            equals(expectedValue));
-
-        expect(hArray.cast(tm.NDDataType.float32).toValue(),
-            equals(expectedValue));
-        expect(hArray.cast(tm.NDDataType.float32VBlocked).toValue(),
-            equals(expectedValue));
-
-        expect(vArray.cast(tm.NDDataType.float32).toValue(),
-            equals(expectedValue));
-        expect(vArray.cast(tm.NDDataType.float32HBlocked).toValue(),
-            equals(expectedValue));
-      };
-
-      var minDimension = 2;
-      var maxDimension = 4;
-      var dimensionCount = 11;
-
-      for (var i = minDimension; i < maxDimension; i++) {
-        var combinations = math.pow(dimensionCount, i + 1);
-        for (var i2 = 0; i2 < combinations; i2++) {
-          var shape = new List(i + 1);
-
-          var i3 = 0;
-          var index = i2;
-          var scale = combinations ~/ dimensionCount;
-
-          while (scale > 0) {
-            shape[i3] = (index ~/ scale) + 1;
-
-            i3++;
-            index = index % scale;
-            scale = scale ~/ dimensionCount;
-          }
-
-          test(shape);
-        }
       }
     });
 

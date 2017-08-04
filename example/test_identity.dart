@@ -4,21 +4,25 @@ import "package:collection/collection.dart";
 
 import "package:tensor_math_simd/tensor_math.dart" as tm;
 
+import "package:tensor_math_simd/src/nd_array_blocked_impl2.dart";
+
 final equality = new DeepCollectionEquality();
 
 void main() {
-  test(test1);
+  var shape = [4, 4];
+  test2(shape);
 
-  test(test2);
+  // test(test2);
+  // test(test3);
 
-  test(test3);
+
 }
 
 void test(void testFunction(List value)) {
   var watch = new Stopwatch();
   watch.start();
 
-  var minDimension = 2;
+  var minDimension = 0;
   var maxDimension = 4;
   var dimensionCount = 12;
 
@@ -48,26 +52,16 @@ void test(void testFunction(List value)) {
   print("Elapsed in ${watch.elapsedMilliseconds} ms");
 }
 
-void test1(List value) {
-  if (!equality.equals(
-      new tm.NDArray(value, dataType: tm.NDDataType.float32).toValue(),
-      value)) {
-    throw new StateError("Not equals 1");
-  }
-}
-
 void test2(List value) {
-  if (!equality.equals(
-      new tm.NDArray(value, dataType: tm.NDDataType.float32HBlocked).toValue(),
-      value)) {
+  NDArrayBlockedImpl array = new tm.NDArray(value, dataType: tm.NDDataType.float32HBlocked);
+  if (!equality.equals(array.identity().toValue(), value)) {
     throw new StateError("Not equals 2");
   }
 }
 
 void test3(List value) {
-  if (!equality.equals(
-      new tm.NDArray(value, dataType: tm.NDDataType.float32VBlocked).toValue(),
-      value)) {
+  NDArrayBlockedImpl array = new tm.NDArray(value, dataType: tm.NDDataType.float32VBlocked);
+  if (!equality.equals(array.identity().toValue(), value)) {
     throw new StateError("Not equals 3");
   }
 }

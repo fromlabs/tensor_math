@@ -121,10 +121,13 @@ abstract class NDArrayBase implements NDArray {
 
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
-      {void initReduction(),
-      void onValueToReduce(
-          int reductionAxeIndex, int dimensionIndex, value, int valueCount),
-      dynamic reduce()});
+      {void begin(), void onValue(value, int valueCount), dynamic end()});
+
+  NDArray argOperationInternal(
+      int axis, NDDescriptor resultDescriptor, NDArray reuse,
+      {void begin(),
+      void onValue(int axeIndex, int dimensionIndex, value, int valueCount),
+      dynamic end()});
 
   @override
   NDDataType get dataType => descriptor.dataType;
@@ -364,7 +367,8 @@ abstract class NDArrayBase implements NDArray {
     var total;
 
     var initTotal;
-    if (dataType == NDDataType.float32HBlocked || dataType == NDDataType.float32VBlocked) {
+    if (dataType == NDDataType.float32HBlocked ||
+        dataType == NDDataType.float32VBlocked) {
       initTotal = new Float32x4.zero();
     } else {
       initTotal = 0;
@@ -372,14 +376,13 @@ abstract class NDArrayBase implements NDArray {
 
     return reduceOperationInternal(
         reductionAxis, keepDimensions, resultDescriptor, reuse,
-        initReduction: () {
+        begin: () {
           total = initTotal;
         },
-        onValueToReduce:
-            (int reductionAxeIndex, int dimensionIndex, value, int valueCount) {
+        onValue: (value, int valueCount) {
           total += value;
         },
-        reduce: () => total);
+        end: () => total);
   }
 
   @override
@@ -393,16 +396,15 @@ abstract class NDArrayBase implements NDArray {
 
     return reduceOperationInternal(
         reductionAxis, keepDimensions, resultDescriptor, reuse,
-        initReduction: () {
+        begin: () {
           total = 0;
           count = 0;
         },
-        onValueToReduce:
-            (int reductionAxeIndex, int dimensionIndex, value, int valueCount) {
+        onValue: (value, int valueCount) {
           total += value;
           count++;
         },
-        reduce: () => total / count);
+        end: () => total / count);
   }
 
   @override
@@ -415,16 +417,15 @@ abstract class NDArrayBase implements NDArray {
 
     return reduceOperationInternal(
         reductionAxis, keepDimensions, resultDescriptor, reuse,
-        initReduction: () {
+        begin: () {
           maxValue = null;
         },
-        onValueToReduce:
-            (int reductionAxeIndex, int dimensionIndex, value, int valueCount) {
+        onValue: (value, int valueCount) {
           if (maxValue == null || value > maxValue) {
             maxValue = value;
           }
         },
-        reduce: () => maxValue);
+        end: () => maxValue);
   }
 
   @override
@@ -437,14 +438,13 @@ abstract class NDArrayBase implements NDArray {
 
     return reduceOperationInternal(
         reductionAxis, keepDimensions, resultDescriptor, reuse,
-        initReduction: () {
+        begin: () {
           total = false;
         },
-        onValueToReduce: (int reductionAxeIndex, int dimensionIndex, bool value,
-            int valueCount) {
+        onValue: (value, int valueCount) {
           total = total || value;
         },
-        reduce: () => total);
+        end: () => total);
   }
 
   @override
@@ -455,19 +455,18 @@ abstract class NDArrayBase implements NDArray {
       var maxValueIndex;
       var maxValue;
 
-      return reduceOperationInternal([axis], false, resultDescriptor, reuse,
-          initReduction: () {
+      return argOperationInternal(axis, resultDescriptor, reuse,
+          begin: () {
             maxValueIndex = null;
             maxValue = null;
           },
-          onValueToReduce: (int reductionAxeIndex, int dimensionIndex, value,
-              int valueCount) {
+          onValue: (int axeIndex, int dimensionIndex, value, int valueCount) {
             if (maxValue == null || value > maxValue) {
               maxValueIndex = dimensionIndex;
               maxValue = value;
             }
           },
-          reduce: () => maxValueIndex);
+          end: () => maxValueIndex);
     } else {
       return reshape(newDimensions: [-1]).argMax(axis: 0, reuse: reuse);
     }
@@ -530,13 +529,9 @@ abstract class NDArrayBase implements NDArray {
       bool keepDimensions = false,
       NDDataType resultDataType,
       covariant NDArray reuse,
-      @required
-          void initReduction(),
-      @required
-          void onValueToReduce(
-              int reductionAxeIndex, int dimensionIndex, value, int valueCount),
-      @required
-          dynamic reduce()}) {
+      @required void begin(),
+      @required void onValue(value, int valueCount),
+      @required dynamic end()}) {
     var resultDescriptor = descriptor.reduceOperation(
         reductionAxis: reductionAxis,
         keepDimensions: keepDimensions,
@@ -544,9 +539,7 @@ abstract class NDArrayBase implements NDArray {
 
     return reduceOperationInternal(
         reductionAxis, keepDimensions, resultDescriptor, reuse,
-        initReduction: initReduction,
-        onValueToReduce: onValueToReduce,
-        reduce: reduce);
+        begin: begin, onValue: onValue, end: end);
   }
 }
 

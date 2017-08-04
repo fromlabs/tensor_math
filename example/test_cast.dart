@@ -2,7 +2,7 @@ import 'package:collection/collection.dart';
 
 import "package:tensor_math_simd/tensor_math.dart" as tm;
 
-import "package:tensor_math_simd/src/nd_array_blocked_impl.dart";
+import "package:tensor_math_simd/src/nd_array_blocked_impl2.dart";
 
 final iterableEquality = new DeepCollectionEquality();
 
@@ -13,7 +13,7 @@ void main() {
 }
 
 void functionalTest() {
-  var shape = [2, 2, 11, 13];
+  var shape = [8, 5, 5];
 
   NDArrayBlockedImpl fromArray = new tm.NDArray.generate(
       shape, (index) => index + 1,
