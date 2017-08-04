@@ -135,6 +135,8 @@ void main() {
             hArray.cast(tm.NDDataType.int64).toValue(), equals(expectedIValue));
       };
 
+      test([2, 1, 5]);
+
       test([]);
 
       var maxDimension = 4;
