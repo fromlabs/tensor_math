@@ -1082,29 +1082,53 @@ void _reduceData(
     {void begin(),
     void onValue(value, int valueCount),
     dynamic end()}) {
-
-  // TODO riduzione che produce un array di dimensioni < 2
+  print("*** targetDataInfo ***");
+  print("shape: ${targetDescriptor.shape}");
+  print(targetDataInfo);
 
   // TODO riduzione su un array di dimensioni = 1
 
   // TODO riduzione sulle colonne
 
+  // TODO riduzione con target di dimensioni = 0
+
   var axis = new Set<int>.from(reductionAxis);
 
   List<int> targetPermutedIndexes;
+  if (targetDescriptor.shape.dimension > 1) {
+    if (sourceArray.dataType.isHBlocked) {
+      targetPermutedIndexes =
+          new List.generate(targetDataInfo.dimensions.length, (index) => index);
+
+      if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
+        var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+        targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+            targetPermutedIndexes[targetPermutedIndexes.length - 2];
+        targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
+        targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
+      }
+    } else {
+      targetPermutedIndexes =
+          new List.generate(targetDataInfo.dimensions.length, (index) => index);
+
+      if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
+        var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+        targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+            targetPermutedIndexes[targetPermutedIndexes.length - 2];
+        targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
+        targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
+      }
+    }
+  } else if (targetDescriptor.shape.dimension == 1) {
+    targetPermutedIndexes = [1];
+  } else {
+    // TODO to implement _reduceData
+    throw new UnimplementedError("to implement _reduceData");
+  }
 
   if (sourceArray.dataType.isHBlocked) {
-    targetPermutedIndexes =
-        new List.generate(targetDataInfo.dimensions.length, (index) => index);
-
     if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
       axis.add(sourceArray.descriptor.shape.dimension);
-
-      var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
-      targetPermutedIndexes[targetPermutedIndexes.length - 1] =
-          targetPermutedIndexes[targetPermutedIndexes.length - 2];
-      targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
-      targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
     }
   } else {
     targetPermutedIndexes =
@@ -1114,12 +1138,6 @@ void _reduceData(
       axis.remove(sourceArray.descriptor.shape.dimension - 2);
       axis.add(sourceArray.descriptor.shape.dimension - 1);
       axis.add(sourceArray.descriptor.shape.dimension);
-
-      var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
-      targetPermutedIndexes[targetPermutedIndexes.length - 1] =
-          targetPermutedIndexes[targetPermutedIndexes.length - 2];
-      targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
-      targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
     }
   }
 
