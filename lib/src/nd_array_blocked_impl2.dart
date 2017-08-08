@@ -1082,6 +1082,9 @@ void _reduceData(
     {void begin(),
     void onValue(value, int valueCount),
     dynamic end()}) {
+  print("*** sourceDataInfo ***");  
+  print("shape: ${sourceArray.descriptor.shape}");
+  print(sourceArray.dataInfo);
   print("*** targetDataInfo ***");
   print("shape: ${targetDescriptor.shape}");
   print(targetDataInfo);
@@ -1094,13 +1097,18 @@ void _reduceData(
 
   var axis = new Set<int>.from(reductionAxis);
 
+  bool isRowsReduction =
+      axis.contains(sourceArray.descriptor.shape.dimension - 2);
+  bool isColumnsReduction =
+      axis.contains(sourceArray.descriptor.shape.dimension - 1);
+
   List<int> targetPermutedIndexes;
   if (targetDescriptor.shape.dimension > 1) {
     if (sourceArray.dataType.isHBlocked) {
       targetPermutedIndexes =
           new List.generate(targetDataInfo.dimensions.length, (index) => index);
 
-      if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
+      if (isRowsReduction) {
         var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
         targetPermutedIndexes[targetPermutedIndexes.length - 1] =
             targetPermutedIndexes[targetPermutedIndexes.length - 2];
@@ -1111,12 +1119,12 @@ void _reduceData(
       targetPermutedIndexes =
           new List.generate(targetDataInfo.dimensions.length, (index) => index);
 
-      if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
+      if (isRowsReduction) {
         var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
         targetPermutedIndexes[targetPermutedIndexes.length - 1] =
-            targetPermutedIndexes[targetPermutedIndexes.length - 2];
-        targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
-        targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
+            targetPermutedIndexes[targetPermutedIndexes.length - 3];
+        targetPermutedIndexes[targetPermutedIndexes.length - 3] = tempIndex;
+        targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 2);
       }
     }
   } else if (targetDescriptor.shape.dimension == 1) {
@@ -1127,14 +1135,11 @@ void _reduceData(
   }
 
   if (sourceArray.dataType.isHBlocked) {
-    if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
+    if (isRowsReduction) {
       axis.add(sourceArray.descriptor.shape.dimension);
     }
   } else {
-    targetPermutedIndexes =
-        new List.generate(targetDataInfo.dimensions.length, (index) => index);
-
-    if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
+    if (isRowsReduction) {
       axis.remove(sourceArray.descriptor.shape.dimension - 2);
       axis.add(sourceArray.descriptor.shape.dimension - 1);
       axis.add(sourceArray.descriptor.shape.dimension);
@@ -1154,7 +1159,13 @@ void _reduceData(
   sourcePermutedIndexes.addAll(newReductionAxis);
   sourcePermutedIndexes.add(sourcePermutedIndexes.length);
 
-  // targetStrides.add(0);
+  var targetRowIndex;
+  var delta1;
+  if (sourceArray.dataType.isHBlocked && isRowsReduction) {
+    // TODO attenzione se è anche isColumnsReduction
+    targetRowIndex = sourceArray.shape.dimension - 3;
+    delta1 = sourceArray.dataInfo.dataColumns - sourceArray.dataType.blockSize;
+  }
 
   var sourceDimensionIndexes =
       new List(sourceArray.dataInfo.internalShape.dimensions.length + 1);
@@ -1239,13 +1250,23 @@ void _reduceData(
           sourceArray.dataInfo.dimensions.length -
               newReductionAxis.length -
               1) {
-        var reducedValue = end();
+        if (isColumnsReduction) {
+          print("ONVALUE(null, null)");
 
-        print("END[$targetDataIndex]: $reducedValue");
+          onValue(null, null);
 
-        // TODO se la riduzione è sull'ultima colonna: devo fare una ulteriore riduzione e devo impostare il target
+          var reducedValue = end();
 
-        targetData[targetDataIndex] = reducedValue;
+          print("END[$targetDataIndex]: $reducedValue");
+
+          // TODO write in targetData
+        } else {
+          var reducedValue = end();
+
+          print("END[$targetDataIndex]: $reducedValue");
+
+          targetData[targetDataIndex] = reducedValue;
+        }
       }
     }
 
@@ -1259,6 +1280,15 @@ void _reduceData(
           sourceArray.dataInfo.dimensions.length - newReductionAxis.length) {
         targetDataIndexes[targetPermutedIndexes[shapeIndex]] +=
             targetDataInfo.stride[targetPermutedIndexes[shapeIndex]];
+
+        if (sourceArray.dataType.isHBlocked && shapeIndex == targetRowIndex) {
+          var sourceDimensionIndex =
+              sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]];
+          if (sourceDimensionIndex % sourceArray.dataType.blockSize == 0) {
+            targetDataIndexes[targetPermutedIndexes[shapeIndex]] += delta1;
+          }
+        }
+
         targetDataIndex = targetDataIndexes[targetPermutedIndexes[shapeIndex]];
       }
 

@@ -366,23 +366,38 @@ abstract class NDArrayBase implements NDArray {
 
     var total;
 
-    var initTotal;
     if (dataType == NDDataType.float32HBlocked ||
         dataType == NDDataType.float32VBlocked) {
-      initTotal = new Float32x4.zero();
-    } else {
-      initTotal = 0;
-    }
+      var initTotal = new Float32x4.zero();
 
-    return reduceOperationInternal(
-        reductionAxis, keepDimensions, resultDescriptor, reuse,
-        begin: () {
-          total = initTotal;
-        },
-        onValue: (value, int valueCount) {
-          total += value;
-        },
-        end: () => total);
+      return reduceOperationInternal(
+          reductionAxis, keepDimensions, resultDescriptor, reuse,
+          begin: () {
+            total = initTotal;
+          },
+          onValue: (value, int valueCount) {
+            if (value != null) {
+              total += value;
+            } else {
+              Float32x4 currentValue = total;
+              total = currentValue.x +
+                  currentValue.y +
+                  currentValue.z +
+                  currentValue.w;
+            }
+          },
+          end: () => total);
+    } else {
+      return reduceOperationInternal(
+          reductionAxis, keepDimensions, resultDescriptor, reuse,
+          begin: () {
+            total = 0;
+          },
+          onValue: (value, int valueCount) {
+            total += value;
+          },
+          end: () => total);
+    }
   }
 
   @override

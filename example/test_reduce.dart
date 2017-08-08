@@ -13,16 +13,18 @@ void main() {
 }
 
 void functionalTest() {
-  var shape = [1, 8, 8];
-  var reductionAxis = [2];
+  var shape = [6, 6, 11];
+  var reductionAxis = [1];
 
   var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
-      dataType: tm.NDDataType.float32)
+          dataType: tm.NDDataType.float32)
       .reduceSum(reductionAxis: reductionAxis)
       .toValue();
 
-  var value = new tm.NDArray.generate(shape, (index) => index + 1,
-      dataType: tm.NDDataType.float32HBlocked)
+  var value;
+
+  value = new tm.NDArray.generate(shape, (index) => index + 1,
+          dataType: tm.NDDataType.float32HBlocked)
       .reduceSum(reductionAxis: reductionAxis)
       .toValue();
 
@@ -31,7 +33,7 @@ void functionalTest() {
   }
 
   value = new tm.NDArray.generate(shape, (index) => index + 1,
-      dataType: tm.NDDataType.float32VBlocked)
+          dataType: tm.NDDataType.float32VBlocked)
       .reduceSum(reductionAxis: reductionAxis)
       .toValue();
 
