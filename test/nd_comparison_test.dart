@@ -7,6 +7,29 @@ import 'package:test/test.dart';
 
 import "package:tensor_math_simd/tensor_math.dart" as tm;
 
+// TODO metodo per generare le combinazioni di shape
+
+Iterable<List<int>> shapeCombinations(int dimension, int dimensionCount) sync* {
+  var combinations = math.pow(dimensionCount, dimension + 1);
+  for (var i2 = 0; i2 < combinations; i2++) {
+    var shape = new List(dimension + 1);
+
+    var i3 = 0;
+    var index = i2;
+    var scale = combinations ~/ dimensionCount;
+
+    while (scale > 0) {
+      shape[i3] = (index ~/ scale) + 1;
+
+      i3++;
+      index = index % scale;
+      scale = scale ~/ dimensionCount;
+    }
+
+    yield shape;
+  }
+}
+
 void main() {
   group('Array tests', () {
     test('Create tests', () {
@@ -36,22 +59,7 @@ void main() {
       var dimensionCount = 11;
 
       for (var i = 0; i < maxDimension; i++) {
-        var combinations = math.pow(dimensionCount, i + 1);
-        for (var i2 = 0; i2 < combinations; i2++) {
-          var shape = new List(i + 1);
-
-          var i3 = 0;
-          var index = i2;
-          var scale = combinations ~/ dimensionCount;
-
-          while (scale > 0) {
-            shape[i3] = (index ~/ scale) + 1;
-
-            i3++;
-            index = index % scale;
-            scale = scale ~/ dimensionCount;
-          }
-
+        for (var shape in shapeCombinations(i, dimensionCount)) {
           test(shape);
         }
       }
@@ -80,22 +88,7 @@ void main() {
       var dimensionCount = 11;
 
       for (var i = 0; i < maxDimension; i++) {
-        var combinations = math.pow(dimensionCount, i + 1);
-        for (var i2 = 0; i2 < combinations; i2++) {
-          var shape = new List(i + 1);
-
-          var i3 = 0;
-          var index = i2;
-          var scale = combinations ~/ dimensionCount;
-
-          while (scale > 0) {
-            shape[i3] = (index ~/ scale) + 1;
-
-            i3++;
-            index = index % scale;
-            scale = scale ~/ dimensionCount;
-          }
-
+        for (var shape in shapeCombinations(i, dimensionCount)) {
           test(shape);
         }
       }
@@ -141,23 +134,57 @@ void main() {
       var dimensionCount = 11;
 
       for (var i = 0; i < maxDimension; i++) {
-        var combinations = math.pow(dimensionCount, i + 1);
-        for (var i2 = 0; i2 < combinations; i2++) {
-          var shape = new List(i + 1);
-
-          var i3 = 0;
-          var index = i2;
-          var scale = combinations ~/ dimensionCount;
-
-          while (scale > 0) {
-            shape[i3] = (index ~/ scale) + 1;
-
-            i3++;
-            index = index % scale;
-            scale = scale ~/ dimensionCount;
-          }
-
+        for (var shape in shapeCombinations(i, dimensionCount)) {
           test(shape);
+        }
+      }
+    });
+
+    test('Reduce sum tests', () {
+      var test = (List<int> shape, List<int> reductionAxis) {
+        var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
+                dataType: tm.NDDataType.float32)
+            .reduceSum(reductionAxis: reductionAxis)
+            .toValue();
+
+        expect(
+            new tm.NDArray.generate(shape, (index) => index + 1,
+                    dataType: tm.NDDataType.float32HBlocked)
+                .reduceSum(reductionAxis: reductionAxis)
+                .toValue(),
+            equals(expectedValue));
+
+        expect(
+            new tm.NDArray.generate(shape, (index) => index + 1,
+                    dataType: tm.NDDataType.float32VBlocked)
+                .reduceSum(reductionAxis: reductionAxis)
+                .toValue(),
+            equals(expectedValue));
+      };
+/*
+      test([6, 6, 11], [0]);
+      test([6, 6, 11], [1]);
+      test([6, 6, 11], [2]);
+      test([6, 6, 11], [0, 1]);
+      test([6, 6, 11], [0, 2]);
+      test([6, 6, 11], [1, 2]);
+      test([6, 6, 11], [0, 1, 2]);
+*/
+      // TODO testare tutte le combinazioni
+      var maxDimension = 4;
+      var dimensionCount = 11;
+
+      for (var i = 0; i < maxDimension; i++) {
+        for (var shape in shapeCombinations(i, dimensionCount)) {
+          print(shape);
+
+          for (var i1 = 0; i1 < shape.length; i1++) {
+            var reductionAxis = [];
+
+            for (var i2 = i1 + 1; i2 < shape.length; i2++) {
+              print("$i1, $i2");
+            }
+          }
         }
       }
     });
@@ -187,22 +214,7 @@ void main() {
       var dimensionCount = 8;
 
       for (var i = minDimension; i < maxDimension; i++) {
-        var combinations = math.pow(dimensionCount, i + 1);
-        for (var i2 = 0; i2 < combinations; i2++) {
-          var shape = new List(i + 1);
-
-          var i3 = 0;
-          var index = i2;
-          var scale = combinations ~/ dimensionCount;
-
-          while (scale > 0) {
-            shape[i3] = (index ~/ scale) + 1;
-
-            i3++;
-            index = index % scale;
-            scale = scale ~/ dimensionCount;
-          }
-
+        for (var shape in shapeCombinations(i, dimensionCount)) {
           for (var i3 = 1; i3 < dimensionCount; i3++) {
             var shape2 = shape.sublist(0, shape.length - 2);
             shape2.add(shape[shape.length - 1]);
@@ -213,6 +225,7 @@ void main() {
       }
     });
 
+    // TODO rivedere come reduce
     test('Transpose - toValue data tests', () {
       var test = (List<int> shape) {
         var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,

@@ -1082,7 +1082,7 @@ void _reduceData(
     {void begin(),
     void onValue(value, int valueCount),
     dynamic end()}) {
-  print("*** sourceDataInfo ***");  
+  print("*** sourceDataInfo ***");
   print("shape: ${sourceArray.descriptor.shape}");
   print(sourceArray.dataInfo);
   print("*** targetDataInfo ***");
