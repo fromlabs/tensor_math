@@ -7,9 +7,8 @@ import 'package:test/test.dart';
 
 import "package:tensor_math_simd/tensor_math.dart" as tm;
 
-// TODO metodo per generare le combinazioni di shape
-
-Iterable<List<int>> shapeCombinations(int dimension, int dimensionCount) sync* {
+Iterable<List<int>> generateShapeCombinations(
+    int dimension, int dimensionCount) sync* {
   var combinations = math.pow(dimensionCount, dimension + 1);
   for (var i2 = 0; i2 < combinations; i2++) {
     var shape = new List(dimension + 1);
@@ -27,6 +26,36 @@ Iterable<List<int>> shapeCombinations(int dimension, int dimensionCount) sync* {
     }
 
     yield shape;
+  }
+}
+
+Iterable<List<int>> generateReductionAxisCombinations(int dimension) sync* {
+  for (var d = 1; d <= dimension; d++) {
+    var i = 0;
+    var indexes = new List(d);
+    indexes[0] = 0;
+
+    for (;;) {
+      if (indexes[i] > dimension - 1) {
+        i--;
+
+        if (i >= 0) {
+          indexes[i]++;
+        } else {
+          break;
+        }
+      } else if (i < d - 1) {
+        // inner
+        i++;
+
+        indexes[i] = indexes[i - 1] + 1;
+      } else {
+        // last
+        yield new List.from(indexes);
+
+        indexes[i]++;
+      }
+    }
   }
 }
 
@@ -59,7 +88,7 @@ void main() {
       var dimensionCount = 11;
 
       for (var i = 0; i < maxDimension; i++) {
-        for (var shape in shapeCombinations(i, dimensionCount)) {
+        for (var shape in generateShapeCombinations(i, dimensionCount)) {
           test(shape);
         }
       }
@@ -88,7 +117,7 @@ void main() {
       var dimensionCount = 11;
 
       for (var i = 0; i < maxDimension; i++) {
-        for (var shape in shapeCombinations(i, dimensionCount)) {
+        for (var shape in generateShapeCombinations(i, dimensionCount)) {
           test(shape);
         }
       }
@@ -134,7 +163,7 @@ void main() {
       var dimensionCount = 11;
 
       for (var i = 0; i < maxDimension; i++) {
-        for (var shape in shapeCombinations(i, dimensionCount)) {
+        for (var shape in generateShapeCombinations(i, dimensionCount)) {
           test(shape);
         }
       }
@@ -161,29 +190,25 @@ void main() {
                 .toValue(),
             equals(expectedValue));
       };
-/*
-      test([6, 6, 11], [0]);
-      test([6, 6, 11], [1]);
-      test([6, 6, 11], [2]);
-      test([6, 6, 11], [0, 1]);
-      test([6, 6, 11], [0, 2]);
-      test([6, 6, 11], [1, 2]);
-      test([6, 6, 11], [0, 1, 2]);
-*/
-      // TODO testare tutte le combinazioni
-      var maxDimension = 4;
+
+      var maxDimension = 5;
       var dimensionCount = 11;
 
       for (var i = 0; i < maxDimension; i++) {
-        for (var shape in shapeCombinations(i, dimensionCount)) {
-          print(shape);
+        for (var shape in generateShapeCombinations(i, dimensionCount)) {
+          print("shape: $shape");
 
-          for (var i1 = 0; i1 < shape.length; i1++) {
-            var reductionAxis = [];
+          for (var reductionAxis in generateReductionAxisCombinations(i + 1)) {
+            // if (reductionAxis.contains(i) && reductionAxis.contains(i - 1)) {
+              try {
+                test(shape, reductionAxis);
+              } catch(e, s) {
+                print("reductionAxis: $reductionAxis");
 
-            for (var i2 = i1 + 1; i2 < shape.length; i2++) {
-              print("$i1, $i2");
-            }
+                rethrow;
+              }
+
+            // }
           }
         }
       }
@@ -214,7 +239,7 @@ void main() {
       var dimensionCount = 8;
 
       for (var i = minDimension; i < maxDimension; i++) {
-        for (var shape in shapeCombinations(i, dimensionCount)) {
+        for (var shape in generateShapeCombinations(i, dimensionCount)) {
           for (var i3 = 1; i3 < dimensionCount; i3++) {
             var shape2 = shape.sublist(0, shape.length - 2);
             shape2.add(shape[shape.length - 1]);

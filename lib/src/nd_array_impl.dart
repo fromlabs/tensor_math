@@ -299,6 +299,87 @@ class NDArrayImpl extends NDArrayBase {
   }
 
   @override
+  NDArray reduceSum(
+      {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
+    var resultDescriptor = descriptor.reduceSum(
+        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+
+    var total;
+
+    return reduceOperationInternal(
+        reductionAxis, keepDimensions, resultDescriptor, reuse,
+        begin: () {
+          total = 0;
+        },
+        onValue: (value, int valueCount) {
+          total += value;
+        },
+        end: () => total);
+  }
+
+  @override
+  NDArray reduceMean(
+      {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
+    var resultDescriptor = descriptor.reduceMean(
+        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+
+    var total;
+    var count;
+
+    return reduceOperationInternal(
+        reductionAxis, keepDimensions, resultDescriptor, reuse,
+        begin: () {
+          total = 0;
+          count = 0;
+        },
+        onValue: (value, int valueCount) {
+          total += value;
+          count++;
+        },
+        end: () => total / count);
+  }
+
+  @override
+  NDArray reduceMax(
+      {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
+    var resultDescriptor = descriptor.reduceMax(
+        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+
+    var maxValue;
+
+    return reduceOperationInternal(
+        reductionAxis, keepDimensions, resultDescriptor, reuse,
+        begin: () {
+          maxValue = null;
+        },
+        onValue: (value, int valueCount) {
+          if (maxValue == null || value > maxValue) {
+            maxValue = value;
+          }
+        },
+        end: () => maxValue);
+  }
+
+  @override
+  NDArray reduceAny(
+      {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
+    var resultDescriptor = descriptor.reduceAny(
+        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+
+    bool total;
+
+    return reduceOperationInternal(
+        reductionAxis, keepDimensions, resultDescriptor, reuse,
+        begin: () {
+          total = false;
+        },
+        onValue: (value, int valueCount) {
+          total = total || value;
+        },
+        end: () => total);
+  }
+
+  @override
   String toString() =>
       "<value: ${toValue()}, shape: $shape, dataType: $dataType, stride: $_dataInfo.stride, offset: $_dataInfo.offset>";
 
