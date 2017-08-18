@@ -223,49 +223,6 @@ class NDArrayBlockedImpl extends NDArrayBase {
           total = _ZERO;
         },
         onValue: (value, int valueCount) {
-/*
-          // TODO controlli da togliere
-          if (value == _ZERO) {
-            throw new StateError("Value ZERO!");
-          }
-          Float32x4 value2 = value;
-          switch (valueCount) {
-            case 0:
-              throw new ArgumentError("Value case");
-            case 1:
-              if (value2.x == 0.0 ||
-                  value2.y != 0.0 ||
-                  value2.z != 0.0 ||
-                  value2.w != 0.0) {
-                throw new ArgumentError("Value case");
-              }
-              break;
-            case 2:
-              if (value2.x == 0.0 ||
-                  value2.y == 0.0 ||
-                  value2.z != 0.0 ||
-                  value2.w != 0.0) {
-                throw new ArgumentError("Value case");
-              }
-              break;
-            case 3:
-              if (value2.x == 0.0 ||
-                  value2.y == 0.0 ||
-                  value2.z == 0.0 ||
-                  value2.w != 0.0) {
-                throw new ArgumentError("Value case");
-              }
-              break;
-            case 4:
-              if (value2.x == 0.0 ||
-                  value2.y == 0.0 ||
-                  value2.z == 0.0 ||
-                  value2.w == 0.0) {
-                throw new ArgumentError("Value case");
-              }
-              break;
-          }
-*/
           if (value != null) {
             total += value;
           } else {
@@ -1412,6 +1369,583 @@ void _reduceData(
     {void begin(),
     void onValue(value, int valueCount),
     dynamic end()}) {
+  var axis = new Set<int>.from(reductionAxis);
+
+  bool isRowsReduction =
+      axis.contains(sourceArray.descriptor.shape.dimension - 2);
+  bool isColumnsReduction =
+      axis.contains(sourceArray.descriptor.shape.dimension - 1);
+
+  var targetStride = new List.from(targetDataInfo.stride);
+
+  List<int> targetPermutedIndexes;
+  if (targetDescriptor.shape.dimension > 1) {
+    if (sourceArray.dataType.isHBlocked) {
+      targetPermutedIndexes =
+          new List.generate(targetDataInfo.dimensions.length, (index) => index);
+
+      if (isRowsReduction && isColumnsReduction) {
+        var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+        targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+            targetPermutedIndexes[targetPermutedIndexes.length - 2];
+        targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
+        tempIndex =
+            targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
+        targetPermutedIndexes.add(tempIndex);
+      } else if (isRowsReduction) {
+        var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+        targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+            targetPermutedIndexes[targetPermutedIndexes.length - 2];
+        targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
+        tempIndex =
+            targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
+        targetPermutedIndexes.add(tempIndex);
+      } else if (isColumnsReduction) {
+        var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+        targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+            targetPermutedIndexes[targetPermutedIndexes.length - 2];
+        targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
+        tempIndex =
+            targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
+        targetPermutedIndexes.add(tempIndex);
+      }
+    } else {
+      targetPermutedIndexes =
+          new List.generate(targetDataInfo.dimensions.length, (index) => index);
+
+      if (isRowsReduction && isColumnsReduction) {
+        var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+        targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+            targetPermutedIndexes[targetPermutedIndexes.length - 3];
+        targetPermutedIndexes[targetPermutedIndexes.length - 3] = tempIndex;
+        tempIndex =
+            targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 2);
+        targetPermutedIndexes.add(tempIndex);
+      } else if (isRowsReduction) {
+        var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+        targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+            targetPermutedIndexes[targetPermutedIndexes.length - 3];
+        targetPermutedIndexes[targetPermutedIndexes.length - 3] = tempIndex;
+        tempIndex =
+            targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 2);
+        targetPermutedIndexes.add(tempIndex);
+      } else if (isColumnsReduction) {
+        var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+        targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+            targetPermutedIndexes[targetPermutedIndexes.length - 3];
+        targetPermutedIndexes[targetPermutedIndexes.length - 3] = tempIndex;
+        tempIndex =
+            targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 2);
+        targetPermutedIndexes.add(tempIndex);
+      }
+    }
+  } else if (targetDescriptor.shape.dimension == 1) {
+    if (sourceArray.dataType.isHBlocked) {
+      if (isRowsReduction && isColumnsReduction) {
+        targetPermutedIndexes = [1, 0, 2];
+      } else if (isRowsReduction) {
+        targetPermutedIndexes = [1, 0];
+      } else if (isColumnsReduction) {
+        targetPermutedIndexes = [1, 0];
+      } else {
+        targetPermutedIndexes = [];
+      }
+    } else {
+      if (isRowsReduction && isColumnsReduction) {
+        targetPermutedIndexes = [0, 1, 2];
+      } else if (isRowsReduction) {
+        targetPermutedIndexes = [0, 1];
+      } else if (isColumnsReduction) {
+        targetPermutedIndexes = [0, 1];
+      } else {
+        targetPermutedIndexes = [];
+      }
+    }
+  } else {
+    targetPermutedIndexes = [0, 1];
+
+    if (sourceArray.shape.dimension > 1) {
+      begin();
+    }
+  }
+
+  if (sourceArray.dataType.isHBlocked) {
+    if (sourceArray.shape.dimension == 1) {
+      axis = new Set.from([1]);
+    } else if (isRowsReduction) {
+      axis.add(sourceArray.descriptor.shape.dimension);
+    }
+  } else {
+    if (sourceArray.shape.dimension == 1) {
+      axis = new Set.from([0]);
+    } else if (isRowsReduction && isColumnsReduction) {
+      axis.remove(sourceArray.descriptor.shape.dimension - 2);
+      axis.remove(sourceArray.descriptor.shape.dimension - 1);
+      axis.add(sourceArray.descriptor.shape.dimension - 1);
+      axis.add(sourceArray.descriptor.shape.dimension);
+      axis.add(sourceArray.descriptor.shape.dimension - 2);
+    } else if (isRowsReduction) {
+      axis.remove(sourceArray.descriptor.shape.dimension - 2);
+      axis.add(sourceArray.descriptor.shape.dimension - 1);
+      axis.add(sourceArray.descriptor.shape.dimension);
+    } else if (isColumnsReduction) {
+      axis.remove(sourceArray.descriptor.shape.dimension - 1);
+      axis.add(sourceArray.descriptor.shape.dimension - 2);
+    }
+  }
+
+  var newReductionAxis = axis.toList(growable: false);
+
+  var sourcePermutedIndexes = new List.generate(
+      sourceArray.dataInfo.dimensions.length, (index) => index);
+
+  sourcePermutedIndexes =
+      sourcePermutedIndexes.where((index) => !axis.contains(index)).toList();
+
+  sourcePermutedIndexes.addAll(newReductionAxis);
+
+  var targetRowIndex;
+  var delta1;
+  var targetColumnIndex;
+  var delta2;
+
+  if (targetDescriptor.shape.dimension > 1) {
+    if (sourceArray.dataType.isHBlocked) {
+      if (isRowsReduction && isColumnsReduction) {
+        targetRowIndex = sourceArray.dataInfo.dimensions.length -
+            newReductionAxis.length -
+            2;
+        delta1 =
+            targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
+        targetColumnIndex = sourceArray.dataInfo.dimensions.length -
+            newReductionAxis.length -
+            1;
+        delta2 = targetDescriptor.dataType.blockSize;
+      } else if (isRowsReduction) {
+        targetRowIndex = sourceArray.dataInfo.dimensions.length -
+            newReductionAxis.length -
+            2;
+        delta1 =
+            targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
+      } else if (isColumnsReduction) {
+        targetRowIndex = sourceArray.dataInfo.dimensions.length -
+            newReductionAxis.length -
+            3;
+        delta1 =
+            targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
+      }
+    } else {
+      if (isRowsReduction && isColumnsReduction) {
+        targetRowIndex = sourceArray.dataInfo.dimensions.length -
+            newReductionAxis.length -
+            2;
+
+        delta1 =
+            0; // targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
+        targetColumnIndex = sourceArray.dataInfo.dimensions.length -
+            newReductionAxis.length -
+            1;
+        delta2 = targetDataInfo.dataRows;
+      } else if (isRowsReduction) {
+        targetRowIndex = sourceArray.dataInfo.dimensions.length -
+            newReductionAxis.length -
+            2;
+
+        delta1 =
+            0; // targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
+      } else if (isColumnsReduction) {
+        targetRowIndex = sourceArray.dataInfo.dimensions.length -
+            newReductionAxis.length -
+            3;
+        delta1 = 0;
+        // targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
+      }
+    }
+  } else if (targetDescriptor.shape.dimension == 1) {
+    if (sourceArray.dataType.isHBlocked) {
+      if (isRowsReduction && isColumnsReduction) {
+        targetColumnIndex = sourceArray.dataInfo.dimensions.length -
+            newReductionAxis.length -
+            1;
+        delta2 = targetDataInfo.dataRows;
+        // targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
+      } else if (isRowsReduction) {} else if (isColumnsReduction) {}
+    } else {
+      if (isRowsReduction && isColumnsReduction) {
+        targetColumnIndex = sourceArray.dataInfo.dimensions.length -
+            newReductionAxis.length -
+            1;
+        delta2 = targetDataInfo.dataRows;
+        // targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
+      } else if (isRowsReduction) {} else if (isColumnsReduction) {}
+    }
+  } else {
+    if (sourceArray.dataType.isHBlocked) {
+      if (isRowsReduction &&
+          isColumnsReduction) {} else if (isRowsReduction) {} else if (isColumnsReduction) {}
+    } else {
+      if (isRowsReduction &&
+          isColumnsReduction) {} else if (isRowsReduction) {} else if (isColumnsReduction) {}
+    }
+  }
+
+  if (targetRowIndex != null && targetRowIndex < 0) {
+    throw new StateError("Illegal targetRowIndex: $targetRowIndex");
+  }
+
+  if (targetColumnIndex != null && targetColumnIndex < 0) {
+    throw new StateError("Illegal targetColumnIndex: $targetColumnIndex");
+  }
+
+  var lastTargetColumnIndex;
+  if (targetDescriptor.shape.dimension > 1) {
+    if (sourceArray.dataType.isHBlocked) {
+      if (isRowsReduction && isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                1];
+      } else if (isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                2];
+      }
+    } else {
+      if (isRowsReduction && isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                1];
+      } else if (isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                2];
+      }
+    }
+  } else if (targetDescriptor.shape.dimension == 1) {
+    if (sourceArray.dataType.isHBlocked) {
+      if (isRowsReduction && isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                1];
+      } else if (isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                2];
+      }
+    } else {
+      if (isRowsReduction && isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                1];
+      } else if (isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                2];
+      }
+    }
+  } else {
+    if (sourceArray.dataType.isHBlocked) {
+      if (isRowsReduction && isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                0];
+      } else if (isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                2];
+      }
+    } else {
+      if (isRowsReduction && isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                0];
+      } else if (isColumnsReduction) {
+        lastTargetColumnIndex = sourcePermutedIndexes[
+            sourceArray.dataInfo.dimensions.length -
+                newReductionAxis.length -
+                2];
+      }
+    }
+  }
+
+  var sourceDimensionIndexes =
+      new List.filled(sourceArray.dataInfo.dimensions.length, 0);
+  var sourceDataIndexes = new List(sourceArray.dataInfo.dimensions.length);
+  var targetDataIndexes = new List(targetDataInfo.dimensions.length);
+
+  sourceDimensionIndexes[sourcePermutedIndexes[0]] = 0;
+  sourceDataIndexes[sourcePermutedIndexes[0]] = 0;
+  targetDataIndexes[targetPermutedIndexes[0]] = 0;
+
+  var shapeIndex = 0;
+  var sourceDataIndex = 0;
+  var targetDataIndex = 0;
+
+  var lastRow =
+      sourceArray.dataInfo.dimensions[sourceArray.dataInfo.rowIndex] == 1;
+  var lastColumn =
+      sourceArray.dataInfo.dimensions[sourceArray.dataInfo.columnIndex] == 1;
+
+  var lastTargetColumn = lastTargetColumnIndex != null &&
+      targetDataInfo.dimensions[targetDataInfo.columnIndex] == 1;
+
+  Float32x4 columnValue;
+  int columnIndex;
+
+  if (isColumnsReduction) {
+    columnValue = _ZERO;
+    columnIndex = 0;
+  }
+
+  var targetBeginIndex;
+  if (targetDescriptor.shape.dimension > 1) {
+    if (isRowsReduction && isColumnsReduction) {
+      targetBeginIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length;
+    } else if (isRowsReduction) {
+      targetBeginIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length;
+    } else if (isColumnsReduction) {
+      targetBeginIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length;
+    } else {
+      targetBeginIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length;
+    }
+  } else if (targetDescriptor.shape.dimension == 1) {
+    if (isRowsReduction && isColumnsReduction) {
+      targetBeginIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length;
+    } else if (isRowsReduction) {
+      targetBeginIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length;
+    } else if (isColumnsReduction) {
+      targetBeginIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length;
+    } else {
+      throw new UnimplementedError("to implement _reduceData");
+    }
+  } else {
+    if (isRowsReduction && isColumnsReduction) {
+      targetBeginIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length - 1;
+    } else if (isRowsReduction) {
+      throw new UnimplementedError("to implement _reduceData");
+    } else if (isColumnsReduction) {
+      targetBeginIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length - 1;
+    } else {
+      throw new UnimplementedError("to implement _reduceData");
+    }
+  }
+
+  var targetLimitIndex =
+      isColumnsReduction ? targetBeginIndex - 1 : targetBeginIndex;
+
+  for (;;) {
+    var maxDimension;
+    if (sourcePermutedIndexes[shapeIndex] ==
+        sourceArray.dataInfo.dimensions.length - 1) {
+      if (lastRow) {
+        maxDimension = sourceArray.dataInfo.lastBlockRowCount;
+      } else {
+        maxDimension = sourceArray.dataType.blockSize;
+      }
+    } else {
+      maxDimension =
+          sourceArray.dataInfo.dimensions[sourcePermutedIndexes[shapeIndex]];
+    }
+
+    if (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] <
+        maxDimension) {
+      if (shapeIndex < sourceArray.dataInfo.dimensions.length - 1) {
+        sourceDataIndex = sourceDataIndexes[sourcePermutedIndexes[shapeIndex]];
+
+        if (shapeIndex < targetBeginIndex) {
+          targetDataIndex =
+              targetDataIndexes[targetPermutedIndexes[shapeIndex]];
+        }
+
+        shapeIndex++;
+
+        sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] = 0;
+        sourceDataIndexes[sourcePermutedIndexes[shapeIndex]] = sourceDataIndex;
+
+        if (shapeIndex < targetBeginIndex) {
+          targetDataIndexes[targetPermutedIndexes[shapeIndex]] =
+              targetDataIndex;
+
+          if (isColumnsReduction &&
+              targetDataInfo.dimensions[targetDataInfo.columnIndex] > 1) {
+            if (targetPermutedIndexes[shapeIndex] ==
+                targetDataInfo.columnIndex) {
+              lastTargetColumn = false;
+            }
+          }
+        }
+
+        if (shapeIndex == targetBeginIndex) {
+          begin();
+        }
+
+        continue;
+      } else {
+        onValue(
+            sourceArray.data[sourceDataIndex],
+            lastColumn
+                ? sourceArray.dataInfo.lastBlockColumnCount
+                : sourceArray.dataType.blockSize);
+      }
+    } else {
+      shapeIndex--;
+
+      if (shapeIndex ==
+          sourceArray.dataInfo.dimensions.length -
+              newReductionAxis.length -
+              1) {
+        if (isColumnsReduction) {
+          onValue(null, null);
+
+          var reducedValue = end();
+
+          switch (columnIndex) {
+            case 0:
+              columnValue = columnValue.withX(reducedValue);
+              columnIndex++;
+              break;
+            case 1:
+              columnValue = columnValue.withY(reducedValue);
+              columnIndex++;
+              break;
+            case 2:
+              columnValue = columnValue.withZ(reducedValue);
+              columnIndex++;
+              break;
+            case 3:
+              columnValue = columnValue.withW(reducedValue);
+              columnIndex++;
+              break;
+          }
+
+          if (columnIndex ==
+              (lastTargetColumn
+                  ? targetDataInfo.lastBlockColumnCount
+                  : targetDescriptor.dataType.blockSize)) {
+            targetData[targetDataIndex] = columnValue;
+
+            columnValue = _ZERO;
+            columnIndex = 0;
+          }
+        } else {
+          var reducedValue = end();
+
+          targetData[targetDataIndex] = reducedValue;
+        }
+      }
+    }
+
+    if (shapeIndex >= 0) {
+      sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]]++;
+      sourceDataIndexes[sourcePermutedIndexes[shapeIndex]] +=
+          sourceArray.dataInfo.stride[sourcePermutedIndexes[shapeIndex]];
+      sourceDataIndex = sourceDataIndexes[sourcePermutedIndexes[shapeIndex]];
+
+      if (shapeIndex < targetBeginIndex) {
+        if (shapeIndex < targetLimitIndex) {
+          targetDataIndexes[targetPermutedIndexes[shapeIndex]] +=
+              targetStride[targetPermutedIndexes[shapeIndex]];
+        }
+
+        if (shapeIndex == targetRowIndex) {
+          var sourceDimensionIndex =
+              sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]];
+          if (sourceDimensionIndex % sourceArray.dataType.blockSize == 0) {
+            targetDataIndexes[targetPermutedIndexes[shapeIndex]] += delta1;
+          }
+        } else if (shapeIndex == targetColumnIndex) {
+          var sourceDimensionIndex =
+              sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]];
+          if (sourceDimensionIndex % sourceArray.dataType.blockSize == 0) {
+            targetDataIndexes[targetPermutedIndexes[shapeIndex]] += delta2;
+          }
+        }
+
+        targetDataIndex = targetDataIndexes[targetPermutedIndexes[shapeIndex]];
+
+        if (isColumnsReduction &&
+            targetDataInfo.dimensions[targetDataInfo.columnIndex] > 1) {
+          if (targetPermutedIndexes[shapeIndex] == targetDataInfo.columnIndex) {
+            if (lastTargetColumnIndex == sourceArray.dataInfo.columnIndex) {
+              lastTargetColumn =
+                  (sourceDimensionIndexes[lastTargetColumnIndex] ==
+                      targetDataInfo
+                              .dimensions[targetPermutedIndexes[shapeIndex]] -
+                          1);
+            } else if (lastTargetColumnIndex == sourceArray.dataInfo.rowIndex) {
+              lastTargetColumn =
+                  (sourceDimensionIndexes[lastTargetColumnIndex] ==
+                      targetDataInfo
+                              .dimensions[targetPermutedIndexes[shapeIndex]] -
+                          1);
+            } else {
+              lastTargetColumn =
+                  (sourceDimensionIndexes[lastTargetColumnIndex] >>
+                          sourceArray.dataType.blockDepth ==
+                      targetDataInfo
+                              .dimensions[targetPermutedIndexes[shapeIndex]] -
+                          1);
+            }
+          }
+        }
+      }
+
+      if (sourceArray.dataInfo.dimensions[sourceArray.dataInfo.rowIndex] > 1) {
+        if (sourcePermutedIndexes[shapeIndex] ==
+            sourceArray.dataInfo.rowIndex) {
+          lastRow =
+              (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] ==
+                  sourceArray.dataInfo
+                          .dimensions[sourcePermutedIndexes[shapeIndex]] -
+                      1);
+        }
+      }
+      if (sourceArray.dataInfo.dimensions[sourceArray.dataInfo.columnIndex] >
+          1) {
+        if (sourcePermutedIndexes[shapeIndex] ==
+            sourceArray.dataInfo.columnIndex) {
+          lastColumn =
+              (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] ==
+                  sourceArray.dataInfo
+                          .dimensions[sourcePermutedIndexes[shapeIndex]] -
+                      1);
+        }
+      }
+    } else {
+      break;
+    }
+  }
+}
+
+void _reduceData2(
+    NDArrayBlockedImpl sourceArray,
+    List<int> reductionAxis,
+    bool keepDimensions,
+    Float32x4List targetData,
+    NDDescriptor targetDescriptor,
+    DataInfo targetDataInfo,
+    {void begin(),
+    void onValue(value, int valueCount),
+    dynamic end()}) {
   _print("sourceDataInfo: ${sourceArray.dataInfo}");
   _print("targetDataInfo: $targetDataInfo");
 
@@ -1746,13 +2280,10 @@ void _reduceData(
   var sourceDimensionIndexes =
       new List.filled(sourceArray.dataInfo.dimensions.length, 0);
   var sourceDataIndexes = new List(sourceArray.dataInfo.dimensions.length);
-  var targetDimensionIndexes =
-      new List.filled(targetDataInfo.dimensions.length, 0);
   var targetDataIndexes = new List(targetDataInfo.dimensions.length);
 
   sourceDimensionIndexes[sourcePermutedIndexes[0]] = 0;
   sourceDataIndexes[sourcePermutedIndexes[0]] = 0;
-  targetDimensionIndexes[targetPermutedIndexes[0]] = 0;
   targetDataIndexes[targetPermutedIndexes[0]] = 0;
 
   var shapeIndex = 0;
@@ -1820,29 +2351,25 @@ void _reduceData(
   var targetLimitIndex =
       isColumnsReduction ? targetBeginIndex - 1 : targetBeginIndex;
 
-  var targetResetIndex = isColumnsReduction && isRowsReduction
-      ? targetBeginIndex
-      : targetLimitIndex;
-
   _print("targetLimitIndex: $targetLimitIndex");
-  _print("targetResetIndex: $targetResetIndex");
   _print("targetBeginIndex: $targetBeginIndex");
 
   for (;;) {
-    var dimension;
+    var maxDimension;
     if (sourcePermutedIndexes[shapeIndex] ==
         sourceArray.dataInfo.dimensions.length - 1) {
       if (lastRow) {
-        dimension = sourceArray.dataInfo.lastBlockRowCount;
+        maxDimension = sourceArray.dataInfo.lastBlockRowCount;
       } else {
-        dimension = sourceArray.dataType.blockSize;
+        maxDimension = sourceArray.dataType.blockSize;
       }
     } else {
-      dimension =
+      maxDimension =
           sourceArray.dataInfo.dimensions[sourcePermutedIndexes[shapeIndex]];
     }
 
-    if (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] < dimension) {
+    if (sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]] <
+        maxDimension) {
       if (shapeIndex < sourceArray.dataInfo.dimensions.length - 1) {
         sourceDataIndex = sourceDataIndexes[sourcePermutedIndexes[shapeIndex]];
 
@@ -1857,13 +2384,6 @@ void _reduceData(
         sourceDataIndexes[sourcePermutedIndexes[shapeIndex]] = sourceDataIndex;
 
         if (shapeIndex < targetBeginIndex) {
-          if (shapeIndex < targetResetIndex) {
-            targetDimensionIndexes[targetPermutedIndexes[shapeIndex]] = 0;
-            if (shapeIndex == targetRowIndex) {
-              targetDimensionIndexes[targetDataInfo.rowIndex] = 0;
-            }
-          }
-
           targetDataIndexes[targetPermutedIndexes[shapeIndex]] =
               targetDataIndex;
 
@@ -1936,11 +2456,7 @@ void _reduceData(
               (lastTargetColumn
                   ? targetDataInfo.lastBlockColumnCount
                   : targetDescriptor.dataType.blockSize)) {
-            _print(
-                "($targetDimensionIndexes)[$targetDataIndex]: END 1: $columnValue");
-
-            _checkDataIndex(targetDescriptor, targetDataInfo, targetDataIndex,
-                targetDimensionIndexes);
+            _print("[$targetDataIndex]: END 1: $columnValue");
 
             targetData[targetDataIndex] = columnValue;
 
@@ -1950,11 +2466,7 @@ void _reduceData(
         } else {
           var reducedValue = end();
 
-          _print(
-              "($targetDimensionIndexes)[$targetDataIndex]: END 2: $reducedValue");
-
-          _checkDataIndex(targetDescriptor, targetDataInfo, targetDataIndex,
-              targetDimensionIndexes);
+          _print("[$targetDataIndex]: END 2: $reducedValue");
 
           targetData[targetDataIndex] = reducedValue;
         }
@@ -1969,7 +2481,6 @@ void _reduceData(
 
       if (shapeIndex < targetBeginIndex) {
         if (shapeIndex < targetLimitIndex) {
-          targetDimensionIndexes[targetPermutedIndexes[shapeIndex]]++;
           targetDataIndexes[targetPermutedIndexes[shapeIndex]] +=
               targetStride[targetPermutedIndexes[shapeIndex]];
         }
@@ -1978,15 +2489,12 @@ void _reduceData(
           var sourceDimensionIndex =
               sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]];
           if (sourceDimensionIndex % sourceArray.dataType.blockSize == 0) {
-            targetDimensionIndexes[targetDimensionIndexes.length - 1] = 0;
-            targetDimensionIndexes[targetDataInfo.rowIndex]++;
             targetDataIndexes[targetPermutedIndexes[shapeIndex]] += delta1;
           }
         } else if (shapeIndex == targetColumnIndex) {
           var sourceDimensionIndex =
               sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex]];
           if (sourceDimensionIndex % sourceArray.dataType.blockSize == 0) {
-            targetDimensionIndexes[targetDataInfo.columnIndex]++;
             targetDataIndexes[targetPermutedIndexes[shapeIndex]] += delta2;
           }
         }

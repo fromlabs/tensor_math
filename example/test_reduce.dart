@@ -7,43 +7,16 @@ import "package:tensor_math_simd/src/nd_array_blocked_impl2.dart";
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  functionalTest([1, 1], [0, 1]);
-  functionalTest([1], [0]);
-  functionalTest([1, 5, 1, 1], [2, 3]);
-  functionalTest([1, 1, 1], [1, 2]);
-  functionalTest([5, 5], [1]);
-  functionalTest([5, 5, 5], [2]);
-  functionalTest([5, 5, 5], [0, 2]);
-
-
-  return;
-
-  functionalTest([5, 5], [1]);
-
-  functionalTest([1, 5, 5], [0, 2]);
-
-  functionalTest([1, 5, 5], [2]);
-
-  functionalTest([1, 1, 5], [2]);
-
-  functionalTest([1, 1, 5], [1]);
-
-  functionalTest([1, 1, 5], [0]);
-
-  functionalTest([1, 5], [0]);
-
-  functionalTest([5, 1], [1]);
-
   // functionalTest([10, 10, 10, 10], [2, 3]);
 
-  // performanceTest();
+  performanceTest();
 }
 
 void performanceTest() {
   List<int> shape = [10, 10, 10, 10];
   List<int> reductionAxis = [2, 3];
 
-  // test1(shape, reductionAxis, 100000);
+  test1(shape, reductionAxis, 100000);
 
   test2(shape, reductionAxis, 100000);
 
