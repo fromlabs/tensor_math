@@ -16,7 +16,7 @@ void performanceTest() {
   List<int> shape = [10, 10, 10, 10];
   List<int> reductionAxis = [2, 3];
 
-  test1(shape, reductionAxis, 100000);
+  //test1(shape, reductionAxis, 100000);
 
   test2(shape, reductionAxis, 100000);
 
