@@ -199,7 +199,6 @@ void main() {
           print("shape: $shape");
 
           for (var reductionAxis in generateReductionAxisCombinations(i + 1)) {
-            // if (reductionAxis.contains(i) && reductionAxis.contains(i - 1)) {
               try {
                 test(shape, reductionAxis);
               } catch(e, s) {
@@ -207,8 +206,48 @@ void main() {
 
                 rethrow;
               }
+          }
+        }
+      }
+    });
 
-            // }
+    test('Reduce mean tests', () {
+      var test = (List<int> shape, List<int> reductionAxis) {
+        var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
+            dataType: tm.NDDataType.float32)
+            .reduceMean(reductionAxis: reductionAxis)
+            .toValue();
+
+        expect(
+            new tm.NDArray.generate(shape, (index) => index + 1,
+                dataType: tm.NDDataType.float32HBlocked)
+                .reduceMean(reductionAxis: reductionAxis)
+                .toValue(),
+            equals(expectedValue));
+
+        expect(
+            new tm.NDArray.generate(shape, (index) => index + 1,
+                dataType: tm.NDDataType.float32VBlocked)
+                .reduceMean(reductionAxis: reductionAxis)
+                .toValue(),
+            equals(expectedValue));
+      };
+
+      var maxDimension = 4;
+      var dimensionCount = 11;
+
+      for (var i = 0; i < maxDimension; i++) {
+        for (var shape in generateShapeCombinations(i, dimensionCount)) {
+          print("shape: $shape");
+
+          for (var reductionAxis in generateReductionAxisCombinations(i + 1)) {
+            try {
+              test(shape, reductionAxis);
+            } catch(e, s) {
+              print("reductionAxis: $reductionAxis");
+
+              rethrow;
+            }
           }
         }
       }

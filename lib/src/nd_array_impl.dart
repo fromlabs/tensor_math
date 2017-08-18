@@ -566,6 +566,8 @@ class NDArrayImpl extends NDArrayBase {
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
       {void begin(), void onValue(value, int valueCount), dynamic end()}) {
+    // TODO eliminare utilizzo permutedIndexes
+
     var newReductionAxis =
         convertToValidReductionAxis(reductionAxis, shape.dimension);
 
@@ -593,6 +595,7 @@ class NDArrayImpl extends NDArrayBase {
       var resultDataIndex = 0;
       var dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
 
+      // TODO verificare che non venga chiamato due volte di seguito
       begin();
 
       while (resultDataIndex < resultData.length) {
