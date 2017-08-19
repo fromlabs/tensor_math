@@ -7,20 +7,20 @@ import "package:tensor_math_simd/src/nd_array_blocked_impl2.dart";
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  // functionalTest([10, 10, 10, 10], [2, 3]);
+  functionalTest3([3], [0]);
 
-  performanceTest();
+  // performanceTest();
 }
 
 void performanceTest() {
   List<int> shape = [10, 10, 10, 10];
   List<int> reductionAxis = [2, 3];
 
-  //test1(shape, reductionAxis, 100000);
+  test1(shape, reductionAxis, 100000);
 
   test2(shape, reductionAxis, 100000);
 
-  // test3(shape, reductionAxis, 100000);
+  test3(shape, reductionAxis, 100000);
 }
 
 void test1(List<int> shape, List<int> reductionAxis, int steps) {
@@ -95,6 +95,80 @@ void functionalTest(List<int> shape, List<int> reductionAxis) {
   value = new tm.NDArray.generate(shape, (index) => index + 1,
           dataType: tm.NDDataType.float32VBlocked)
       .reduceSum(reductionAxis: reductionAxis)
+      .toValue();
+
+  if (!iterableEquality.equals(value, expectedValue)) {
+    print(value);
+    print(expectedValue);
+
+    throw new StateError("not equals");
+  }
+}
+
+void functionalTest2(List<int> shape, List<int> reductionAxis) {
+  var array = new tm.NDArray.generate(shape, (index) => index + 1,
+      dataType: tm.NDDataType.float32);
+
+  print(array.toValue());
+
+  var expectedValue = array.reduceMean(reductionAxis: reductionAxis).toValue();
+
+  print(expectedValue);
+
+  var value;
+
+  value = new tm.NDArray.generate(shape, (index) => index + 1,
+          dataType: tm.NDDataType.float32HBlocked)
+      .reduceMean(reductionAxis: reductionAxis)
+      .toValue();
+
+  if (!iterableEquality.equals(value, expectedValue)) {
+    print(value);
+    print(expectedValue);
+
+    throw new StateError("not equals");
+  }
+
+  value = new tm.NDArray.generate(shape, (index) => index + 1,
+          dataType: tm.NDDataType.float32VBlocked)
+      .reduceMean(reductionAxis: reductionAxis)
+      .toValue();
+
+  if (!iterableEquality.equals(value, expectedValue)) {
+    print(value);
+    print(expectedValue);
+
+    throw new StateError("not equals");
+  }
+}
+
+void functionalTest3(List<int> shape, List<int> reductionAxis) {
+  var array = new tm.NDArray.generate(shape, (index) => index + 1,
+      dataType: tm.NDDataType.float32);
+
+  print(array.toValue());
+
+  var expectedValue = array.reduceMax(reductionAxis: reductionAxis).toValue();
+
+  print(expectedValue);
+
+  var value;
+
+  value = new tm.NDArray.generate(shape, (index) => index + 1,
+          dataType: tm.NDDataType.float32HBlocked)
+      .reduceMax(reductionAxis: reductionAxis)
+      .toValue();
+
+  if (!iterableEquality.equals(value, expectedValue)) {
+    print(value);
+    print(expectedValue);
+
+    throw new StateError("not equals");
+  }
+
+  value = new tm.NDArray.generate(shape, (index) => index + 1,
+          dataType: tm.NDDataType.float32VBlocked)
+      .reduceMax(reductionAxis: reductionAxis)
       .toValue();
 
   if (!iterableEquality.equals(value, expectedValue)) {

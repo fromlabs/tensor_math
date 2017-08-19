@@ -323,18 +323,20 @@ class NDArrayImpl extends NDArrayBase {
     var resultDescriptor = descriptor.reduceMean(
         reductionAxis: reductionAxis, keepDimensions: keepDimensions);
 
+    var newReductionAxis =
+        convertToValidReductionAxis(reductionAxis, shape.dimension);
+
     var total;
-    var count;
+    var count = newReductionAxis.fold<int>(
+        1, (count, reductionIndex) => count * shape.dimensions[reductionIndex]);
 
     return reduceOperationInternal(
-        reductionAxis, keepDimensions, resultDescriptor, reuse,
+        newReductionAxis, keepDimensions, resultDescriptor, reuse,
         begin: () {
           total = 0;
-          count = 0;
         },
         onValue: (value, int valueCount) {
           total += value;
-          count++;
         },
         end: () => total / count);
   }
@@ -595,7 +597,7 @@ class NDArrayImpl extends NDArrayBase {
       var resultDataIndex = 0;
       var dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
 
-      // TODO verificare che non venga chiamato due volte di seguito
+      // TODO verificare che non venga chiamato e se viene chiamato due volte?
       begin();
 
       while (resultDataIndex < resultData.length) {
