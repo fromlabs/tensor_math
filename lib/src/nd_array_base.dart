@@ -126,7 +126,7 @@ abstract class NDArrayBase implements NDArray {
   NDArray argOperationInternal(
       int axis, NDDescriptor resultDescriptor, NDArray reuse,
       {void begin(),
-      void onValue(int axeIndex, int dimensionIndex, value, int valueCount),
+      void onValue(dimensionIndex, value, int valueCount),
       dynamic end()});
 
   @override
@@ -350,37 +350,15 @@ abstract class NDArrayBase implements NDArray {
     var thenArray = toNDArray(thenValue, dataType: dataType);
     var elseArray = toNDArray(elseValue, dataType: dataType);
 
+    var resultDescriptor =
+        descriptor.select(thenArray.descriptor, elseArray.descriptor);
+
     return elementWiseTernaryOperationInternal(
         thenArray,
         elseArray,
-        descriptor.select(thenArray.descriptor, elseArray.descriptor),
+        resultDescriptor,
         reuse,
         (value1, value2, value3) => value1 ? value2 : value3);
-  }
-
-  @override
-  NDArray argMax({int axis, NDArray reuse}) {
-    if (axis != null) {
-      var resultDescriptor = descriptor.argMax(axis: axis);
-
-      var maxValueIndex;
-      var maxValue;
-
-      return argOperationInternal(axis, resultDescriptor, reuse,
-          begin: () {
-            maxValueIndex = null;
-            maxValue = null;
-          },
-          onValue: (int axeIndex, int dimensionIndex, value, int valueCount) {
-            if (maxValue == null || value > maxValue) {
-              maxValueIndex = dimensionIndex;
-              maxValue = value;
-            }
-          },
-          end: () => maxValueIndex);
-    } else {
-      return reshape(newDimensions: [-1]).argMax(axis: 0, reuse: reuse);
-    }
   }
 
   @override
@@ -438,18 +416,28 @@ abstract class NDArrayBase implements NDArray {
   NDArray reduceOperation(
       {List<int> reductionAxis,
       bool keepDimensions = false,
-      NDDataType resultDataType,
       covariant NDArray reuse,
       @required void begin(),
       @required void onValue(value, int valueCount),
       @required dynamic end()}) {
     var resultDescriptor = descriptor.reduceOperation(
-        reductionAxis: reductionAxis,
-        keepDimensions: keepDimensions,
-        resultDataType: resultDataType);
+        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
 
     return reduceOperationInternal(
         reductionAxis, keepDimensions, resultDescriptor, reuse,
+        begin: begin, onValue: onValue, end: end);
+  }
+
+  @override
+  NDArray argOperation(
+      {int axis = 0,
+      covariant NDArray reuse,
+      @required void begin(),
+      @required void onValue(dimensionIndex, value, int valueCount),
+      @required dynamic end()}) {
+    var resultDescriptor = descriptor.argOperation(axis: axis);
+
+    return argOperationInternal(axis, resultDescriptor, reuse,
         begin: begin, onValue: onValue, end: end);
   }
 }

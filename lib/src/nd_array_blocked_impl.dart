@@ -769,7 +769,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
   NDArray argOperationInternal(
       int axis, NDDescriptor resultDescriptor, NDArray reuse,
       {void begin(),
-      void onValue(int axeIndex, int dimensionIndex, value, int valueCount),
+      void onValue(dimensionIndex, value, int valueCount),
       end()}) {
     var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
 
@@ -1010,6 +1010,13 @@ class NDArrayBlockedImpl extends NDArrayBase {
           total = total || value;
         },
         end: () => total);
+  }
+
+  @override
+  NDArray argMax({int axis = 0, NDArray reuse}) {
+    // TODO to implement NDArrayBlockedImpl.argMax
+    throw new UnimplementedError(
+        "to implement NDArrayBlockedImpl.argMax: $this");
   }
 
   @override
@@ -1402,7 +1409,7 @@ void _argData(
     _DataInfo targetDataInfo,
     _MatrixInfo targetMatrixInfo,
     {void begin(),
-    void onValue(int axeIndex, int dimensionIndex, value, int valueCount),
+    void onValue(dimensionIndex, value, int valueCount),
     dynamic end()}) {
   var sourceDimensions = new List.from(sourceArray.descriptor.shape.dimensions
       .sublist(0, sourceArray.descriptor.shape.dimension - 2));
@@ -1536,11 +1543,8 @@ void _argData(
 
       shapeIndex--;
 
-      onValue(
-          sourcePermutedIndexes[shapeIndex - 1],
-          sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex - 1]] - 1,
-          sourceArray._data[sourceDataIndex],
-          blockColumnCount);
+      onValue(sourceDimensionIndexes[sourcePermutedIndexes[shapeIndex - 1]] - 1,
+          sourceArray._data[sourceDataIndex], blockColumnCount);
     } else {
       var dimension;
       if (sourcePermutedIndexes[shapeIndex] == sourceDimensions.length - 1) {

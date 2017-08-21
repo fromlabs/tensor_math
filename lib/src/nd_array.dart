@@ -1,6 +1,8 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
+import "package:meta/meta.dart";
+
 import "nd_object.dart";
 
 import "nd_shape.dart";
@@ -86,7 +88,24 @@ abstract class NDArray implements NDObject {
       covariant NDArray reuse});
 
   @override
-  NDArray argMax({int axis, covariant NDArray reuse});
+  NDArray argMax({int axis = 0, covariant NDArray reuse});
+
+  @override
+  NDArray reduceOperation(
+      {List<int> reductionAxis,
+      bool keepDimensions = false,
+      covariant NDArray reuse,
+      @required void begin(),
+      @required void onValue(value, int valueCount),
+      @required dynamic end()});
+
+  @override
+  NDArray argOperation(
+      {int axis = 0,
+      covariant NDArray reuse,
+      @required void begin(),
+      @required void onValue(dimensionIndex, value, int valueCount),
+      @required dynamic end()});
 
   @override
   NDArray abs({covariant NDArray reuse});

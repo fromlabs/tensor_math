@@ -87,9 +87,8 @@ class NDDescriptor implements NDObject {
       isGreaterOrEqual(descriptor2);
 
   @override
-  NDDescriptor argMax({int axis, covariant NDDescriptor reuse}) =>
-      new NDDescriptor(
-          shape: shape.arg(axis: axis), dataType: NDDataType.uint32);
+  NDDescriptor argMax({int axis = 0, covariant NDDescriptor reuse}) =>
+      arg(axis: axis);
 
   NDDescriptor broadcast(covariant NDDescriptor descriptor2,
           {@required NDDataType resultDataType}) =>
@@ -251,6 +250,9 @@ class NDDescriptor implements NDObject {
           shape: shape.reduce(
               reductionAxis: reductionAxis, keepDimensions: keepDimensions),
           dataType: resultDataType);
+
+  NDDescriptor arg({int axis = 0}) => new NDDescriptor(
+      shape: shape.arg(axis: axis), dataType: NDDataType.uint32);
 
   @override
   NDDescriptor reduceAny(
@@ -462,15 +464,20 @@ class NDDescriptor implements NDObject {
   NDDescriptor reduceOperation(
           {List<int> reductionAxis,
           bool keepDimensions = false,
-          @required NDDataType resultDataType,
           covariant NDDescriptor reuse,
           void begin(),
           void onValue(value, int valueCount),
           dynamic end()}) =>
-      this.reduce(
-          reductionAxis: reductionAxis,
-          keepDimensions: keepDimensions,
-          resultDataType: resultDataType);
+      this.reduce(reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+
+  @override
+  NDDescriptor argOperation(
+          {int axis = 0,
+          covariant NDDescriptor reuse,
+          void begin(),
+          void onValue(dimensionIndex, value, int valueCount),
+          dynamic end()}) =>
+      this.arg(axis: axis);
 
   @override
   String toString() =>

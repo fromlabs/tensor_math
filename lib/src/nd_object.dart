@@ -38,7 +38,7 @@ abstract class NDObject {
   NDObject reduceAny(
       {List<int> reductionAxis, bool keepDimensions = false, NDObject reuse});
 
-  NDObject argMax({int axis, NDObject reuse});
+  NDObject argMax({int axis = 0, NDObject reuse});
 
   NDObject abs({NDObject reuse});
 
@@ -115,9 +115,15 @@ abstract class NDObject {
   NDObject reduceOperation(
       {List<int> reductionAxis,
       bool keepDimensions = false,
-      @required NDDataType resultDataType,
       NDObject reuse,
       @required void begin(),
       @required void onValue(value, int valueCount),
+      @required dynamic end()});
+
+  NDObject argOperation(
+      {int axis = 0,
+      NDObject reuse,
+      @required void begin(),
+      @required void onValue(dimensionIndex, value, int valueCount),
       @required dynamic end()});
 }

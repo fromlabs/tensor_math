@@ -15,12 +15,12 @@ import "nd_array_base.dart";
 class NDArrayImpl extends NDArrayBase {
   final List _data;
 
-  final _DataInfo _dataInfo;
+  final DataInfo _dataInfo;
 
   factory NDArrayImpl(value, NDDescriptor descriptor, NDArray reuse) {
-    var dataInfo = _createNormalizedDataInfo(descriptor.shape);
+    var dataInfo = new DataInfo.normalized(descriptor);
 
-    var data = _createData(descriptor, reuse);
+    var data = createData(descriptor, reuse);
 
     _loadData(value, data, descriptor);
 
@@ -33,9 +33,9 @@ class NDArrayImpl extends NDArrayBase {
 
   factory NDArrayImpl.generate(
       generator(int index), NDDescriptor descriptor, NDArray reuse) {
-    var dataInfo = _createNormalizedDataInfo(descriptor.shape);
+    var dataInfo = new DataInfo.normalized(descriptor);
 
-    var data = _createData(descriptor, reuse);
+    var data = createData(descriptor, reuse);
 
     _generateData(generator, data, descriptor);
 
@@ -46,9 +46,9 @@ class NDArrayImpl extends NDArrayBase {
       NDArrayBase fromArray, NDDataType toDataType, NDArray reuse) {
     var resultDescriptor = fromArray.descriptor.cast(toDataType);
 
-    var dataInfo = _createNormalizedDataInfo(resultDescriptor.shape);
+    var dataInfo = new DataInfo.normalized(resultDescriptor);
 
-    var data = _createData(resultDescriptor, reuse);
+    var data = createData(resultDescriptor, reuse);
 
     _castData(fromArray, data, resultDescriptor);
 
@@ -108,7 +108,7 @@ class NDArrayImpl extends NDArrayBase {
   }
 
   @override
-  bool get isNormalized => _dataInfo == _createNormalizedDataInfo(shape);
+  bool get isNormalized => _dataInfo == new DataInfo.normalized(descriptor);
 
   @override
   NDArray normalize({NDArray reuse}) {
@@ -117,7 +117,7 @@ class NDArrayImpl extends NDArrayBase {
     } else {
       var resultDescriptor = descriptor;
 
-      var resultDataInfo = _createNormalizedDataInfo(resultDescriptor.shape);
+      var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var resultData = elementWiseUnaryOperationInternal(
           resultDescriptor, reuse, (value) => value)._data;
@@ -133,7 +133,7 @@ class NDArrayImpl extends NDArrayBase {
     } else {
       var resultDescriptor = descriptor.reshape(newDimensions: newDimensions);
 
-      var resultDataInfo = _createNormalizedDataInfo(resultDescriptor.shape);
+      var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var resultData;
       if (isNormalized) {
@@ -165,7 +165,7 @@ class NDArrayImpl extends NDArrayBase {
         resultStride[i] = _dataInfo.stride[permutationAxe];
       }
 
-      var resultDataInfo = new _DataInfo(resultStride, _dataInfo.offset);
+      var resultDataInfo = new DataInfo(resultStride, _dataInfo.offset);
 
       return new NDArrayImpl._(_data, resultDescriptor, resultDataInfo);
     } else {
@@ -177,8 +177,8 @@ class NDArrayImpl extends NDArrayBase {
   NDArray tile(List<int> multiplies, {NDArray reuse}) {
     var resultDescriptor = descriptor.tile(multiplies);
     var resultShape = resultDescriptor.shape;
-    var resultData = _createData(resultDescriptor, reuse);
-    var resultDataInfo = _createNormalizedDataInfo(resultShape);
+    var resultData = createData(resultDescriptor, reuse);
+    var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
     var shapeIndex = 0;
     var dimensionIndexes = new List(resultShape.dimension);
@@ -235,8 +235,8 @@ class NDArrayImpl extends NDArrayBase {
 
     var resultDescriptor = descriptor.matMul(array2.descriptor);
     var resultShape = resultDescriptor.shape;
-    var resultData = _createData(resultDescriptor, reuse);
-    var resultDataInfo = _createNormalizedDataInfo(resultShape);
+    var resultData = createData(resultDescriptor, reuse);
+    var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
     var shapeIndex = 0;
     var dimensionIndexes = new List(resultShape.dimension);
@@ -382,21 +382,42 @@ class NDArrayImpl extends NDArrayBase {
   }
 
   @override
+  NDArray argMax({int axis = 0, NDArray reuse}) {
+    var resultDescriptor = descriptor.argMax(axis: axis);
+
+    var maxValueIndex;
+    var maxValue;
+
+    return argOperationInternal(axis, resultDescriptor, reuse,
+        begin: () {
+          maxValueIndex = null;
+          maxValue = null;
+        },
+        onValue: (dimensionIndex, value, int valueCount) {
+          if (maxValue == null || value > maxValue) {
+            maxValueIndex = dimensionIndex;
+            maxValue = value;
+          }
+        },
+        end: () => maxValueIndex);
+  }
+
+  @override
   String toString() =>
       "<value: ${toValue()}, shape: $shape, dataType: $dataType, stride: $_dataInfo.stride, offset: $_dataInfo.offset>";
 
   @override
   NDArrayImpl elementWiseUnaryOperationInternal(
       NDDescriptor resultDescriptor, NDArray reuse, unaryOperation(value)) {
-    var resultData = _createData(resultDescriptor, reuse);
+    var resultData = createData(resultDescriptor, reuse);
     var resultDataInfo;
 
     if (shape.isScalar) {
-      resultDataInfo = new _DataInfo(_dataInfo.stride, 0);
+      resultDataInfo = new DataInfo(_dataInfo.stride, 0);
 
       resultData[0] = unaryOperation(_data[_dataInfo.offset]);
     } else {
-      resultDataInfo = _createNormalizedDataInfo(resultDescriptor.shape);
+      resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
       var dimensionIndexes = new List(shape.dimension);
@@ -438,16 +459,16 @@ class NDArrayImpl extends NDArrayBase {
       NDArray reuse,
       binaryOperation(value1, value2)) {
     var resultShape = resultDescriptor.shape;
-    var resultData = _createData(resultDescriptor, reuse);
+    var resultData = createData(resultDescriptor, reuse);
     var resultDataInfo;
 
     if (resultShape.isScalar) {
-      resultDataInfo = new _DataInfo(_dataInfo.stride, 0);
+      resultDataInfo = new DataInfo(_dataInfo.stride, 0);
 
       resultData[0] = binaryOperation(
           _data[_dataInfo.offset], array2._data[array2._dataInfo.offset]);
     } else {
-      resultDataInfo = _createNormalizedDataInfo(resultShape);
+      resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
       var dimensionIndexes = new List(resultShape.dimension);
@@ -496,18 +517,18 @@ class NDArrayImpl extends NDArrayBase {
       NDArray reuse,
       ternaryOperation(value1, value2, value3)) {
     var resultShape = resultDescriptor.shape;
-    var resultData = _createData(resultDescriptor, reuse);
+    var resultData = createData(resultDescriptor, reuse);
     var resultDataInfo;
 
     if (resultShape.isScalar) {
-      resultDataInfo = new _DataInfo(_dataInfo.stride, 0);
+      resultDataInfo = new DataInfo(_dataInfo.stride, 0);
 
       resultData[0] = ternaryOperation(
           _data[_dataInfo.offset],
           array2._data[array2._dataInfo.offset],
           array3._data[array3._dataInfo.offset]);
     } else {
-      resultDataInfo = _createNormalizedDataInfo(resultShape);
+      resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
       var dimensionIndexes = new List(resultShape.dimension);
@@ -574,9 +595,8 @@ class NDArrayImpl extends NDArrayBase {
         convertToValidReductionAxis(reductionAxis, shape.dimension);
 
     if (newReductionAxis.isNotEmpty) {
-      var resultShape = resultDescriptor.shape;
-      var resultData = _createData(resultDescriptor, reuse);
-      var resultDataInfo = _createNormalizedDataInfo(resultShape);
+      var resultData = createData(resultDescriptor, reuse);
+      var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
       var permutedIndexes = new List(shape.dimension);
@@ -643,11 +663,12 @@ class NDArrayImpl extends NDArrayBase {
   NDArray argOperationInternal(
       axis, NDDescriptor resultDescriptor, NDArray reuse,
       {void begin(),
-      void onValue(int axeIndex, int dimensionIndex, value, int valueCount),
+      void onValue(dimensionIndex, value, int valueCount),
       dynamic end()}) {
-    var resultShape = resultDescriptor.shape;
-    var resultData = _createData(resultDescriptor, reuse);
-    var resultDataInfo = _createNormalizedDataInfo(resultShape);
+    // TODO eliminare utilizzo permutedIndexes
+
+    var resultData = createData(resultDescriptor, reuse);
+    var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
     var shapeIndex = 0;
     var permutedIndexes = new List(shape.dimension);
@@ -665,6 +686,7 @@ class NDArrayImpl extends NDArrayBase {
     var resultDataIndex = 0;
     var dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
 
+    // TODO verificare che non venga chiamato e se viene chiamato due volte?
     begin();
 
     while (resultDataIndex < resultData.length) {
@@ -674,8 +696,7 @@ class NDArrayImpl extends NDArrayBase {
         }
 
         if (shapeIndex == shape.dimension - 1) {
-          onValue(
-              permutedIndexes[shapeIndex], dimensionIndex, _data[dataIndex], 1);
+          onValue(dimensionIndex, _data[dataIndex], 1);
 
           dataIndex += _dataInfo.stride[permutedIndexes[shapeIndex]];
           dimensionIndex++;
@@ -706,16 +727,6 @@ class NDArrayImpl extends NDArrayBase {
 }
 
 final _iterableEquality = new IterableEquality<dynamic>();
-
-_DataInfo _createNormalizedDataInfo(NDShape shape) {
-  List<int> stride = new List(shape.dimension);
-  var factor = 1;
-  for (var i = shape.dimension - 1; i >= 0; i--) {
-    stride[i] = factor;
-    factor *= shape[i];
-  }
-  return new _DataInfo(stride, 0);
-}
 
 void _loadData(value, List data, NDDescriptor descriptor) {
   if (descriptor.dataType.isFloat) {
@@ -833,7 +844,7 @@ List<int> _calculateBroadcastedStride(
       }
     }, growable: false);
 
-List _createData(NDDescriptor descriptor, NDArrayImpl reuse) {
+List createData(NDDescriptor descriptor, NDArrayImpl reuse) {
   if (descriptor.dataType == NDDataType.unknown) {
     throw new ArgumentError.value(descriptor.dataType.toString(), "data type");
   }
@@ -878,7 +889,7 @@ List _createData(NDDescriptor descriptor, NDArrayImpl reuse) {
 }
 
 Iterable<num> _createValueIterable(
-    List _data, NDDescriptor descriptor, _DataInfo dataInfo) sync* {
+    List _data, NDDescriptor descriptor, DataInfo dataInfo) sync* {
   if (descriptor.shape.isScalar) {
     yield _data[dataInfo.offset];
   } else {
@@ -915,17 +926,27 @@ Iterable<num> _createValueIterable(
   }
 }
 
-class _DataInfo {
+class DataInfo {
   final List<int> stride;
 
   final int offset;
 
-  _DataInfo(this.stride, this.offset);
+  DataInfo(this.stride, this.offset);
+
+  factory DataInfo.normalized(NDDescriptor descriptor) {
+    List<int> stride = new List(descriptor.shape.dimension);
+    var factor = 1;
+    for (var i = descriptor.shape.dimension - 1; i >= 0; i--) {
+      stride[i] = factor;
+      factor *= descriptor.shape[i];
+    }
+    return new DataInfo(stride, 0);
+  }
 
   @override
   // ignore: hash_and_equals
   bool operator ==(other) {
-    if (other is _DataInfo) {
+    if (other is DataInfo) {
       return offset == other.offset &&
           _iterableEquality.equals(stride, other.stride);
     } else {
