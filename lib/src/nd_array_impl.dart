@@ -24,7 +24,7 @@ class NDArrayImpl extends NDArrayBase {
 
     _loadData(value, data, descriptor);
 
-    return new NDArrayImpl._(data, descriptor, dataInfo);
+    return new NDArrayImpl.raw(data, descriptor, dataInfo);
   }
 
   factory NDArrayImpl.filled(
@@ -39,7 +39,7 @@ class NDArrayImpl extends NDArrayBase {
 
     _generateData(generator, data, descriptor);
 
-    return new NDArrayImpl._(data, descriptor, dataInfo);
+    return new NDArrayImpl.raw(data, descriptor, dataInfo);
   }
 
   factory NDArrayImpl.castFrom(
@@ -52,10 +52,10 @@ class NDArrayImpl extends NDArrayBase {
 
     _castData(fromArray, data, resultDescriptor);
 
-    return new NDArrayImpl._(data, resultDescriptor, dataInfo);
+    return new NDArrayImpl.raw(data, resultDescriptor, dataInfo);
   }
 
-  NDArrayImpl._(this._data, NDDescriptor descriptor, this._dataInfo)
+  NDArrayImpl.raw(this._data, NDDescriptor descriptor, this._dataInfo)
       : super.raw(descriptor);
 
   @override
@@ -122,7 +122,7 @@ class NDArrayImpl extends NDArrayBase {
       var resultData = elementWiseUnaryOperationInternal(
           resultDescriptor, reuse, (value) => value)._data;
 
-      return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
+      return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
     }
   }
 
@@ -143,7 +143,7 @@ class NDArrayImpl extends NDArrayBase {
             resultDescriptor, reuse, (value) => value)._data;
       }
 
-      return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
+      return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
     }
   }
 
@@ -167,7 +167,7 @@ class NDArrayImpl extends NDArrayBase {
 
       var resultDataInfo = new DataInfo(resultStride, _dataInfo.offset);
 
-      return new NDArrayImpl._(_data, resultDescriptor, resultDataInfo);
+      return new NDArrayImpl.raw(_data, resultDescriptor, resultDataInfo);
     } else {
       return this;
     }
@@ -176,57 +176,63 @@ class NDArrayImpl extends NDArrayBase {
   @override
   NDArray tile(List<int> multiplies, {NDArray reuse}) {
     var resultDescriptor = descriptor.tile(multiplies);
-    var resultShape = resultDescriptor.shape;
-    var resultData = createData(resultDescriptor, reuse);
-    var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
-    var shapeIndex = 0;
-    var dimensionIndexes = new List(resultShape.dimension);
-    var dimensionSourceIndexes = new List(resultShape.dimension);
-    var data1Indexes = new List(resultShape.dimension);
-    var startData1Indexes = new List(resultShape.dimension);
-    var stride1 = _dataInfo.stride;
-    var data1Index = data1Indexes[shapeIndex] = _dataInfo.offset;
-    var startData1Index = startData1Indexes[shapeIndex] = data1Index;
-    var resultDataIndex = 0;
-    var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-    var dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
-    while (resultDataIndex < resultData.length) {
-      if (dimensionIndex < resultShape[shapeIndex]) {
-        if (shapeIndex == resultShape.dimension - 1) {
-          resultData[resultDataIndex++] = _data[data1Index];
-          dimensionIndex++;
-          if (dimensionSourceIndex < shape[shapeIndex] - 1) {
-            data1Index += stride1[shapeIndex];
-            dimensionSourceIndex++;
+    if (descriptor != resultDescriptor) {
+      var resultShape = resultDescriptor.shape;
+      var resultData = createData(resultDescriptor, reuse);
+      var resultDataInfo = new DataInfo.normalized(resultDescriptor);
+
+      var shapeIndex = 0;
+      var dimensionIndexes = new List(resultShape.dimension);
+      var dimensionSourceIndexes = new List(resultShape.dimension);
+      var data1Indexes = new List(resultShape.dimension);
+      var startData1Indexes = new List(resultShape.dimension);
+      var stride1 = _dataInfo.stride;
+      var data1Index = data1Indexes[shapeIndex] = _dataInfo.offset;
+      var startData1Index = startData1Indexes[shapeIndex] = data1Index;
+      var resultDataIndex = 0;
+      var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
+      var dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
+      while (resultDataIndex < resultData.length) {
+        if (dimensionIndex < resultShape[shapeIndex]) {
+          if (shapeIndex == resultShape.dimension - 1) {
+            resultData[resultDataIndex++] = _data[data1Index];
+            dimensionIndex++;
+            if (dimensionSourceIndex < shape[shapeIndex] - 1) {
+              data1Index += stride1[shapeIndex];
+              dimensionSourceIndex++;
+            } else {
+              data1Index = startData1Index;
+              dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
+            }
           } else {
-            data1Index = startData1Index;
+            shapeIndex++;
+            data1Indexes[shapeIndex] = data1Index;
+            startData1Index = startData1Indexes[shapeIndex] = data1Index;
+            dimensionIndex = dimensionIndexes[shapeIndex] = 0;
             dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
           }
         } else {
-          shapeIndex++;
-          data1Indexes[shapeIndex] = data1Index;
-          startData1Index = startData1Indexes[shapeIndex] = data1Index;
-          dimensionIndex = dimensionIndexes[shapeIndex] = 0;
-          dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
-        }
-      } else {
-        shapeIndex--;
-        dimensionIndex =
-            dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
-        if (dimensionSourceIndexes[shapeIndex] < shape[shapeIndex] - 1) {
-          data1Index = data1Indexes[shapeIndex] =
-              data1Indexes[shapeIndex] + stride1[shapeIndex];
-          dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] =
-              dimensionSourceIndexes[shapeIndex] + 1;
-        } else {
-          data1Index = data1Indexes[shapeIndex] = startData1Indexes[shapeIndex];
-          dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
+          shapeIndex--;
+          dimensionIndex =
+              dimensionIndexes[shapeIndex] = dimensionIndexes[shapeIndex] + 1;
+          if (dimensionSourceIndexes[shapeIndex] < shape[shapeIndex] - 1) {
+            data1Index = data1Indexes[shapeIndex] =
+                data1Indexes[shapeIndex] + stride1[shapeIndex];
+            dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] =
+                dimensionSourceIndexes[shapeIndex] + 1;
+          } else {
+            data1Index =
+                data1Indexes[shapeIndex] = startData1Indexes[shapeIndex];
+            dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
+          }
         }
       }
-    }
 
-    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
+      return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
+    } else {
+      return this;
+    }
   }
 
   @override
@@ -295,7 +301,7 @@ class NDArrayImpl extends NDArrayBase {
       }
     }
 
-    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
+    return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
   }
 
   @override
@@ -449,7 +455,7 @@ class NDArrayImpl extends NDArrayBase {
       }
     }
 
-    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
+    return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
   }
 
   @override
@@ -506,7 +512,7 @@ class NDArrayImpl extends NDArrayBase {
       }
     }
 
-    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
+    return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
   }
 
   @override
@@ -582,7 +588,7 @@ class NDArrayImpl extends NDArrayBase {
       }
     }
 
-    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
+    return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
   }
 
   @override
@@ -653,7 +659,7 @@ class NDArrayImpl extends NDArrayBase {
         }
       }
 
-      return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
+      return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
     } else {
       return this;
     }
@@ -722,7 +728,7 @@ class NDArrayImpl extends NDArrayBase {
       }
     }
 
-    return new NDArrayImpl._(resultData, resultDescriptor, resultDataInfo);
+    return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
   }
 }
 

@@ -7,19 +7,22 @@ import "package:tensor_math_simd/src/nd_array_blocked_impl.dart";
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  // functionalTest();
+  functionalTest();
 
-  performanceTest();
+  // performanceTest();
 }
 
 void functionalTest() {
-  var shape = [2, 2, 5, 13];
-  var permutationAxis = [1, 0, 3, 2];
+  var shape = [1, 1];
+  var permutationAxis = [1, 0];
+  // var permutationAxis = [1, 0, 3, 2];
 
   var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
           dataType: tm.NDDataType.float32)
       .transpose(permutationAxis: permutationAxis)
       .toValue();
+
+  print(expectedValue);
 
   var value = new tm.NDArray.generate(shape, (index) => index + 1,
           dataType: tm.NDDataType.float32HBlocked)
@@ -27,7 +30,9 @@ void functionalTest() {
       .toValue();
 
   if (!iterableEquality.equals(value, expectedValue)) {
-    throw new StateError("not equals: $value $expectedValue");
+    print(expectedValue);
+    print(value);
+    throw new StateError("not equals");
   }
 
   value = new tm.NDArray.generate(shape, (index) => index + 1,
@@ -36,7 +41,9 @@ void functionalTest() {
       .toValue();
 
   if (!iterableEquality.equals(value, expectedValue)) {
-    throw new StateError("not equals: $value $expectedValue");
+    print(expectedValue);
+    print(value);
+    throw new StateError("not equals");
   }
 }
 

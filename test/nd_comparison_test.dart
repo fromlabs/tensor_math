@@ -59,6 +59,43 @@ Iterable<List<int>> generateReductionAxisCombinations(int dimension) sync* {
   }
 }
 
+Iterable<List<int>> generatePermutationAxisCombinations(int dimension) sync* {
+  var i = 0;
+  var indexes = new List(dimension);
+  indexes[0] = 0;
+
+  for (;;) {
+    if (indexes[i] > dimension - 1) {
+      i--;
+
+      if (i >= 0) {
+        indexes[i]++;
+        while (indexes.indexOf(indexes[i]) != i) {
+          indexes[i]++;
+        }
+      } else {
+        break;
+      }
+    } else if (i < dimension - 1) {
+      // inner
+      i++;
+
+      indexes[i] = 0;
+      while (indexes.indexOf(indexes[i]) != i) {
+        indexes[i]++;
+      }
+    } else {
+      // last
+      yield new List.from(indexes);
+
+      indexes[i]++;
+      while (indexes.indexOf(indexes[i]) != i) {
+        indexes[i]++;
+      }
+    }
+  }
+}
+
 void main() {
   group('Array tests', () {
     test('Create tests', () {
@@ -295,6 +332,60 @@ void main() {
       }
     });
 
+    test('Arg max tests', () {
+      var test = (List<int> shape, int axis) {
+        List list = new tm.NDArray.generate(shape, (index) => index + 1,
+                dataType: tm.NDDataType.float32)
+            .reshape(newDimensions: [-1]).toValue();
+
+        list.shuffle();
+
+        var initialValue = new tm.NDArray(list, dataType: tm.NDDataType.float32)
+            .reshape(newDimensions: shape)
+            .toValue();
+
+        var expectedValue =
+            new tm.NDArray(initialValue, dataType: tm.NDDataType.float32)
+                .argMax(axis: axis)
+                .toValue();
+
+        expect(
+            new tm.NDArray(initialValue,
+                    dataType: tm.NDDataType.float32HBlocked)
+                .argMax(axis: axis)
+                .toValue(),
+            equals(expectedValue));
+
+        expect(
+            new tm.NDArray(initialValue,
+                    dataType: tm.NDDataType.float32VBlocked)
+                .argMax(axis: axis)
+                .toValue(),
+            equals(expectedValue));
+      };
+
+      var maxDimension = 5;
+      var dimensionCount = 11;
+
+      for (var i = 0; i < maxDimension; i++) {
+        for (var shape in generateShapeCombinations(i, dimensionCount)) {
+          print("shape: $shape");
+
+          for (var axis = 0; axis < shape.length; axis++) {
+            try {
+              for (var l = 0; l < 10; l++) {
+                test(shape, axis);
+              }
+            } catch (e, s) {
+              print("axis: $axis");
+
+              rethrow;
+            }
+          }
+        }
+      }
+    });
+
     test('Matmul tests', () {
       var test = (List<int> shape1, List<int> shape2) {
         var shapeLength2 = shape2.reduce((v1, v2) => v1 * v2);
@@ -331,44 +422,95 @@ void main() {
       }
     });
 
-    // TODO rivedere come reduce
-    test('Transpose - toValue data tests', () {
-      var test = (List<int> shape) {
+    test('Transpose tests', () {
+      var test = (List<int> shape, List<int> permutationAxis) {
         var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
                 dataType: tm.NDDataType.float32)
-            .transpose(permutationAxis: [1, 0, 2, 3]).toValue();
+            .transpose(permutationAxis: permutationAxis)
+            .toValue();
+
         expect(
             new tm.NDArray.generate(shape, (index) => index + 1,
                     dataType: tm.NDDataType.float32HBlocked)
-                .transpose(permutationAxis: [1, 0, 2, 3]).toValue(),
+                .transpose(permutationAxis: permutationAxis)
+                .toValue(),
             equals(expectedValue));
+
         expect(
             new tm.NDArray.generate(shape, (index) => index + 1,
                     dataType: tm.NDDataType.float32VBlocked)
-                .transpose(permutationAxis: [1, 0, 2, 3]).toValue(),
+                .transpose(permutationAxis: permutationAxis)
+                .toValue(),
             equals(expectedValue));
       };
 
+      var maxDimension = 5;
       var dimensionCount = 11;
 
-      var i = 3;
-      var combinations = math.pow(dimensionCount, i + 1);
-      for (var i2 = 0; i2 < combinations; i2++) {
-        var shape = new List(i + 1);
+      for (var i = 1; i < maxDimension; i++) {
+        for (var shape in generateShapeCombinations(i, dimensionCount)) {
+          print("shape: $shape");
 
-        var i3 = 0;
-        var index = i2;
-        var scale = combinations ~/ dimensionCount;
+          for (var permutationAxis
+              in generatePermutationAxisCombinations(i + 1)) {
+            try {
+              test(shape, permutationAxis);
+            } catch (e, s) {
+              print("permutationAxis: $permutationAxis");
 
-        while (scale > 0) {
-          shape[i3] = (index ~/ scale) + 1;
-
-          i3++;
-          index = index % scale;
-          scale = scale ~/ dimensionCount;
+              rethrow;
+            }
+          }
         }
+      }
+    });
 
-        test(shape);
+    test('Tile tests', () {
+      var test = (List<int> shape, List<int> multiplies) {
+        var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
+                dataType: tm.NDDataType.float32)
+            .tile(multiplies)
+            .toValue();
+
+        expect(
+            new tm.NDArray.generate(shape, (index) => index + 1,
+                    dataType: tm.NDDataType.float32HBlocked)
+                .tile(multiplies)
+                .toValue(),
+            equals(expectedValue));
+
+        expect(
+            new tm.NDArray.generate(shape, (index) => index + 1,
+                    dataType: tm.NDDataType.float32VBlocked)
+                .tile(multiplies)
+                .toValue(),
+            equals(expectedValue));
+      };
+
+      var maxDimension = 5;
+      var dimensionCount = 11;
+
+      for (var i = 0; i < maxDimension; i++) {
+        for (var shape in generateShapeCombinations(i, dimensionCount)) {
+          print("shape: $shape");
+
+          for (var reductionAxis in generateReductionAxisCombinations(i + 1)) {
+            for (var m = 2; m < 5; m++) {
+              var multiplies = new List.filled(shape.length, 1);
+              for (var axis in reductionAxis) {
+                multiplies[axis] = m;
+              }
+
+              try {
+                test(shape, multiplies);
+              } catch (e, s) {
+                print("multiplies: $multiplies");
+
+                rethrow;
+              }
+            }
+          }
+        }
       }
     });
 
@@ -490,7 +632,7 @@ void main() {
       test([2, 2, 2, 2], [2, 2, 4, 1]);
       test([4, 4, 11, 13], [1, 1, 52, 44]);
     });
-
+/*
     test('Transpose tests', () {
       var test = (List<int> shape, List<int> permutationAxis) {
         var value =
@@ -523,7 +665,7 @@ void main() {
 
       test([4, 4, 11, 13], null);
     });
-
+*/
     test('Tile tests', () {
       var test = (List<int> shape, List<int> multiplies) {
         var array = new tm.NDArray.generate(shape, (index) => index + 1,

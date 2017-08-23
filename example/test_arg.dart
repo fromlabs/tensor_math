@@ -9,11 +9,14 @@ import "package:tensor_math_simd/src/nd_array_blocked_impl2.dart";
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  // functionalTest([10, 10, 10], 0);
+  functionalTest([10], 0);
 
-  // functionalTest([10, 10, 10], 1);
+  functionalTest([10, 10], 0);
+  functionalTest([10, 10], 1);
 
   functionalTest([10, 10, 10], 0);
+  functionalTest([10, 10, 10], 1);
+  functionalTest([10, 10, 10], 2);
 }
 
 void functionalTest(List<int> shape, int axis) {
@@ -36,13 +39,6 @@ void functionalTest(List<int> shape, int axis) {
 
   print(expectedValue);
 
-  new tm.NDArray(initialValue, dataType: tm.NDDataType.float32HBlocked)
-      .argMax(axis: axis);
-
-  new tm.NDArray(initialValue, dataType: tm.NDDataType.float32VBlocked)
-      .argMax(axis: axis);
-
-/*
   var value;
 
   value = new tm.NDArray(initialValue, dataType: tm.NDDataType.float32HBlocked)
@@ -66,5 +62,4 @@ void functionalTest(List<int> shape, int axis) {
 
     throw new StateError("not equals");
   }
-*/
 }

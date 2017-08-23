@@ -173,7 +173,9 @@ class NDShape {
     } else {
       var newPermutationAxis = permutationAxis;
 
-      if (newPermutationAxis == null) {
+      if (dimension < 2) {
+        throw new ArgumentError("Shape dimension must be almost 2: $this");
+      } else if (newPermutationAxis == null) {
         newPermutationAxis =
             new List.generate(dimension, (index) => dimension - index - 1);
       } else if (permutationAxis.length != dimension) {
@@ -219,13 +221,13 @@ class NDShape {
 
       return new NDShape(resultDimensions);
     } else {
-      return dimension == null ? this : shape2;
+      return isUnknownDimension ? this : shape2;
     }
   }
 
   NDShape _matMul(NDShape shape2) {
-    if (dimension == null) {
-      if (shape2.dimension == null) {
+    if (isUnknownDimension) {
+      if (shape2.isUnknownDimension) {
         return this;
       } else if (shape2.dimension < 2) {
         throw new ArgumentError("Shape dimension must be almost 2: $shape2");
@@ -238,7 +240,7 @@ class NDShape {
 
         return new NDShape(resultDimensions);
       }
-    } else if (shape2.dimension == null) {
+    } else if (shape2.isUnknownDimension) {
       if (dimension < 2) {
         throw new ArgumentError("Shape dimension must be almost 2: $this");
       } else {
