@@ -1,8 +1,8 @@
-name: tensor_math_simd
+name: tensor_math
 description: A starting point for Dart libraries or applications.
 version: 0.0.1
 author: Roberto Tassi <roberto.tassi@fromlabs.org>
-homepage: https://github.com/fromlabs/tensor_graph
+homepage: https://github.com/fromlabs/tensor_math
 
 environment:
   sdk: '>=1.20.1 <2.0.0'

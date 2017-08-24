@@ -138,18 +138,17 @@ class NDShape {
       var newReductionAxis =
           convertToValidReductionAxis(reductionAxis, dimensionCount);
 
-      if (reductionAxis == null) {
-        return this;
-      } else if (reductionAxis.length > dimensionCount) {
-        throw new ArgumentError.value(
-            reductionAxis, "reduction axis", "Max dimension is $dimensionCount");
-      } else if (reductionAxis.length != reductionAxis.toSet().length) {
-        throw new ArgumentError.value(reductionAxis, "reduction axis",
-            "Must be unique indexes $reductionAxis");
+      if (newReductionAxis.length > dimensionCount) {
+        throw new ArgumentError.value(newReductionAxis, "reduction axis",
+            "Max dimension is $dimensionCount");
+      } else if (newReductionAxis.length != newReductionAxis.toSet().length) {
+        throw new ArgumentError.value(newReductionAxis, "reduction axis",
+            "Must be unique indexes $newReductionAxis");
       }
 
-      var resultDimensions = new List(
-          keepDimensions ? dimensionCount : dimensionCount - newReductionAxis.length);
+      var resultDimensions = new List(keepDimensions
+          ? dimensionCount
+          : dimensionCount - newReductionAxis.length);
       var axis = newReductionAxis.toSet();
       var resultIndex = 0;
       for (var i = 0; i < dimensionCount; i++) {
@@ -176,11 +175,11 @@ class NDShape {
       if (dimensionCount < 2) {
         throw new ArgumentError("Shape dimension must be almost 2: $this");
       } else if (newPermutationAxis == null) {
-        newPermutationAxis =
-            new List.generate(dimensionCount, (index) => dimensionCount - index - 1);
+        newPermutationAxis = new List.generate(
+            dimensionCount, (index) => dimensionCount - index - 1);
       } else if (permutationAxis.length != dimensionCount) {
-        throw new ArgumentError.value(
-            permutationAxis, "permutation axis", "Dimension is $dimensionCount");
+        throw new ArgumentError.value(permutationAxis, "permutation axis",
+            "Dimension is $dimensionCount");
       } else if (permutationAxis.length != permutationAxis.toSet().length) {
         throw new ArgumentError.value(permutationAxis, "permutation axis",
             "Must be unique indexes $permutationAxis");
@@ -198,7 +197,8 @@ class NDShape {
 
   NDShape _broadcast(NDShape shape2) {
     if (dimensionCount != null && shape2.dimensionCount != null) {
-      var resultDimensions = new List(max(dimensionCount, shape2.dimensionCount));
+      var resultDimensions =
+          new List(max(dimensionCount, shape2.dimensionCount));
 
       var resultIndex = resultDimensions.length - 1;
       var index1 = dimensionCount - 1;

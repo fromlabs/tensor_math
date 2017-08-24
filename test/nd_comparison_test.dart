@@ -5,7 +5,7 @@ import "dart:math" as math;
 
 import 'package:test/test.dart';
 
-import "package:tensor_math_simd/tensor_math.dart" as tm;
+import "package:tensor_math/tensor_math.dart" as tm;
 
 Iterable<List<int>> generateShapeCombinations(
     int dimension, int dimensionCount) sync* {

@@ -3,9 +3,9 @@
 
 import 'package:test/test.dart';
 
-import "package:tensor_math_simd/tensor_math.dart";
+import "package:tensor_math/tensor_math.dart";
 
-import "package:tensor_math_simd/src/nd_array_base.dart" show createTestNDArray;
+import "package:tensor_math/src/nd_array_base.dart" show createTestNDArray;
 
 void main() {
   group('Array tests', () {

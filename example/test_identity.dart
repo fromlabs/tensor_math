@@ -2,9 +2,9 @@ import "dart:math" as math;
 
 import "package:collection/collection.dart";
 
-import "package:tensor_math_simd/tensor_math.dart" as tm;
+import "package:tensor_math/tensor_math.dart" as tm;
 
-import "package:tensor_math_simd/src/nd_array_blocked_impl2.dart";
+import "package:tensor_math/src/nd_array_blocked_impl.dart";
 
 final equality = new DeepCollectionEquality();
 

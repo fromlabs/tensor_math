@@ -157,8 +157,8 @@ class NDArrayImpl extends NDArrayBase {
           descriptor.transpose(permutationAxis: permutationAxis);
 
       var newPermutationAxis = permutationAxis ??
-          new List.generate(
-              shape.dimensionCount, (index) => shape.dimensionCount - index - 1);
+          new List.generate(shape.dimensionCount,
+              (index) => shape.dimensionCount - index - 1);
 
       var resultStride = new List(shape.dimensionCount);
 
@@ -632,7 +632,8 @@ class NDArrayImpl extends NDArrayBase {
 
       while (resultDataIndex < resultData.length) {
         if (dimensionIndex < dimensions[shapeIndex]) {
-          if (shapeIndex == shape.dimensionCount - newReductionAxis.length - 1) {
+          if (shapeIndex ==
+              shape.dimensionCount - newReductionAxis.length - 1) {
             begin();
           }
 
@@ -650,7 +651,8 @@ class NDArrayImpl extends NDArrayBase {
         } else {
           shapeIndex--;
 
-          if (shapeIndex == shape.dimensionCount - newReductionAxis.length - 1) {
+          if (shapeIndex ==
+              shape.dimensionCount - newReductionAxis.length - 1) {
             resultData[resultDataIndex++] = end();
           }
 
@@ -850,7 +852,8 @@ void _castConvertedData(NDArrayBase fromArray, List data,
 List<int> _calculateBroadcastedStride(
         NDShape broadcastedShape, NDArrayImpl array) =>
     new List.generate(broadcastedShape.dimensionCount, (index) {
-      var dimensionDelta = broadcastedShape.dimensionCount - array.shape.dimensionCount;
+      var dimensionDelta =
+          broadcastedShape.dimensionCount - array.shape.dimensionCount;
       if (index < dimensionDelta || array.shape[index - dimensionDelta] == 1) {
         return 0;
       } else {
