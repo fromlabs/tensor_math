@@ -44,7 +44,7 @@ abstract class NDObject {
 
   NDObject exp({NDObject reuse});
 
-  NDObject inv({NDObject reuse});
+  NDObject reciprocal({NDObject reuse});
 
   NDObject log({NDObject reuse});
 

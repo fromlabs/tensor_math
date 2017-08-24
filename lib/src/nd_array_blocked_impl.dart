@@ -1,7 +1,6 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
-import 'dart:collection';
 import "dart:typed_data";
 
 import "package:collection/collection.dart";
@@ -21,7 +20,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
   final _MatrixInfo _matrixInfo;
 
   factory NDArrayBlockedImpl(value, NDDescriptor descriptor, NDArray reuse) {
-    _checkDimension(descriptor.shape.dimension);
+    _checkDimension(descriptor.shape.dimensionCount);
 
     var matrixInfo = new _MatrixInfo(descriptor);
 
@@ -37,7 +36,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
   factory NDArrayBlockedImpl.filled(
       fillValue, NDDescriptor descriptor, NDArrayBlockedImpl reuse) {
     if (fillValue == 0) {
-      _checkDimension(descriptor.shape.dimension);
+      _checkDimension(descriptor.shape.dimensionCount);
 
       var matrixInfo = new _MatrixInfo(descriptor);
 
@@ -58,7 +57,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
   factory NDArrayBlockedImpl.generate(
       generator(int index), NDDescriptor descriptor, NDArray reuse) {
-    _checkDimension(descriptor.shape.dimension);
+    _checkDimension(descriptor.shape.dimensionCount);
 
     var matrixInfo = new _MatrixInfo(descriptor);
 
@@ -75,7 +74,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
       NDArrayBase fromArray, NDDataType toDataType, NDArray reuse) {
     var resultDescriptor = fromArray.descriptor.cast(toDataType);
 
-    _checkDimension(resultDescriptor.shape.dimension);
+    _checkDimension(resultDescriptor.shape.dimensionCount);
 
     var matrixInfo = new _MatrixInfo(resultDescriptor);
 
@@ -101,13 +100,13 @@ class NDArrayBlockedImpl extends NDArrayBase {
   dynamic toValue() {
     var value = new List(shape[0]);
 
-    var values = new List(shape.dimension - 1);
+    var values = new List(shape.dimensionCount - 1);
     values[0] = value;
 
     var shapeIndex = 0;
 
-    var dimensionIndexes = new List(shape.dimension - 1);
-    var dataIndexes = new List(shape.dimension - 1);
+    var dimensionIndexes = new List(shape.dimensionCount - 1);
+    var dataIndexes = new List(shape.dimensionCount - 1);
 
     var dataIndex = 0;
     dimensionIndexes[0] = 0;
@@ -118,7 +117,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
     while (i < shape.length) {
       var value = values[shapeIndex];
 
-      if (shapeIndex == shape.dimension - 2) {
+      if (shapeIndex == shape.dimensionCount - 2) {
         for (var row = 0; row < _matrixInfo.rows; row++) {
           List<num> rowValues = new List(_matrixInfo.columns);
 
@@ -240,10 +239,10 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
       var resultDescriptor = descriptor.reshape(newDimensions: newDimensions);
 
-      if (newDimensions[shape.dimension - 2] ==
-              shape.dimensions[shape.dimension - 2] &&
-          newDimensions[shape.dimension - 1] ==
-              shape.dimensions[shape.dimension - 1]) {
+      if (newDimensions[shape.dimensionCount - 2] ==
+              shape.dimensions[shape.dimensionCount - 2] &&
+          newDimensions[shape.dimensionCount - 1] ==
+              shape.dimensions[shape.dimensionCount - 1]) {
         var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
 
         var resultDataInfo =
@@ -267,11 +266,11 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
       var newPermutationAxis = permutationAxis ??
           new List.generate(
-              shape.dimension, (index) => shape.dimension - index - 1);
+              shape.dimensionCount, (index) => shape.dimensionCount - index - 1);
 
       var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
 
-      var sourceHeadStride = new List(shape.dimension - 2);
+      var sourceHeadStride = new List(shape.dimensionCount - 2);
       for (var i = 0; i < newPermutationAxis.length - 2; i++) {
         var permutationAxe = newPermutationAxis[i];
         sourceHeadStride[i] = _dataInfo.headStride[permutationAxe];
@@ -284,12 +283,12 @@ class NDArrayBlockedImpl extends NDArrayBase {
           resultDescriptor, resultDataInfo, resultMatrixInfo, reuse);
 
       var matrixUnchanged =
-          newPermutationAxis[shape.dimension - 2] == shape.dimension - 2 &&
-              newPermutationAxis[shape.dimension - 1] == shape.dimension - 1;
+          newPermutationAxis[shape.dimensionCount - 2] == shape.dimensionCount - 2 &&
+              newPermutationAxis[shape.dimensionCount - 1] == shape.dimensionCount - 1;
 
       if (matrixUnchanged ||
-          newPermutationAxis[shape.dimension - 2] == shape.dimension - 1 &&
-              newPermutationAxis[shape.dimension - 1] == shape.dimension - 2) {
+          newPermutationAxis[shape.dimensionCount - 2] == shape.dimensionCount - 1 &&
+              newPermutationAxis[shape.dimensionCount - 1] == shape.dimensionCount - 2) {
         if (matrixUnchanged) {
           _transposeData(this, sourceHeadStride, resultData, resultDescriptor,
               resultDataInfo, resultMatrixInfo);
@@ -328,8 +327,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
     var shapeIndex = 0;
 
-    var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
-    var dataIndexes = new List(resultDescriptor.shape.dimension - 1);
+    var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+    var dataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
 
     var dataIndex = 0;
     dimensionIndexes[0] = 0;
@@ -338,7 +337,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
     var i = 0;
 
     while (i < resultDescriptor.shape.length) {
-      if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+      if (shapeIndex == resultDescriptor.shape.dimensionCount - 2) {
         for (var row = 0; row < resultMatrixInfo.rows; row++) {
           var column;
           for (column = 0;
@@ -451,8 +450,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
     var shapeIndex = 0;
 
-    var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
-    var dataIndexes = new List(resultDescriptor.shape.dimension - 1);
+    var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+    var dataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
 
     var dataIndex = 0;
     dimensionIndexes[0] = 0;
@@ -461,7 +460,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
     var i = 0;
 
     while (i < resultDescriptor.shape.length) {
-      if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+      if (shapeIndex == resultDescriptor.shape.dimensionCount - 2) {
         for (var row = 0; row < resultMatrixInfo.rows; row++) {
           var column;
           for (column = 0;
@@ -592,8 +591,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
     var shapeIndex = 0;
 
-    var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
-    var dataIndexes = new List(resultDescriptor.shape.dimension - 1);
+    var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+    var dataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
 
     var dataIndex = 0;
     dimensionIndexes[0] = 0;
@@ -602,7 +601,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
     var i = 0;
 
     while (i < resultDescriptor.shape.length) {
-      if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+      if (shapeIndex == resultDescriptor.shape.dimensionCount - 2) {
         for (var row = 0; row < resultMatrixInfo.rows; row++) {
           var column;
           for (column = 0;
@@ -743,7 +742,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
     }
 
     var newReductionAxis =
-        convertToValidReductionAxis(reductionAxis, shape.dimension);
+        convertToValidReductionAxis(reductionAxis, shape.dimensionCount);
 
     if (newReductionAxis.isNotEmpty) {
       var resultMatrixInfo = new _MatrixInfo(resultDescriptor);
@@ -827,8 +826,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
     var shapeIndex = 0;
 
-    var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
-    var dataIndexes = new List(resultDescriptor.shape.dimension - 1);
+    var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+    var dataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
 
     var dataIndex = 0;
     dimensionIndexes[0] = 0;
@@ -837,7 +836,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
     var i = 0;
 
     while (i < resultDescriptor.shape.length) {
-      if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+      if (shapeIndex == resultDescriptor.shape.dimensionCount - 2) {
         for (var row = 0; row < resultMatrixInfo.rows; row++) {
           var column;
           for (column = 0;
@@ -1038,12 +1037,12 @@ void _checkDimension(int dimension) {
 }
 
 _DataInfo _createNormalizedDataInfo(NDShape shape, _MatrixInfo matrixInfo) {
-  List<int> stride = new List(shape.dimension - 2);
+  List<int> stride = new List(shape.dimensionCount - 2);
 
   var dataLength;
   if (stride.isNotEmpty) {
     var factor = matrixInfo.dataLength;
-    for (var i = shape.dimension - 3; i >= 0; i--) {
+    for (var i = shape.dimensionCount - 3; i >= 0; i--) {
       stride[i] = factor;
       factor *= shape[i];
     }
@@ -1076,13 +1075,13 @@ List _createData(NDDescriptor descriptor, _DataInfo dataInfo,
 
 void _loadData(value, Float32x4List data, NDDescriptor descriptor,
     _DataInfo dataInfo, _MatrixInfo matrixInfo) {
-  var values = new List(descriptor.shape.dimension - 1);
+  var values = new List(descriptor.shape.dimensionCount - 1);
   values[0] = value;
 
   var shapeIndex = 0;
 
-  var dimensionIndexes = new List(descriptor.shape.dimension - 1);
-  var dataIndexes = new List(descriptor.shape.dimension - 1);
+  var dimensionIndexes = new List(descriptor.shape.dimensionCount - 1);
+  var dataIndexes = new List(descriptor.shape.dimensionCount - 1);
 
   var dataIndex = 0;
   dimensionIndexes[0] = 0;
@@ -1093,7 +1092,7 @@ void _loadData(value, Float32x4List data, NDDescriptor descriptor,
   while (i < descriptor.shape.length) {
     var value = values[shapeIndex];
 
-    if (shapeIndex == descriptor.shape.dimension - 2) {
+    if (shapeIndex == descriptor.shape.dimensionCount - 2) {
       for (var row = 0; row < matrixInfo.rows; row++) {
         List<num> rowValues = value[row];
 
@@ -1188,9 +1187,9 @@ void _reduceData(
     void onValue(value, int valueCount),
     dynamic end()}) {
   var sourceDimensions = new List.from(sourceArray.descriptor.shape.dimensions
-      .sublist(0, sourceArray.descriptor.shape.dimension - 2));
+      .sublist(0, sourceArray.descriptor.shape.dimensionCount - 2));
   var targetDimensions = new List.from(targetDescriptor.shape.dimensions
-      .sublist(0, targetDescriptor.shape.dimension - 2));
+      .sublist(0, targetDescriptor.shape.dimensionCount - 2));
 
   var sourceStrides = new List.from(sourceArray._dataInfo.headStride);
   var targetStrides = new List.from(targetDataInfo.headStride);
@@ -1199,7 +1198,7 @@ void _reduceData(
   var sourceColumnIndex;
 
   var axis = new Set<int>.from(reductionAxis);
-  if (axis.contains(sourceArray.descriptor.shape.dimension - 1)) {
+  if (axis.contains(sourceArray.descriptor.shape.dimensionCount - 1)) {
     // throw new UnimplementedError();
   }
 
@@ -1224,8 +1223,8 @@ void _reduceData(
     targetPermutedIndexes =
         new List.generate(targetDimensions.length, (index) => index);
 
-    if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
-      axis.add(sourceArray.descriptor.shape.dimension);
+    if (axis.contains(sourceArray.descriptor.shape.dimensionCount - 2)) {
+      axis.add(sourceArray.descriptor.shape.dimensionCount);
 
       var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
       targetPermutedIndexes[targetPermutedIndexes.length - 1] =
@@ -1252,10 +1251,10 @@ void _reduceData(
     targetPermutedIndexes =
         new List.generate(targetDimensions.length, (index) => index);
 
-    if (axis.contains(sourceArray.descriptor.shape.dimension - 2)) {
-      axis.remove(sourceArray.descriptor.shape.dimension - 2);
-      axis.add(sourceArray.descriptor.shape.dimension - 1);
-      axis.add(sourceArray.descriptor.shape.dimension);
+    if (axis.contains(sourceArray.descriptor.shape.dimensionCount - 2)) {
+      axis.remove(sourceArray.descriptor.shape.dimensionCount - 2);
+      axis.add(sourceArray.descriptor.shape.dimensionCount - 1);
+      axis.add(sourceArray.descriptor.shape.dimensionCount);
 
       var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
       targetPermutedIndexes[targetPermutedIndexes.length - 1] =
@@ -1268,7 +1267,7 @@ void _reduceData(
   var newReductionAxis = axis.toList(growable: false);
 
   var sourcePermutedIndexes = new List.generate(
-      sourceArray.descriptor.shape.dimension + 1, (index) => index,
+      sourceArray.descriptor.shape.dimensionCount + 1, (index) => index,
       growable: true);
 
   sourcePermutedIndexes = sourcePermutedIndexes
@@ -1412,9 +1411,9 @@ void _argData(
     void onValue(dimensionIndex, value, int valueCount),
     dynamic end()}) {
   var sourceDimensions = new List.from(sourceArray.descriptor.shape.dimensions
-      .sublist(0, sourceArray.descriptor.shape.dimension - 2));
+      .sublist(0, sourceArray.descriptor.shape.dimensionCount - 2));
   var targetDimensions = new List.from(targetDescriptor.shape.dimensions
-      .sublist(0, targetDescriptor.shape.dimension - 2));
+      .sublist(0, targetDescriptor.shape.dimensionCount - 2));
 
   var sourceStrides = new List.from(sourceArray._dataInfo.headStride);
   var targetStrides = new List.from(targetDataInfo.headStride);
@@ -1446,8 +1445,8 @@ void _argData(
     targetPermutedIndexes =
         new List.generate(targetDimensions.length, (index) => index);
 
-    if (axis == sourceArray.descriptor.shape.dimension - 2) {
-      argAxis.add(sourceArray.descriptor.shape.dimension);
+    if (axis == sourceArray.descriptor.shape.dimensionCount - 2) {
+      argAxis.add(sourceArray.descriptor.shape.dimensionCount);
 
       var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
       targetPermutedIndexes[targetPermutedIndexes.length - 1] =
@@ -1474,10 +1473,10 @@ void _argData(
     targetPermutedIndexes =
         new List.generate(targetDimensions.length, (index) => index);
 
-    if (axis == sourceArray.descriptor.shape.dimension - 2) {
-      argAxis.remove(sourceArray.descriptor.shape.dimension - 2);
-      argAxis.add(sourceArray.descriptor.shape.dimension - 1);
-      argAxis.add(sourceArray.descriptor.shape.dimension);
+    if (axis == sourceArray.descriptor.shape.dimensionCount - 2) {
+      argAxis.remove(sourceArray.descriptor.shape.dimensionCount - 2);
+      argAxis.add(sourceArray.descriptor.shape.dimensionCount - 1);
+      argAxis.add(sourceArray.descriptor.shape.dimensionCount);
 
       var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
       targetPermutedIndexes[targetPermutedIndexes.length - 1] =
@@ -1490,7 +1489,7 @@ void _argData(
   var newArgAxis = argAxis.toList(growable: false);
 
   var sourcePermutedIndexes = new List.generate(
-      sourceArray.descriptor.shape.dimension + 1, (index) => index,
+      sourceArray.descriptor.shape.dimensionCount + 1, (index) => index,
       growable: true);
 
   sourcePermutedIndexes = sourcePermutedIndexes
@@ -1632,7 +1631,7 @@ void _identityData(
   var targetStrides = new List.from(targetDataInfo.headStride);
 
   var targetDimensions = new List.from(targetDescriptor.shape.dimensions
-      .sublist(0, targetDescriptor.shape.dimension - 2));
+      .sublist(0, targetDescriptor.shape.dimensionCount - 2));
 
   if (sourceArray.dataType.isHBlocked) {
     targetStrides.add(targetMatrixInfo.dataColumns);
@@ -1701,136 +1700,6 @@ void _identityData(
   }
 }
 
-void _identityDataOld(
-    NDArrayBlockedImpl sourceArray,
-    Float32x4List targetData,
-    NDDescriptor targetDescriptor,
-    _DataInfo targetDataInfo,
-    _MatrixInfo targetMatrixInfo) {
-  var targetStrides = new List.from(targetDataInfo.headStride);
-
-  var targetDimensions = new List.from(targetDescriptor.shape.dimensions
-      .sublist(0, targetDescriptor.shape.dimension - 2));
-
-  if (sourceArray.dataType.isHBlocked) {
-    targetStrides.add(targetMatrixInfo.dataColumns);
-    targetStrides.add(targetDescriptor.dataType.blockSize);
-    targetStrides.add(1);
-    targetDimensions.add(targetMatrixInfo.blockRows);
-    targetDimensions.add(targetMatrixInfo.blockColumns);
-    targetDimensions.add(targetDescriptor.dataType.blockSize);
-  } else {
-    targetStrides.add(targetMatrixInfo.dataRows);
-    targetStrides.add(targetDescriptor.dataType.blockSize);
-    targetStrides.add(1);
-    targetDimensions.add(targetMatrixInfo.blockColumns);
-    targetDimensions.add(targetMatrixInfo.blockRows);
-    targetDimensions.add(targetDescriptor.dataType.blockSize);
-  }
-
-  print("targetShape: ${targetDescriptor.shape}");
-  print("targetDimensions: $targetDimensions");
-  print("targetStrides: $targetStrides");
-
-  var targetDimensionIndexes = new List(targetDimensions.length + 1);
-  var targetDataIndexes = new List(targetDimensions.length + 1);
-
-  var targetShapeIndex = 0;
-  targetDimensionIndexes[0] = 0;
-  var targetDataIndex = 0;
-  targetDataIndexes[0] = 0;
-
-  var sourceDataIndex = 0;
-
-  while (targetShapeIndex >= 0) {
-    if (targetShapeIndex == targetDimensions.length) {
-      print(
-          "${targetDimensionIndexes.sublist(0, targetShapeIndex).map((index) => index - 1)}: $targetDataIndex");
-
-      targetData[targetDataIndex] = sourceArray._data[sourceDataIndex++];
-
-      targetShapeIndex--;
-    } else {
-      if (targetDimensionIndexes[targetShapeIndex] <
-          targetDimensions[targetShapeIndex]) {
-        targetDataIndex = targetDataIndexes[targetShapeIndex];
-
-        targetDimensionIndexes[targetShapeIndex]++;
-        targetDataIndexes[targetShapeIndex] =
-            targetDataIndex + targetStrides[targetShapeIndex];
-
-        targetShapeIndex++;
-
-        targetDimensionIndexes[targetShapeIndex] = 0;
-        targetDataIndexes[targetShapeIndex] = targetDataIndex;
-      } else {
-        targetShapeIndex--;
-      }
-    }
-  }
-}
-
-void _loopExample(
-    NDArrayBlockedImpl sourceArray,
-    List targetData,
-    NDDescriptor targetDescriptor,
-    _DataInfo targetDataInfo,
-    _MatrixInfo targetMatrixInfo) {
-  var targetStrides = new List.from(targetDataInfo.headStride);
-
-  var targetDimensions = new List.from(targetDescriptor.shape.dimensions
-      .sublist(0, targetDescriptor.shape.dimension - 2));
-
-  if (sourceArray.dataType.isHBlocked) {
-    targetStrides.add(targetMatrixInfo.dataColumns);
-    targetStrides.add(targetDescriptor.dataType.blockSize);
-    targetStrides.add(1);
-    targetDimensions.add(targetMatrixInfo.blockRows);
-    targetDimensions.add(targetMatrixInfo.blockColumns);
-    targetDimensions.add(targetDescriptor.dataType.blockSize);
-  } else {
-    targetStrides.add(targetMatrixInfo.dataRows);
-    targetStrides.add(targetDescriptor.dataType.blockSize);
-    targetStrides.add(1);
-    targetDimensions.add(targetMatrixInfo.blockColumns);
-    targetDimensions.add(targetMatrixInfo.blockRows);
-    targetDimensions.add(targetDescriptor.dataType.blockSize);
-  }
-
-  var targetDimensionIndexes = new List(targetDimensions.length + 1);
-  var targetDataIndexes = new List(targetDimensions.length + 1);
-
-  var targetShapeIndex = 0;
-  targetDimensionIndexes[0] = 0;
-  var sourceDataIndex = 0;
-  var targetDataIndex = 0;
-  targetDataIndexes[0] = 0;
-
-  while (targetShapeIndex >= 0) {
-    if (targetShapeIndex == targetDimensions.length) {
-      targetData[targetDataIndex] = sourceArray._data[sourceDataIndex++];
-
-      targetShapeIndex--;
-    } else {
-      if (targetDimensionIndexes[targetShapeIndex] <
-          targetDimensions[targetShapeIndex]) {
-        targetDataIndex = targetDataIndexes[targetShapeIndex];
-
-        targetDimensionIndexes[targetShapeIndex]++;
-        targetDataIndexes[targetShapeIndex] =
-            targetDataIndex + targetStrides[targetShapeIndex];
-
-        targetShapeIndex++;
-
-        targetDimensionIndexes[targetShapeIndex] = 0;
-        targetDataIndexes[targetShapeIndex] = targetDataIndex;
-      } else {
-        targetShapeIndex--;
-      }
-    }
-  }
-}
-
 void _transposeData(
     NDArrayBlockedImpl sourceArray,
     List sourceHeadStride,
@@ -1845,9 +1714,9 @@ void _transposeData(
       ? sourceArray._matrixInfo.blockColumns
       : sourceArray._matrixInfo.blockRows;
 
-  var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
-  var sourceDataIndexes = new List(resultDescriptor.shape.dimension - 1);
-  var targetDataIndexes = new List(resultDescriptor.shape.dimension - 1);
+  var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var sourceDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var targetDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
 
   var shapeIndex = 0;
   dimensionIndexes[0] = 0;
@@ -1857,7 +1726,7 @@ void _transposeData(
   targetDataIndexes[0] = 0;
 
   while (shapeIndex >= 0) {
-    if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+    if (shapeIndex == resultDescriptor.shape.dimensionCount - 2) {
       for (var dimension1 = 0; dimension1 < dimension1s; dimension1++) {
         for (var dimension2 = 0; dimension2 < dimension2s; dimension2++) {
           resultData[targetDataIndex++] = sourceArray._data[sourceDataIndex++];
@@ -1910,9 +1779,9 @@ void _transposeSwitchedData(
   var delta2 =
       resultDescriptor.dataType.blockSize - resultMatrixInfo.dataLength;
 
-  var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
-  var sourceDataIndexes = new List(resultDescriptor.shape.dimension - 1);
-  var targetDataIndexes = new List(resultDescriptor.shape.dimension - 1);
+  var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var sourceDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var targetDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
 
   var shapeIndex = 0;
   dimensionIndexes[0] = 0;
@@ -1922,7 +1791,7 @@ void _transposeSwitchedData(
   targetDataIndexes[0] = 0;
 
   while (shapeIndex >= 0) {
-    if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+    if (shapeIndex == resultDescriptor.shape.dimensionCount - 2) {
       for (var dimension1 = 0; dimension1 < dimension1s; dimension1++) {
         for (var dimension2 = 0; dimension2 < dimension2s; dimension2++) {
           var a0 = sourceArray._data[sourceDataIndex++];
@@ -1972,10 +1841,10 @@ void _matMulData(
     NDDescriptor resultDescriptor,
     _DataInfo resultDataInfo,
     _MatrixInfo resultMatrixInfo) {
-  var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
-  var sourceDataIndexes1 = new List(resultDescriptor.shape.dimension - 1);
-  var sourceDataIndexes2 = new List(resultDescriptor.shape.dimension - 1);
-  var targetDataIndexes = new List(resultDescriptor.shape.dimension - 1);
+  var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var sourceDataIndexes1 = new List(resultDescriptor.shape.dimensionCount - 1);
+  var sourceDataIndexes2 = new List(resultDescriptor.shape.dimensionCount - 1);
+  var targetDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
 
   var shapeIndex = 0;
   dimensionIndexes[0] = 0;
@@ -1987,7 +1856,7 @@ void _matMulData(
   targetDataIndexes[0] = 0;
 
   while (shapeIndex >= 0) {
-    if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+    if (shapeIndex == resultDescriptor.shape.dimensionCount - 2) {
       var initialSourceDataIndex2 = sourceDataIndex2;
 
       for (var row1 = 0;
@@ -2079,8 +1948,8 @@ void _generateData(generator(int index), Float32x4List data,
     NDDescriptor descriptor, _DataInfo dataInfo, _MatrixInfo matrixInfo) {
   var shapeIndex = 0;
 
-  var dimensionIndexes = new List(descriptor.shape.dimension - 1);
-  var dataIndexes = new List(descriptor.shape.dimension - 1);
+  var dimensionIndexes = new List(descriptor.shape.dimensionCount - 1);
+  var dataIndexes = new List(descriptor.shape.dimensionCount - 1);
 
   var dataIndex = 0;
   dimensionIndexes[0] = 0;
@@ -2089,7 +1958,7 @@ void _generateData(generator(int index), Float32x4List data,
   var i = 0;
 
   while (i < descriptor.shape.length) {
-    if (shapeIndex == descriptor.shape.dimension - 2) {
+    if (shapeIndex == descriptor.shape.dimensionCount - 2) {
       for (var row = 0; row < matrixInfo.rows; row++) {
         var column;
         for (column = 0;
@@ -2188,7 +2057,7 @@ void _castBlockedData(
     _DataInfo resultDataInfo,
     _MatrixInfo resultMatrixInfo) {
   var multiplier;
-  if (resultDescriptor.shape.dimension > 2) {
+  if (resultDescriptor.shape.dimensionCount > 2) {
     multiplier = resultDescriptor.shape.length ~/
         (resultMatrixInfo.rows * resultMatrixInfo.columns);
   } else {
@@ -2241,8 +2110,8 @@ void _castConvertedData(
 
   var shapeIndex = 0;
 
-  var dimensionIndexes = new List(resultDescriptor.shape.dimension - 1);
-  var dataIndexes = new List(resultDescriptor.shape.dimension - 1);
+  var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var dataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
 
   var dataIndex = 0;
   dimensionIndexes[0] = 0;
@@ -2251,7 +2120,7 @@ void _castConvertedData(
   var i = 0;
 
   while (i < resultDescriptor.shape.length) {
-    if (shapeIndex == resultDescriptor.shape.dimension - 2) {
+    if (shapeIndex == resultDescriptor.shape.dimensionCount - 2) {
       for (var row = 0; row < resultMatrixInfo.rows; row++) {
         var column;
         for (column = 0;
@@ -2340,12 +2209,12 @@ Iterable<num> _createTiledValueIterable(
   if (array.descriptor == tiledDescriptor) {
     return _createValueIterable(array);
   } else if (array.descriptor.shape
-              .dimensions[array.descriptor.shape.dimension - 2] ==
+              .dimensions[array.descriptor.shape.dimensionCount - 2] ==
           tiledDescriptor
-              .shape.dimensions[tiledDescriptor.shape.dimension - 2] &&
-      array.descriptor.shape.dimensions[array.descriptor.shape.dimension - 1] ==
+              .shape.dimensions[tiledDescriptor.shape.dimensionCount - 2] &&
+      array.descriptor.shape.dimensions[array.descriptor.shape.dimensionCount - 1] ==
           tiledDescriptor
-              .shape.dimensions[tiledDescriptor.shape.dimension - 1]) {
+              .shape.dimensions[tiledDescriptor.shape.dimensionCount - 1]) {
     return _createHeadTiledValueIterable(array, tiledDescriptor);
   } else {
     return _createFullTiledValueIterable(array, tiledDescriptor);
@@ -2356,10 +2225,10 @@ Iterable<num> _createHeadTiledValueIterable(
     NDArrayBlockedImpl array, NDDescriptor tiledDescriptor) sync* {
   var shapeIndex = 0;
 
-  var dimensionIndexes = new List(array.shape.dimension - 1);
-  var sourceDimensionIndexes = new List(array.shape.dimension - 1);
-  var dataIndexes = new List(array.shape.dimension - 1);
-  var initialDataIndexes = new List(array.shape.dimension - 1);
+  var dimensionIndexes = new List(array.shape.dimensionCount - 1);
+  var sourceDimensionIndexes = new List(array.shape.dimensionCount - 1);
+  var dataIndexes = new List(array.shape.dimensionCount - 1);
+  var initialDataIndexes = new List(array.shape.dimensionCount - 1);
 
   var dataIndex = 0;
   dimensionIndexes[0] = 0;
@@ -2370,7 +2239,7 @@ Iterable<num> _createHeadTiledValueIterable(
   var i = 0;
 
   while (i < tiledDescriptor.shape.length) {
-    if (shapeIndex == array.shape.dimension - 2) {
+    if (shapeIndex == array.shape.dimensionCount - 2) {
       for (var row = 0; row < array._matrixInfo.rows; row++) {
         var column;
         for (column = 0;
@@ -2459,10 +2328,10 @@ Iterable<num> _createFullTiledValueIterable(
     NDArrayBlockedImpl array, NDDescriptor tiledDescriptor) sync* {
   var shapeIndex = 0;
 
-  var dimensionIndexes = new List(array.shape.dimension - 1);
-  var sourceDimensionIndexes = new List(array.shape.dimension - 1);
-  var dataIndexes = new List(array.shape.dimension - 1);
-  var initialDataIndexes = new List(array.shape.dimension - 1);
+  var dimensionIndexes = new List(array.shape.dimensionCount - 1);
+  var sourceDimensionIndexes = new List(array.shape.dimensionCount - 1);
+  var dataIndexes = new List(array.shape.dimensionCount - 1);
+  var initialDataIndexes = new List(array.shape.dimensionCount - 1);
 
   var dataIndex = 0;
   dimensionIndexes[0] = 0;
@@ -2471,16 +2340,16 @@ Iterable<num> _createFullTiledValueIterable(
   initialDataIndexes[0] = 0;
 
   var rowsMultiplier =
-      tiledDescriptor.shape[tiledDescriptor.shape.dimension - 2] ~/
+      tiledDescriptor.shape[tiledDescriptor.shape.dimensionCount - 2] ~/
           array._matrixInfo.rows;
   var columnsMultiplier =
-      tiledDescriptor.shape[tiledDescriptor.shape.dimension - 1] ~/
+      tiledDescriptor.shape[tiledDescriptor.shape.dimensionCount - 1] ~/
           array._matrixInfo.columns;
 
   var i = 0;
 
   while (i < tiledDescriptor.shape.length) {
-    if (shapeIndex == array.shape.dimension - 2) {
+    if (shapeIndex == array.shape.dimensionCount - 2) {
       var initialRowDataIndex = dataIndex;
 
       for (var rowIteration = 0;
@@ -2592,12 +2461,12 @@ Iterable<num> _createBroadcastedValueIterable(
   if (array.descriptor == broadcastedDescriptor) {
     return _createValueIterable(array);
   } else if (array.descriptor.shape
-              .dimensions[array.descriptor.shape.dimension - 2] ==
+              .dimensions[array.descriptor.shape.dimensionCount - 2] ==
           broadcastedDescriptor
-              .shape.dimensions[broadcastedDescriptor.shape.dimension - 2] &&
-      array.descriptor.shape.dimensions[array.descriptor.shape.dimension - 1] ==
+              .shape.dimensions[broadcastedDescriptor.shape.dimensionCount - 2] &&
+      array.descriptor.shape.dimensions[array.descriptor.shape.dimensionCount - 1] ==
           broadcastedDescriptor
-              .shape.dimensions[broadcastedDescriptor.shape.dimension - 1]) {
+              .shape.dimensions[broadcastedDescriptor.shape.dimensionCount - 1]) {
     return _createHeadBroadcastedValueIterable(array, broadcastedDescriptor);
   } else {
     return _createFullBroadcastedValueIterable(array, broadcastedDescriptor);
@@ -2609,10 +2478,10 @@ Iterable<num> _createHeadBroadcastedValueIterable(
   var broadcastedShape;
   var multiplier;
 
-  if (broadcastedDescriptor.shape.dimension > array.shape.dimension) {
+  if (broadcastedDescriptor.shape.dimensionCount > array.shape.dimensionCount) {
     broadcastedShape = new NDShape(broadcastedDescriptor.shape.dimensions
         .sublist(
-            broadcastedDescriptor.shape.dimension - array.shape.dimension));
+            broadcastedDescriptor.shape.dimensionCount - array.shape.dimensionCount));
     multiplier = broadcastedDescriptor.shape.length ~/ broadcastedShape.length;
   } else {
     broadcastedShape = broadcastedDescriptor.shape;
@@ -2622,10 +2491,10 @@ Iterable<num> _createHeadBroadcastedValueIterable(
   for (var iteration = 0; iteration < multiplier; iteration++) {
     var shapeIndex = 0;
 
-    var dimensionIndexes = new List(array.shape.dimension - 1);
-    var sourceDimensionIndexes = new List(array.shape.dimension - 1);
-    var dataIndexes = new List(array.shape.dimension - 1);
-    var initialDataIndexes = new List(array.shape.dimension - 1);
+    var dimensionIndexes = new List(array.shape.dimensionCount - 1);
+    var sourceDimensionIndexes = new List(array.shape.dimensionCount - 1);
+    var dataIndexes = new List(array.shape.dimensionCount - 1);
+    var initialDataIndexes = new List(array.shape.dimensionCount - 1);
 
     var dataIndex = 0;
     dimensionIndexes[0] = 0;
@@ -2636,7 +2505,7 @@ Iterable<num> _createHeadBroadcastedValueIterable(
     var i = 0;
 
     while (i < broadcastedShape.length) {
-      if (shapeIndex == array.shape.dimension - 2) {
+      if (shapeIndex == array.shape.dimensionCount - 2) {
         for (var row = 0; row < array._matrixInfo.rows; row++) {
           var column;
           for (column = 0;
@@ -2728,10 +2597,10 @@ Iterable<num> _createFullBroadcastedValueIterable(
   var broadcastedShape;
   var multiplier;
 
-  if (broadcastedDescriptor.shape.dimension > array.shape.dimension) {
+  if (broadcastedDescriptor.shape.dimensionCount > array.shape.dimensionCount) {
     broadcastedShape = new NDShape(broadcastedDescriptor.shape.dimensions
         .sublist(
-            broadcastedDescriptor.shape.dimension - array.shape.dimension));
+            broadcastedDescriptor.shape.dimensionCount - array.shape.dimensionCount));
     multiplier = broadcastedDescriptor.shape.length ~/ broadcastedShape.length;
   } else {
     broadcastedShape = broadcastedDescriptor.shape;
@@ -2741,10 +2610,10 @@ Iterable<num> _createFullBroadcastedValueIterable(
   for (var iteration = 0; iteration < multiplier; iteration++) {
     var shapeIndex = 0;
 
-    var dimensionIndexes = new List(array.shape.dimension - 1);
-    var sourceDimensionIndexes = new List(array.shape.dimension - 1);
-    var dataIndexes = new List(array.shape.dimension - 1);
-    var initialDataIndexes = new List(array.shape.dimension - 1);
+    var dimensionIndexes = new List(array.shape.dimensionCount - 1);
+    var sourceDimensionIndexes = new List(array.shape.dimensionCount - 1);
+    var dataIndexes = new List(array.shape.dimensionCount - 1);
+    var initialDataIndexes = new List(array.shape.dimensionCount - 1);
 
     var dataIndex = 0;
     dimensionIndexes[0] = 0;
@@ -2752,15 +2621,15 @@ Iterable<num> _createFullBroadcastedValueIterable(
     dataIndexes[0] = 0;
     initialDataIndexes[0] = 0;
 
-    var rowsMultiplier = broadcastedShape[broadcastedShape.dimension - 2] ~/
+    var rowsMultiplier = broadcastedShape[broadcastedShape.dimensionCount - 2] ~/
         array._matrixInfo.rows;
-    var columnsMultiplier = broadcastedShape[broadcastedShape.dimension - 1] ~/
+    var columnsMultiplier = broadcastedShape[broadcastedShape.dimensionCount - 1] ~/
         array._matrixInfo.columns;
 
     var i = 0;
 
     while (i < broadcastedShape.length) {
-      if (shapeIndex == array.shape.dimension - 2) {
+      if (shapeIndex == array.shape.dimensionCount - 2) {
         var initialRowDataIndex = dataIndex;
 
         for (var rowIteration = 0;
@@ -2873,8 +2742,8 @@ Iterable<num> _createFullBroadcastedValueIterable(
 Iterable<num> _createValueIterable(NDArrayBlockedImpl array) sync* {
   var shapeIndex = 0;
 
-  var dimensionIndexes = new List(array.shape.dimension - 1);
-  var dataIndexes = new List(array.shape.dimension - 1);
+  var dimensionIndexes = new List(array.shape.dimensionCount - 1);
+  var dataIndexes = new List(array.shape.dimensionCount - 1);
 
   var dataIndex = 0;
   dimensionIndexes[0] = 0;
@@ -2883,7 +2752,7 @@ Iterable<num> _createValueIterable(NDArrayBlockedImpl array) sync* {
   var i = 0;
 
   while (i < array.shape.length) {
-    if (shapeIndex == array.shape.dimension - 2) {
+    if (shapeIndex == array.shape.dimensionCount - 2) {
       for (var row = 0; row < array._matrixInfo.rows; row++) {
         var column;
         for (column = 0;
@@ -2985,8 +2854,8 @@ class _MatrixInfo {
   final int delta3;
 
   factory _MatrixInfo(NDDescriptor descriptor) {
-    var rows = descriptor.shape.dimensions[descriptor.shape.dimension - 2];
-    var columns = descriptor.shape.dimensions[descriptor.shape.dimension - 1];
+    var rows = descriptor.shape.dimensions[descriptor.shape.dimensionCount - 2];
+    var columns = descriptor.shape.dimensions[descriptor.shape.dimensionCount - 1];
 
     var blockRows = (rows + descriptor.dataType.blockSize - 1) >>
         descriptor.dataType.blockDepth; // equal (/4).ceil

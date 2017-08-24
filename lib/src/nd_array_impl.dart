@@ -12,6 +12,8 @@ import "nd_array.dart";
 
 import "nd_array_base.dart";
 
+import "nd_util.dart";
+
 class NDArrayImpl extends NDArrayBase {
   final List _data;
 
@@ -68,9 +70,9 @@ class NDArrayImpl extends NDArrayBase {
       return _data[_dataInfo.offset];
     } else {
       var shapeIndex = 0;
-      var dimensionValues = new List(shape.dimension);
-      var dimensionIndexes = new List(shape.dimension);
-      var dataIndexes = new List(shape.dimension);
+      var dimensionValues = new List(shape.dimensionCount);
+      var dimensionIndexes = new List(shape.dimensionCount);
+      var dataIndexes = new List(shape.dimensionCount);
       var dataIndex = dataIndexes[shapeIndex] = _dataInfo.offset;
       var resultValues =
           dimensionValues[shapeIndex] = new List(shape[shapeIndex]);
@@ -78,7 +80,7 @@ class NDArrayImpl extends NDArrayBase {
       var i = 0;
       while (i < shape.length) {
         if (dimensionIndex < shape[shapeIndex]) {
-          if (shapeIndex == shape.dimension - 1) {
+          if (shapeIndex == shape.dimensionCount - 1) {
             var axeDimension = shape[shapeIndex];
             var axeStride = _dataInfo.stride[shapeIndex];
             while (dimensionIndex < axeDimension) {
@@ -156,9 +158,9 @@ class NDArrayImpl extends NDArrayBase {
 
       var newPermutationAxis = permutationAxis ??
           new List.generate(
-              shape.dimension, (index) => shape.dimension - index - 1);
+              shape.dimensionCount, (index) => shape.dimensionCount - index - 1);
 
-      var resultStride = new List(shape.dimension);
+      var resultStride = new List(shape.dimensionCount);
 
       for (var i = 0; i < newPermutationAxis.length; i++) {
         var permutationAxe = newPermutationAxis[i];
@@ -183,10 +185,10 @@ class NDArrayImpl extends NDArrayBase {
       var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
-      var dimensionIndexes = new List(resultShape.dimension);
-      var dimensionSourceIndexes = new List(resultShape.dimension);
-      var data1Indexes = new List(resultShape.dimension);
-      var startData1Indexes = new List(resultShape.dimension);
+      var dimensionIndexes = new List(resultShape.dimensionCount);
+      var dimensionSourceIndexes = new List(resultShape.dimensionCount);
+      var data1Indexes = new List(resultShape.dimensionCount);
+      var startData1Indexes = new List(resultShape.dimensionCount);
       var stride1 = _dataInfo.stride;
       var data1Index = data1Indexes[shapeIndex] = _dataInfo.offset;
       var startData1Index = startData1Indexes[shapeIndex] = data1Index;
@@ -195,7 +197,7 @@ class NDArrayImpl extends NDArrayBase {
       var dimensionSourceIndex = dimensionSourceIndexes[shapeIndex] = 0;
       while (resultDataIndex < resultData.length) {
         if (dimensionIndex < resultShape[shapeIndex]) {
-          if (shapeIndex == resultShape.dimension - 1) {
+          if (shapeIndex == resultShape.dimensionCount - 1) {
             resultData[resultDataIndex++] = _data[data1Index];
             dimensionIndex++;
             if (dimensionSourceIndex < shape[shapeIndex] - 1) {
@@ -245,16 +247,16 @@ class NDArrayImpl extends NDArrayBase {
     var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
     var shapeIndex = 0;
-    var dimensionIndexes = new List(resultShape.dimension);
-    var data1Indexes = new List(resultShape.dimension);
+    var dimensionIndexes = new List(resultShape.dimensionCount);
+    var data1Indexes = new List(resultShape.dimensionCount);
     var data1Index = data1Indexes[shapeIndex] = _dataInfo.offset;
-    var data2Indexes = new List(resultShape.dimension);
+    var data2Indexes = new List(resultShape.dimensionCount);
     var data2Index = data2Indexes[shapeIndex] = array2._dataInfo.offset;
     var resultDataIndex = 0;
     var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
     while (resultDataIndex < resultData.length) {
       if (dimensionIndex < resultShape[shapeIndex]) {
-        if (shapeIndex == resultShape.dimension - 2) {
+        if (shapeIndex == resultShape.dimensionCount - 2) {
           var shapeDimension1 = shape[shapeIndex];
           var shapeDimensionInternal = shape[shapeIndex + 1];
           var shapeDimension2 = array2.shape[shapeIndex + 1];
@@ -330,7 +332,7 @@ class NDArrayImpl extends NDArrayBase {
         reductionAxis: reductionAxis, keepDimensions: keepDimensions);
 
     var newReductionAxis =
-        convertToValidReductionAxis(reductionAxis, shape.dimension);
+        convertToValidReductionAxis(reductionAxis, shape.dimensionCount);
 
     var total;
     var count = newReductionAxis.fold<int>(
@@ -426,14 +428,14 @@ class NDArrayImpl extends NDArrayBase {
       resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
-      var dimensionIndexes = new List(shape.dimension);
-      var dataIndexes = new List(shape.dimension);
+      var dimensionIndexes = new List(shape.dimensionCount);
+      var dataIndexes = new List(shape.dimensionCount);
       var dataIndex = dataIndexes[shapeIndex] = _dataInfo.offset;
       var resultDataIndex = 0;
       var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
       while (resultDataIndex < resultData.length) {
         if (dimensionIndex < shape[shapeIndex]) {
-          if (shapeIndex == shape.dimension - 1) {
+          if (shapeIndex == shape.dimensionCount - 1) {
             var axeDimension = shape[shapeIndex];
             var axeStride = _dataInfo.stride[shapeIndex];
             while (dimensionIndex++ < axeDimension) {
@@ -477,18 +479,18 @@ class NDArrayImpl extends NDArrayBase {
       resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
-      var dimensionIndexes = new List(resultShape.dimension);
-      var data1Indexes = new List(resultShape.dimension);
+      var dimensionIndexes = new List(resultShape.dimensionCount);
+      var data1Indexes = new List(resultShape.dimensionCount);
       var stride1 = _calculateBroadcastedStride(resultShape, this);
       var data1Index = data1Indexes[shapeIndex] = _dataInfo.offset;
-      var data2Indexes = new List(resultShape.dimension);
+      var data2Indexes = new List(resultShape.dimensionCount);
       var stride2 = _calculateBroadcastedStride(resultShape, array2);
       var data2Index = data2Indexes[shapeIndex] = array2._dataInfo.offset;
       var resultDataIndex = 0;
       var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
       while (resultDataIndex < resultData.length) {
         if (dimensionIndex < resultShape[shapeIndex]) {
-          if (shapeIndex == resultShape.dimension - 1) {
+          if (shapeIndex == resultShape.dimensionCount - 1) {
             resultData[resultDataIndex++] =
                 binaryOperation(_data[data1Index], array2._data[data2Index]);
             data1Index += stride1[shapeIndex];
@@ -537,16 +539,16 @@ class NDArrayImpl extends NDArrayBase {
       resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
-      var dimensionIndexes = new List(resultShape.dimension);
-      var data1Indexes = new List(resultShape.dimension);
+      var dimensionIndexes = new List(resultShape.dimensionCount);
+      var data1Indexes = new List(resultShape.dimensionCount);
       var stride1 = _calculateBroadcastedStride(resultShape, this);
       var data1Delta = stride1[shapeIndex];
       var data1Index = data1Indexes[shapeIndex] = _dataInfo.offset;
-      var data2Indexes = new List(resultShape.dimension);
+      var data2Indexes = new List(resultShape.dimensionCount);
       var stride2 = _calculateBroadcastedStride(resultShape, array2);
       var data2Delta = stride2[shapeIndex];
       var data2Index = data2Indexes[shapeIndex] = array2._dataInfo.offset;
-      var data3Indexes = new List(resultShape.dimension);
+      var data3Indexes = new List(resultShape.dimensionCount);
       var stride3 = _calculateBroadcastedStride(resultShape, array3);
       var data3Delta = stride3[shapeIndex];
       var data3Index = data3Indexes[shapeIndex] = array3._dataInfo.offset;
@@ -554,7 +556,7 @@ class NDArrayImpl extends NDArrayBase {
       var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
       while (resultDataIndex < resultData.length) {
         if (dimensionIndex < resultShape[shapeIndex]) {
-          if (shapeIndex == resultShape.dimension - 1) {
+          if (shapeIndex == resultShape.dimensionCount - 1) {
             resultData[resultDataIndex++] = ternaryOperation(_data[data1Index],
                 array2._data[data2Index], array3._data[data3Index]);
             data1Index += data1Delta;
@@ -595,20 +597,18 @@ class NDArrayImpl extends NDArrayBase {
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
       {void begin(), void onValue(value, int valueCount), dynamic end()}) {
-    // TODO eliminare utilizzo permutedIndexes
-
     var newReductionAxis =
-        convertToValidReductionAxis(reductionAxis, shape.dimension);
+        convertToValidReductionAxis(reductionAxis, shape.dimensionCount);
 
     if (newReductionAxis.isNotEmpty) {
       var resultData = createData(resultDescriptor, reuse);
       var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
-      var permutedIndexes = new List(shape.dimension);
+      var permutedIndexes = new List(shape.dimensionCount);
       var axis = new Set.from(newReductionAxis);
       var resultIndex = 0;
-      for (var i = 0; i < shape.dimension; i++) {
+      for (var i = 0; i < shape.dimensionCount; i++) {
         if (!axis.contains(i)) {
           permutedIndexes[resultIndex++] = i;
         }
@@ -616,45 +616,50 @@ class NDArrayImpl extends NDArrayBase {
       for (var i = 0; i < newReductionAxis.length; i++) {
         permutedIndexes[resultIndex++] = newReductionAxis[i];
       }
-      var dimensionIndexes = new List(shape.dimension);
-      var dataIndexes = new List(shape.dimension);
-      var dataIndex =
-          dataIndexes[permutedIndexes[shapeIndex]] = _dataInfo.offset;
-      var resultDataIndex = 0;
-      var dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
 
-      // TODO verificare che non venga chiamato e se viene chiamato due volte?
-      begin();
+      var stride = permute(_dataInfo.stride, permutedIndexes);
+      var dimensions = permute(shape.dimensions, permutedIndexes);
+
+      var dimensionIndexes = new List(shape.dimensionCount);
+      var dataIndexes = new List(shape.dimensionCount);
+      var dataIndex = dataIndexes[0] = _dataInfo.offset;
+      var resultDataIndex = 0;
+      var dimensionIndex = dimensionIndexes[0] = 0;
+
+      if (resultDescriptor.shape.dimensionCount == 0) {
+        begin();
+      }
 
       while (resultDataIndex < resultData.length) {
-        if (dimensionIndex < shape[permutedIndexes[shapeIndex]]) {
-          if (shapeIndex == shape.dimension - newReductionAxis.length - 1) {
+        if (dimensionIndex < dimensions[shapeIndex]) {
+          if (shapeIndex == shape.dimensionCount - newReductionAxis.length - 1) {
             begin();
           }
 
-          if (shapeIndex == shape.dimension - 1) {
+          if (shapeIndex == shape.dimensionCount - 1) {
             onValue(_data[dataIndex], 1);
 
-            dataIndex += _dataInfo.stride[permutedIndexes[shapeIndex]];
+            dataIndex += stride[shapeIndex];
             dimensionIndex++;
           } else {
             shapeIndex++;
-            dataIndexes[permutedIndexes[shapeIndex]] = dataIndex;
-            dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
+            dataIndexes[shapeIndex] = dataIndex;
+            dimensionIndexes[shapeIndex] = 0;
+            dimensionIndex = 0;
           }
         } else {
           shapeIndex--;
 
-          if (shapeIndex == shape.dimension - newReductionAxis.length - 1) {
+          if (shapeIndex == shape.dimensionCount - newReductionAxis.length - 1) {
             resultData[resultDataIndex++] = end();
           }
 
           if (shapeIndex >= 0) {
-            dataIndex = dataIndexes[permutedIndexes[shapeIndex]] =
-                dataIndexes[permutedIndexes[shapeIndex]] +
-                    _dataInfo.stride[permutedIndexes[shapeIndex]];
-            dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] =
-                dimensionIndexes[permutedIndexes[shapeIndex]] + 1;
+            dataIndexes[shapeIndex] += stride[shapeIndex];
+            dataIndex = dataIndexes[shapeIndex];
+
+            dimensionIndexes[shapeIndex]++;
+            dimensionIndex = dimensionIndexes[shapeIndex];
           }
         }
       }
@@ -671,59 +676,62 @@ class NDArrayImpl extends NDArrayBase {
       {void begin(),
       void onValue(dimensionIndex, value, int valueCount),
       dynamic end()}) {
-    // TODO eliminare utilizzo permutedIndexes
-
     var resultData = createData(resultDescriptor, reuse);
     var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
     var shapeIndex = 0;
-    var permutedIndexes = new List(shape.dimension);
+    var permutedIndexes = new List(shape.dimensionCount);
     var resultIndex = 0;
-    for (var i = 0; i < shape.dimension; i++) {
+    for (var i = 0; i < shape.dimensionCount; i++) {
       if (i != axis) {
         permutedIndexes[resultIndex++] = i;
       }
     }
     permutedIndexes[resultIndex++] = axis;
 
-    var dimensionIndexes = new List(shape.dimension);
-    var dataIndexes = new List(shape.dimension);
-    var dataIndex = dataIndexes[permutedIndexes[shapeIndex]] = _dataInfo.offset;
-    var resultDataIndex = 0;
-    var dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
+    var stride = permute(_dataInfo.stride, permutedIndexes);
+    var dimensions = permute(shape.dimensions, permutedIndexes);
 
-    // TODO verificare che non venga chiamato e se viene chiamato due volte?
-    begin();
+    var dimensionIndexes = new List(shape.dimensionCount);
+    var dataIndexes = new List(shape.dimensionCount);
+    var dataIndex = dataIndexes[0] = _dataInfo.offset;
+    var resultDataIndex = 0;
+    var dimensionIndex = dimensionIndexes[0] = 0;
+
+    if (resultDescriptor.shape.dimensionCount == 0) {
+      begin();
+    }
 
     while (resultDataIndex < resultData.length) {
-      if (dimensionIndex < shape[permutedIndexes[shapeIndex]]) {
-        if (shapeIndex == shape.dimension - 2) {
+      if (dimensionIndex < dimensions[shapeIndex]) {
+        if (shapeIndex == shape.dimensionCount - 2) {
           begin();
         }
 
-        if (shapeIndex == shape.dimension - 1) {
+        if (shapeIndex == shape.dimensionCount - 1) {
           onValue(dimensionIndex, _data[dataIndex], 1);
 
-          dataIndex += _dataInfo.stride[permutedIndexes[shapeIndex]];
+          dataIndex += stride[shapeIndex];
           dimensionIndex++;
         } else {
           shapeIndex++;
-          dataIndexes[permutedIndexes[shapeIndex]] = dataIndex;
-          dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] = 0;
+          dataIndexes[shapeIndex] = dataIndex;
+          dimensionIndexes[shapeIndex] = 0;
+          dimensionIndex = 0;
         }
       } else {
         shapeIndex--;
 
-        if (shapeIndex == shape.dimension - 2) {
+        if (shapeIndex == shape.dimensionCount - 2) {
           resultData[resultDataIndex++] = end();
         }
 
         if (shapeIndex >= 0) {
-          dataIndex = dataIndexes[permutedIndexes[shapeIndex]] =
-              dataIndexes[permutedIndexes[shapeIndex]] +
-                  _dataInfo.stride[permutedIndexes[shapeIndex]];
-          dimensionIndex = dimensionIndexes[permutedIndexes[shapeIndex]] =
-              dimensionIndexes[permutedIndexes[shapeIndex]] + 1;
+          dataIndexes[shapeIndex] += stride[shapeIndex];
+          dataIndex = dataIndexes[shapeIndex];
+
+          dimensionIndexes[shapeIndex]++;
+          dimensionIndex = dimensionIndexes[shapeIndex];
         }
       }
     }
@@ -751,15 +759,15 @@ void _loadConvertedData(
   if (shape.isScalar) {
     data[0] = converter(value);
   } else {
-    var dimensionValues = new List(shape.dimension);
-    var dimensionIndexes = new List(shape.dimension);
+    var dimensionValues = new List(shape.dimensionCount);
+    var dimensionIndexes = new List(shape.dimensionCount);
     var shapeIndex = 0;
     var dataIndex = 0;
     var dimensionValue = dimensionValues[0] = value;
     var dimensionIndex = dimensionIndexes[0] = 0;
     while (dataIndex < data.length) {
       if (dimensionIndex < shape[shapeIndex]) {
-        if (shapeIndex == shape.dimension - 1) {
+        if (shapeIndex == shape.dimensionCount - 1) {
           var axeDimension = shape[shapeIndex];
           while (dimensionIndex < axeDimension) {
             data[dataIndex++] = converter(dimensionValue[dimensionIndex++]);
@@ -841,8 +849,8 @@ void _castConvertedData(NDArrayBase fromArray, List data,
 
 List<int> _calculateBroadcastedStride(
         NDShape broadcastedShape, NDArrayImpl array) =>
-    new List.generate(broadcastedShape.dimension, (index) {
-      var dimensionDelta = broadcastedShape.dimension - array.shape.dimension;
+    new List.generate(broadcastedShape.dimensionCount, (index) {
+      var dimensionDelta = broadcastedShape.dimensionCount - array.shape.dimensionCount;
       if (index < dimensionDelta || array.shape[index - dimensionDelta] == 1) {
         return 0;
       } else {
@@ -900,14 +908,14 @@ Iterable<num> _createValueIterable(
     yield _data[dataInfo.offset];
   } else {
     var shapeIndex = 0;
-    var dimensionIndexes = new List(descriptor.shape.dimension);
-    var dataIndexes = new List(descriptor.shape.dimension);
+    var dimensionIndexes = new List(descriptor.shape.dimensionCount);
+    var dataIndexes = new List(descriptor.shape.dimensionCount);
     var dataIndex = dataIndexes[shapeIndex] = dataInfo.offset;
     var dimensionIndex = dimensionIndexes[shapeIndex] = 0;
     var i = 0;
     while (i < descriptor.shape.length) {
       if (dimensionIndex < descriptor.shape[shapeIndex]) {
-        if (shapeIndex == descriptor.shape.dimension - 1) {
+        if (shapeIndex == descriptor.shape.dimensionCount - 1) {
           var axeDimension = descriptor.shape[shapeIndex];
           var axeStride = dataInfo.stride[shapeIndex];
           while (dimensionIndex < axeDimension) {
@@ -940,9 +948,9 @@ class DataInfo {
   DataInfo(this.stride, this.offset);
 
   factory DataInfo.normalized(NDDescriptor descriptor) {
-    List<int> stride = new List(descriptor.shape.dimension);
+    List<int> stride = new List(descriptor.shape.dimensionCount);
     var factor = 1;
-    for (var i = descriptor.shape.dimension - 1; i >= 0; i--) {
+    for (var i = descriptor.shape.dimensionCount - 1; i >= 0; i--) {
       stride[i] = factor;
       factor *= descriptor.shape[i];
     }

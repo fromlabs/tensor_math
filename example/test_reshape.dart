@@ -1,5 +1,3 @@
-import "dart:math" as math;
-
 import "package:collection/collection.dart";
 
 import "package:tensor_math_simd/tensor_math.dart" as tm;

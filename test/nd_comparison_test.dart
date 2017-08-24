@@ -238,7 +238,7 @@ void main() {
           for (var reductionAxis in generateReductionAxisCombinations(i + 1)) {
             try {
               test(shape, reductionAxis);
-            } catch (e, s) {
+            } catch (e) {
               print("reductionAxis: $reductionAxis");
 
               rethrow;
@@ -280,7 +280,7 @@ void main() {
           for (var reductionAxis in generateReductionAxisCombinations(i + 1)) {
             try {
               test(shape, reductionAxis);
-            } catch (e, s) {
+            } catch (e) {
               print("reductionAxis: $reductionAxis");
 
               rethrow;
@@ -322,7 +322,7 @@ void main() {
           for (var reductionAxis in generateReductionAxisCombinations(i + 1)) {
             try {
               test(shape, reductionAxis);
-            } catch (e, s) {
+            } catch (e) {
               print("reductionAxis: $reductionAxis");
 
               rethrow;
@@ -376,7 +376,7 @@ void main() {
               for (var l = 0; l < 10; l++) {
                 test(shape, axis);
               }
-            } catch (e, s) {
+            } catch (e) {
               print("axis: $axis");
 
               rethrow;
@@ -455,7 +455,7 @@ void main() {
               in generatePermutationAxisCombinations(i + 1)) {
             try {
               test(shape, permutationAxis);
-            } catch (e, s) {
+            } catch (e) {
               print("permutationAxis: $permutationAxis");
 
               rethrow;
@@ -503,7 +503,7 @@ void main() {
 
               try {
                 test(shape, multiplies);
-              } catch (e, s) {
+              } catch (e) {
                 print("multiplies: $multiplies");
 
                 rethrow;

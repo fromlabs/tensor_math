@@ -3,7 +3,6 @@
 
 import "dart:math" as math;
 
-import 'dart:typed_data';
 import "package:meta/meta.dart";
 
 import 'nd_descriptor.dart';
@@ -189,8 +188,8 @@ abstract class NDArrayBase implements NDArray {
       descriptor.exp(), reuse, (value) => math.exp(value));
 
   @override
-  NDArray inv({NDArray reuse}) => elementWiseUnaryOperationInternal(
-      descriptor.inv(), reuse, (value) => 1 / value);
+  NDArray reciprocal({NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.reciprocal(), reuse, (value) => 1 / value);
 
   @override
   NDArray log({NDArray reuse}) => elementWiseUnaryOperationInternal(
@@ -416,12 +415,15 @@ abstract class NDArrayBase implements NDArray {
   NDArray reduceOperation(
       {List<int> reductionAxis,
       bool keepDimensions = false,
+      @required NDDataType resultDataType,
       covariant NDArray reuse,
       @required void begin(),
       @required void onValue(value, int valueCount),
       @required dynamic end()}) {
     var resultDescriptor = descriptor.reduceOperation(
-        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+        reductionAxis: reductionAxis,
+        keepDimensions: keepDimensions,
+        resultDataType: resultDataType);
 
     return reduceOperationInternal(
         reductionAxis, keepDimensions, resultDescriptor, reuse,

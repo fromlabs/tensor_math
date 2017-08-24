@@ -339,7 +339,7 @@ class NDDescriptor implements NDObject {
   }
 
   @override
-  NDDescriptor inv({covariant NDDescriptor reuse}) {
+  NDDescriptor reciprocal({covariant NDDescriptor reuse}) {
     if (!dataType.isFloat) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only float data type");
@@ -464,11 +464,15 @@ class NDDescriptor implements NDObject {
   NDDescriptor reduceOperation(
           {List<int> reductionAxis,
           bool keepDimensions = false,
+          @required NDDataType resultDataType,
           covariant NDDescriptor reuse,
           void begin(),
           void onValue(value, int valueCount),
           dynamic end()}) =>
-      this.reduce(reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+      this.reduce(
+          reductionAxis: reductionAxis,
+          keepDimensions: keepDimensions,
+          resultDataType: resultDataType);
 
   @override
   NDDescriptor argOperation(

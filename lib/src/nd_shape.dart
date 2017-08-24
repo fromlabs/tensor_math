@@ -19,35 +19,35 @@ class NDShape {
             dimensions != null ? new List.unmodifiable(dimensions) : null,
         this._length = _calculateLength(dimensions);
 
-  int get dimension => dimensions?.length;
+  int get dimensionCount => dimensions?.length;
 
   int get length => _length;
 
-  bool get isUnknownDimension => dimensions == null;
+  bool get hasUnknownDimensions => dimensions == null;
 
-  bool get isUnknownLength => _length == null;
+  bool get hasUnknownLength => _length == null;
 
-  bool get isScalar => dimension == 0;
+  bool get isScalar => dimensionCount == 0;
 
-  bool get isVector => dimension == 1;
+  bool get isVector => dimensionCount == 1;
 
-  bool get isMatrix => dimension == 2;
+  bool get isMatrix => dimensionCount == 2;
 
-  bool get isTensor3D => dimension == 3;
+  bool get isTensor3D => dimensionCount == 3;
 
-  bool get isTensor4D => dimension == 4;
+  bool get isTensor4D => dimensionCount == 4;
 
   int get(int axe) => dimensions != null ? dimensions[axe] : null;
 
   int operator [](int axe) => get(axe);
 
   bool isCompatibleWith(NDShape shape2) {
-    if (isUnknownDimension || shape2.isUnknownDimension) {
+    if (hasUnknownDimensions || shape2.hasUnknownDimensions) {
       return true;
-    } else if (dimension != shape2.dimension) {
+    } else if (dimensionCount != shape2.dimensionCount) {
       return false;
     } else {
-      for (var i = 0; i < dimension; i++) {
+      for (var i = 0; i < dimensionCount; i++) {
         var axeDimension = dimensions[i];
         var axeDimension2 = shape2.dimensions[i];
         if (axeDimension == null || axeDimension2 == null) {
@@ -98,9 +98,9 @@ class NDShape {
       _transpose(permutationAxis: permutationAxis);
 
   NDShape _merge(NDShape shape2) {
-    if (dimension != null && shape2.dimension != null) {
-      if (dimension == shape2.dimension) {
-        var resultDimensions = new List(dimension);
+    if (dimensionCount != null && shape2.dimensionCount != null) {
+      if (dimensionCount == shape2.dimensionCount) {
+        var resultDimensions = new List(dimensionCount);
 
         for (var i = 0; i < resultDimensions.length; i++) {
           var dimension1 = this.dimensions[i];
@@ -125,34 +125,34 @@ class NDShape {
             "Shape dimensions must be equal: $this != $shape2");
       }
     } else {
-      return dimension != null ? this : shape2;
+      return dimensionCount != null ? this : shape2;
     }
   }
 
   NDShape _reduce({List<int> reductionAxis, bool keepDimensions = false}) {
-    if (isUnknownDimension) {
+    if (hasUnknownDimensions) {
       return this;
-    } else if (dimension == 0) {
+    } else if (dimensionCount == 0) {
       throw new StateError("Can't reduce a scalar");
     } else {
       var newReductionAxis =
-          convertToValidReductionAxis(reductionAxis, dimension);
+          convertToValidReductionAxis(reductionAxis, dimensionCount);
 
       if (reductionAxis == null) {
         return this;
-      } else if (reductionAxis.length > dimension) {
+      } else if (reductionAxis.length > dimensionCount) {
         throw new ArgumentError.value(
-            reductionAxis, "reduction axis", "Max dimension is $dimension");
+            reductionAxis, "reduction axis", "Max dimension is $dimensionCount");
       } else if (reductionAxis.length != reductionAxis.toSet().length) {
         throw new ArgumentError.value(reductionAxis, "reduction axis",
             "Must be unique indexes $reductionAxis");
       }
 
       var resultDimensions = new List(
-          keepDimensions ? dimension : dimension - newReductionAxis.length);
+          keepDimensions ? dimensionCount : dimensionCount - newReductionAxis.length);
       var axis = newReductionAxis.toSet();
       var resultIndex = 0;
-      for (var i = 0; i < dimension; i++) {
+      for (var i = 0; i < dimensionCount; i++) {
         if (keepDimensions) {
           resultDimensions[resultIndex++] =
               !axis.contains(i) ? dimensions[i] : 1;
@@ -168,25 +168,25 @@ class NDShape {
   }
 
   NDShape _transpose({List<int> permutationAxis}) {
-    if (isUnknownDimension) {
+    if (hasUnknownDimensions) {
       return this;
     } else {
       var newPermutationAxis = permutationAxis;
 
-      if (dimension < 2) {
+      if (dimensionCount < 2) {
         throw new ArgumentError("Shape dimension must be almost 2: $this");
       } else if (newPermutationAxis == null) {
         newPermutationAxis =
-            new List.generate(dimension, (index) => dimension - index - 1);
-      } else if (permutationAxis.length != dimension) {
+            new List.generate(dimensionCount, (index) => dimensionCount - index - 1);
+      } else if (permutationAxis.length != dimensionCount) {
         throw new ArgumentError.value(
-            permutationAxis, "permutation axis", "Dimension is $dimension");
+            permutationAxis, "permutation axis", "Dimension is $dimensionCount");
       } else if (permutationAxis.length != permutationAxis.toSet().length) {
         throw new ArgumentError.value(permutationAxis, "permutation axis",
             "Must be unique indexes $permutationAxis");
       }
 
-      var resultDimensions = new List(dimension);
+      var resultDimensions = new List(dimensionCount);
 
       for (var i = 0; i < resultDimensions.length; i++) {
         resultDimensions[i] = dimensions[newPermutationAxis[i]];
@@ -197,12 +197,12 @@ class NDShape {
   }
 
   NDShape _broadcast(NDShape shape2) {
-    if (dimension != null && shape2.dimension != null) {
-      var resultDimensions = new List(max(dimension, shape2.dimension));
+    if (dimensionCount != null && shape2.dimensionCount != null) {
+      var resultDimensions = new List(max(dimensionCount, shape2.dimensionCount));
 
       var resultIndex = resultDimensions.length - 1;
-      var index1 = dimension - 1;
-      var index2 = shape2.dimension - 1;
+      var index1 = dimensionCount - 1;
+      var index2 = shape2.dimensionCount - 1;
       while (index1 >= 0 || index2 >= 0) {
         var d1 = index1 >= 0 ? dimensions[index1] : 1;
         var d2 = index2 >= 0 ? shape2.dimensions[index2] : 1;
@@ -221,49 +221,49 @@ class NDShape {
 
       return new NDShape(resultDimensions);
     } else {
-      return isUnknownDimension ? this : shape2;
+      return hasUnknownDimensions ? this : shape2;
     }
   }
 
   NDShape _matMul(NDShape shape2) {
-    if (isUnknownDimension) {
-      if (shape2.isUnknownDimension) {
+    if (hasUnknownDimensions) {
+      if (shape2.hasUnknownDimensions) {
         return this;
-      } else if (shape2.dimension < 2) {
+      } else if (shape2.dimensionCount < 2) {
         throw new ArgumentError("Shape dimension must be almost 2: $shape2");
       } else {
-        var resultDimensions = new List(shape2.dimension);
+        var resultDimensions = new List(shape2.dimensionCount);
 
-        resultDimensions[shape2.dimension - 2] = null;
-        resultDimensions[shape2.dimension - 1] =
-            shape2.dimensions[shape2.dimension - 1];
+        resultDimensions[shape2.dimensionCount - 2] = null;
+        resultDimensions[shape2.dimensionCount - 1] =
+            shape2.dimensions[shape2.dimensionCount - 1];
 
         return new NDShape(resultDimensions);
       }
-    } else if (shape2.isUnknownDimension) {
-      if (dimension < 2) {
+    } else if (shape2.hasUnknownDimensions) {
+      if (dimensionCount < 2) {
         throw new ArgumentError("Shape dimension must be almost 2: $this");
       } else {
-        var resultDimensions = new List(dimension);
+        var resultDimensions = new List(dimensionCount);
 
-        resultDimensions[dimension - 2] = dimensions[dimension - 2];
-        resultDimensions[dimension - 1] = null;
+        resultDimensions[dimensionCount - 2] = dimensions[dimensionCount - 2];
+        resultDimensions[dimensionCount - 1] = null;
 
         return new NDShape(resultDimensions);
       }
-    } else if (dimension < 2) {
+    } else if (dimensionCount < 2) {
       throw new ArgumentError("Shape dimension must be almost 2: $this");
-    } else if (shape2.dimension < 2) {
+    } else if (shape2.dimensionCount < 2) {
       throw new ArgumentError("Shape dimension must be almost 2: $shape2");
-    } else if (dimension != shape2.dimension) {
+    } else if (dimensionCount != shape2.dimensionCount) {
       throw new ArgumentError(
           "Shape dimensions must be equal: $this != $shape2");
     } else {
-      var resultDimensions = new List(dimension);
+      var resultDimensions = new List(dimensionCount);
 
       // check head
-      if (dimension > 2) {
-        for (var i = 0; i < dimension - 2; i++) {
+      if (dimensionCount > 2) {
+        for (var i = 0; i < dimensionCount - 2; i++) {
           var dimension1 = dimensions[i];
           var dimension2 = shape2.dimensions[i];
           if (dimension1 != null &&
@@ -278,15 +278,15 @@ class NDShape {
       }
 
       // check tail matrix
-      var cols1 = dimensions[dimension - 1];
-      var rows2 = shape2.dimensions[shape2.dimension - 2];
+      var cols1 = dimensions[dimensionCount - 1];
+      var rows2 = shape2.dimensions[shape2.dimensionCount - 2];
       if (cols1 != null && rows2 != null && cols1 != rows2) {
         throw new ArgumentError(
             "Shape not valid for matrix multiplication: $cols1 != $rows2");
       } else {
-        resultDimensions[dimension - 2] = dimensions[dimension - 2];
-        resultDimensions[dimension - 1] =
-            shape2.dimensions[shape2.dimension - 1];
+        resultDimensions[dimensionCount - 2] = dimensions[dimensionCount - 2];
+        resultDimensions[dimensionCount - 1] =
+            shape2.dimensions[shape2.dimensionCount - 1];
 
         return new NDShape(resultDimensions);
       }
@@ -295,7 +295,7 @@ class NDShape {
 
   NDShape _reshape({List<int> newDimensions}) {
     if (newDimensions == null) {
-      if (isUnknownDimension) {
+      if (hasUnknownDimensions) {
         return this;
       } else {
         return new NDShape();
@@ -323,7 +323,7 @@ class NDShape {
     if (wildcardDimensionIndex != null) {
       newDimensions2 = new List.from(newDimensions);
 
-      if (!isUnknownLength) {
+      if (!hasUnknownLength) {
         if (length % newLength == 0) {
           newDimensions2[wildcardDimensionIndex] = length ~/ newLength;
         } else {
@@ -338,7 +338,7 @@ class NDShape {
     }
 
     var newShape = new NDShape(newDimensions2);
-    if (isUnknownLength || newShape.length == length) {
+    if (hasUnknownLength || newShape.length == length) {
       return newShape;
     } else {
       throw new ArgumentError.value(
@@ -349,20 +349,20 @@ class NDShape {
   NDShape _tile(List<int> multiplies) {
     if (isScalar) {
       throw new StateError("Can't tile a scalar");
-    } else if (multiplies == null || multiplies.length != dimension) {
+    } else if (multiplies == null || multiplies.length != dimensionCount) {
       throw new ArgumentError.value(
-          multiplies, "tile multiplis", "Must be $dimension length");
+          multiplies, "tile multiplis", "Must be $dimensionCount length");
     }
 
     var newDimensions = new List.generate(
-        dimension, (index) => multiplies[index] * dimensions[index]);
+        dimensionCount, (index) => multiplies[index] * dimensions[index]);
 
     return new NDShape(newDimensions);
   }
 
   @override
   String toString() =>
-      "<Shape: dimensions=$dimensions, dimension=$dimension, length=$length>";
+      "<Shape: dimensions=$dimensions, dimension=$dimensionCount, length=$length>";
 
   static int _calculateLength(List<int> dimensions) {
     if (dimensions == null) {

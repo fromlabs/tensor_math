@@ -5,7 +5,6 @@ import "package:meta/meta.dart";
 
 import "nd_object.dart";
 
-import "nd_shape.dart";
 import "nd_data_type.dart";
 import "nd_array_base.dart";
 
@@ -114,7 +113,7 @@ abstract class NDArray implements NDObject {
   NDArray exp({covariant NDArray reuse});
 
   @override
-  NDArray inv({covariant NDArray reuse});
+  NDArray reciprocal({covariant NDArray reuse});
 
   @override
   NDArray log({covariant NDArray reuse});

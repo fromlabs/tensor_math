@@ -11,109 +11,109 @@ void main() {
 
     test('Shape dimension test', () {
       var shape = new NDShape();
-      expect(shape.dimension, isNull);
+      expect(shape.dimensionCount, isNull);
       expect(shape.length, isNull);
-      expect(shape.isUnknownDimension, isTrue);
-      expect(shape.isUnknownLength, isTrue);
+      expect(shape.hasUnknownDimensions, isTrue);
+      expect(shape.hasUnknownLength, isTrue);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
 
       shape = new NDShape([]);
-      expect(shape.dimension, 0);
+      expect(shape.dimensionCount, 0);
       expect(shape.length, 1);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isFalse);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isFalse);
       expect(shape.isScalar, isTrue);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
 
       shape = new NDShape([null]);
-      expect(shape.dimension, 1);
+      expect(shape.dimensionCount, 1);
       expect(shape.length, null);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isTrue);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isTrue);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isTrue);
       expect(shape.isMatrix, isFalse);
 
       shape = new NDShape([1]);
-      expect(shape.dimension, 1);
+      expect(shape.dimensionCount, 1);
       expect(shape.length, 1);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isFalse);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isFalse);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isTrue);
       expect(shape.isMatrix, isFalse);
 
       shape = new NDShape([10]);
-      expect(shape.dimension, 1);
+      expect(shape.dimensionCount, 1);
       expect(shape.length, 10);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isFalse);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isFalse);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isTrue);
       expect(shape.isMatrix, isFalse);
 
       shape = new NDShape([null, null]);
-      expect(shape.dimension, 2);
+      expect(shape.dimensionCount, 2);
       expect(shape.length, null);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isTrue);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isTrue);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isTrue);
 
       shape = new NDShape([1, null]);
-      expect(shape.dimension, 2);
+      expect(shape.dimensionCount, 2);
       expect(shape.length, null);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isTrue);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isTrue);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isTrue);
 
       shape = new NDShape([null, 1]);
-      expect(shape.dimension, 2);
+      expect(shape.dimensionCount, 2);
       expect(shape.length, null);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isTrue);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isTrue);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isTrue);
 
       shape = new NDShape([1, 1]);
-      expect(shape.dimension, 2);
+      expect(shape.dimensionCount, 2);
       expect(shape.length, 1);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isFalse);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isFalse);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isTrue);
 
       shape = new NDShape([10, 10]);
-      expect(shape.dimension, 2);
+      expect(shape.dimensionCount, 2);
       expect(shape.length, 100);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isFalse);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isFalse);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isTrue);
 
       shape = new NDShape([null, null, null]);
-      expect(shape.dimension, 3);
+      expect(shape.dimensionCount, 3);
       expect(shape.length, null);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isTrue);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isTrue);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
 
       shape = new NDShape([10, 10, 10]);
-      expect(shape.dimension, 3);
+      expect(shape.dimensionCount, 3);
       expect(shape.length, 1000);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isFalse);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isFalse);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
@@ -121,28 +121,28 @@ void main() {
 
     test('Shape transpose test', () {
       var shape = new NDShape(null).transpose();
-      expect(shape.dimension, isNull);
+      expect(shape.dimensionCount, isNull);
       expect(shape.length, isNull);
-      expect(shape.isUnknownDimension, isTrue);
-      expect(shape.isUnknownLength, isTrue);
+      expect(shape.hasUnknownDimensions, isTrue);
+      expect(shape.hasUnknownLength, isTrue);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
 
       shape = new NDShape([null, null, null]).transpose();
-      expect(shape.dimension, 3);
+      expect(shape.dimensionCount, 3);
       expect(shape.length, null);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isTrue);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isTrue);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
 
       shape = new NDShape([1, 2, 3]).transpose();
-      expect(shape.dimension, 3);
+      expect(shape.dimensionCount, 3);
       expect(shape.length, 6);
-      expect(shape.isUnknownDimension, isFalse);
-      expect(shape.isUnknownLength, isFalse);
+      expect(shape.hasUnknownDimensions, isFalse);
+      expect(shape.hasUnknownLength, isFalse);
       expect(shape.isScalar, isFalse);
       expect(shape.isVector, isFalse);
       expect(shape.isMatrix, isFalse);
