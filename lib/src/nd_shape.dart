@@ -135,8 +135,8 @@ class NDShape {
     } else if (dimensionCount == 0) {
       throw new StateError("Can't reduce a scalar");
     } else {
-      var newReductionAxis =
-          convertToValidReductionAxis(reductionAxis, dimensionCount);
+      var newReductionAxis = convertToValidReductionAxis(
+          reductionAxis, dimensionCount);
 
       if (newReductionAxis.length > dimensionCount) {
         throw new ArgumentError.value(newReductionAxis, "reduction axis",

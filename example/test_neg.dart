@@ -1,30 +1,33 @@
+import "dart:typed_data";
+
 import 'package:collection/collection.dart';
 
 import "package:tensor_math/tensor_math.dart" as tm;
 
+import "package:tensor_math/src/nd_array_blocked_impl.dart";
+
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  functionalTest();
+  functionalTest([8, 5, 5]);
+  functionalTest([10, 10, 10, 10]);
+  functionalTest([10]);
+  functionalTest([]);
 
-  // performanceTest();
+  performanceTest();
 }
 
-void functionalTest() {
-  var shape = [1, 1];
-  var permutationAxis = [1, 0];
-  // var permutationAxis = [1, 0, 3, 2];
-
+void functionalTest(List<int> shape) {
   var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
           dataType: tm.NDDataType.float32)
-      .transpose(permutationAxis: permutationAxis)
+      .neg()
       .toValue();
 
   print(expectedValue);
 
   var value = new tm.NDArray.generate(shape, (index) => index + 1,
           dataType: tm.NDDataType.float32VBlocked)
-      .transpose(permutationAxis: permutationAxis)
+      .neg()
       .toValue();
 
   if (!iterableEquality.equals(value, expectedValue)) {
@@ -35,21 +38,26 @@ void functionalTest() {
 }
 
 void performanceTest() {
-  test([10, 10, 10, 10], [0, 1, 3, 2], tm.NDDataType.float32, 10000000);
+  test([10, 10, 10, 10], tm.NDDataType.float32, 10000);
 
-  test([10, 10, 10, 10], [0, 1, 3, 2], tm.NDDataType.float32VBlocked, 100000);
+  test([10, 10, 10, 10], tm.NDDataType.float32VBlocked, 10000);
+
+  test([10, 10, 10, 10], tm.NDDataType.float32, 100000);
+
+  test([10, 10, 10, 10], tm.NDDataType.float32VBlocked, 100000);
 }
 
-void test(List<int> shape, List<int> permutationAxis, tm.NDDataType dataType,
-    int steps) {
+void allPerformanceTest() {}
+
+void test(List<int> shape, tm.NDDataType type, int steps) {
   var watch = new Stopwatch();
   watch.start();
 
   var array =
-      new tm.NDArray.generate(shape, (index) => index + 1, dataType: dataType);
+      new tm.NDArray.generate(shape, (index) => index + 1, dataType: type);
 
   for (var i = 0; i < steps; i++) {
-    array.transpose(permutationAxis: permutationAxis);
+    array.neg();
   }
 
   print(

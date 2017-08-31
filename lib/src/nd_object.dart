@@ -97,20 +97,20 @@ abstract class NDObject {
   NDObject elementWiseUnaryOperation(
       {@required NDDataType resultDataType,
       NDObject reuse,
-      @required unaryOperation(value)});
+      @required unaryOperation(value, int valueCount)});
 
   NDObject elementWiseBinaryOperation(value2,
       {NDDataType dataType2,
       @required NDDataType resultDataType,
       NDObject reuse,
-      @required binaryOperation(value1, value2)});
+      @required binaryOperation(value1, value2, int valueCount)});
 
   NDObject elementWiseTernaryOperation(value2, value3,
       {NDDataType dataType2,
       NDDataType dataType3,
       @required NDDataType resultDataType,
       NDObject reuse,
-      @required ternaryOperation(value1, value2, value3)});
+      @required ternaryOperation(value1, value2, value3, int valueCount)});
 
   NDObject reduceOperation(
       {List<int> reductionAxis,

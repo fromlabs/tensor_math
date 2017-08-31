@@ -1,7 +1,7 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
-import 'dart:math';
+import 'dart:math' as math;
 import "dart:typed_data";
 
 import "package:collection/collection.dart";
@@ -26,6 +26,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
   final DataInfo dataInfo;
 
   factory NDArrayBlockedImpl(value, NDDescriptor descriptor, NDArray reuse) {
+    assert(debug("NDArrayBlockedImpl(${descriptor.shape})"));
+
     var dataInfo = new DataInfo(descriptor);
 
     var data = _createData(descriptor, dataInfo, reuse);
@@ -37,6 +39,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
   factory NDArrayBlockedImpl.filled(
       fillValue, NDDescriptor descriptor, NDArrayBlockedImpl reuse) {
+    assert(debug("NDArrayBlockedImpl.filled($fillValue, ${descriptor.shape})"));
+
     if (fillValue == 0) {
       var dataInfo = new DataInfo(descriptor);
 
@@ -49,6 +53,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
       return new NDArrayBlockedImpl.raw(data, descriptor, dataInfo);
     } else {
       // TODO ottimizzabile
+      assert(debug("OPTIMIZABLE"));
 
       return new NDArrayBlockedImpl.generate(
           (index) => fillValue, descriptor, reuse);
@@ -57,6 +62,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
   factory NDArrayBlockedImpl.generate(
       generator(int index), NDDescriptor descriptor, NDArray reuse) {
+    assert(debug("NDArrayBlockedImpl.generate(${descriptor.shape})"));
+
     var dataInfo = new DataInfo(descriptor);
 
     var data = _createData(descriptor, dataInfo, reuse);
@@ -68,6 +75,9 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
   factory NDArrayBlockedImpl.castFrom(
       NDArrayBase fromArray, NDDataType toDataType, NDArray reuse) {
+    assert(debug(
+        "NDArrayBlockedImpl.castFrom(from: ${fromArray.descriptor}, to: $toDataType)"));
+
     var resultDescriptor = fromArray.descriptor.cast(toDataType);
 
     var dataInfo = new DataInfo(resultDescriptor);
@@ -88,21 +98,10 @@ class NDArrayBlockedImpl extends NDArrayBase {
   @override
   NDArray normalize({NDArray reuse}) => this;
 
-  NDArray identity({NDArray reuse}) {
-    var targetDescriptor = descriptor;
-
-    var targetDataInfo = new DataInfo(targetDescriptor);
-
-    var targetData = _createData(targetDescriptor, targetDataInfo, reuse);
-
-    _identityData(this, targetData, targetDescriptor, targetDataInfo);
-
-    return new NDArrayBlockedImpl.raw(
-        targetData, targetDescriptor, targetDataInfo);
-  }
-
   @override
   dynamic toValue() {
+    assert(debug("NDArrayBlockedImpl(${descriptor.shape}).toValue()"));
+
     var value = new List(dataInfo.internalShape[0]);
 
     var values = new List(dataInfo.internalShape.dimensionCount - 1);
@@ -115,6 +114,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
     var shapeIndex = 0;
     var dataIndex = 0;
+
+    var lastColumnIndex = dataInfo.dataColumns - descriptor.dataType.blockSize;
 
     for (;;) {
       if (dimensionIndexes[shapeIndex] < dataInfo.internalShape[shapeIndex]) {
@@ -142,7 +143,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
             var column;
             for (column = 0;
-                column < dataInfo.dataColumns - descriptor.dataType.blockSize;
+                column < lastColumnIndex;
                 column += descriptor.dataType.blockSize) {
               var value4 = data[dataIndex];
 
@@ -217,6 +218,9 @@ class NDArrayBlockedImpl extends NDArrayBase {
     NDArrayBlockedImpl array2 =
         toNDArray(value2, dataType: NDDataType.float32VBlocked);
 
+    assert(debug(
+        "NDArrayBlockedImpl(${descriptor.shape}).matMul(${array2.shape})"));
+
     var resultDescriptor = descriptor.matMul(array2.descriptor);
 
     var resultDataInfo = new DataInfo(resultDescriptor);
@@ -236,6 +240,9 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
     if (permutationAxis != null &&
         !permutationAxis.every((index) => permutationAxis[index] == index)) {
+      assert(debug(
+          "NDArrayBlockedImpl(${descriptor.shape}).transpose($permutationAxis)"));
+
       var newPermutationAxis = permutationAxis ??
           new List.generate(shape.dimensionCount,
               (index) => shape.dimensionCount - index - 1);
@@ -267,6 +274,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
         return new NDArrayBlockedImpl.raw(
             resultData, resultDescriptor, resultDataInfo);
       } else {
+        assert(debug("OPTIMIZABLE: transpose full"));
+
         // TODO ottimizzare con createTransposedValueIterable
         return cast(NDDataType.float32)
             .transpose(permutationAxis: newPermutationAxis)
@@ -282,6 +291,9 @@ class NDArrayBlockedImpl extends NDArrayBase {
     var resultDescriptor = descriptor.tile(multiplies);
 
     if (descriptor != resultDescriptor) {
+      assert(
+          debug("NDArrayBlockedImpl(${descriptor.shape}).tile($multiplies)"));
+
       var resultDataInfo = new DataInfo(resultDescriptor);
 
       var resultData = _createData(resultDescriptor, resultDataInfo, reuse);
@@ -299,7 +311,9 @@ class NDArrayBlockedImpl extends NDArrayBase {
   NDArray reduceSum(
       {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
     var resultDescriptor = descriptor.reduceSum(
-        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+      reductionAxis: reductionAxis,
+      keepDimensions: false, // TODO implementare keepDimensions
+    );
 
     var total;
 
@@ -326,7 +340,9 @@ class NDArrayBlockedImpl extends NDArrayBase {
   NDArray reduceMean(
       {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
     var resultDescriptor = descriptor.reduceMean(
-        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+      reductionAxis: reductionAxis,
+      keepDimensions: false, // TODO implementare keepDimensions
+    );
 
     var newReductionAxis =
         convertToValidReductionAxis(reductionAxis, shape.dimensionCount);
@@ -365,7 +381,9 @@ class NDArrayBlockedImpl extends NDArrayBase {
   NDArray reduceMax(
       {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
     var resultDescriptor = descriptor.reduceMax(
-        reductionAxis: reductionAxis, keepDimensions: keepDimensions);
+      reductionAxis: reductionAxis,
+      keepDimensions: false, // TODO implementare keepDimensions
+    );
 
     var maxValue;
     int maxValueCount;
@@ -381,7 +399,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
             if (maxValue != null) {
               Float32x4 currentValue = maxValue;
               Float32x4 newValue = currentValue.max(value);
-              maxValueCount = max(maxValueCount, valueCount);
+              maxValueCount = math.max(maxValueCount, valueCount);
 
               switch (valueCount) {
                 case 4:
@@ -409,15 +427,15 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
             switch (maxValueCount) {
               case 4:
-                maxValue = max(max(currentValue.x, currentValue.y),
-                    max(currentValue.w, currentValue.z));
+                maxValue = math.max(math.max(currentValue.x, currentValue.y),
+                    math.max(currentValue.w, currentValue.z));
                 break;
               case 3:
-                maxValue =
-                    max(max(currentValue.x, currentValue.y), currentValue.z);
+                maxValue = math.max(
+                    math.max(currentValue.x, currentValue.y), currentValue.z);
                 break;
               case 2:
-                maxValue = max(currentValue.x, currentValue.y);
+                maxValue = math.max(currentValue.x, currentValue.y);
                 break;
               case 1:
                 maxValue = currentValue.x;
@@ -456,7 +474,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
             if (maxValue != null) {
               Float32x4 currentValue = maxValue;
               Float32x4 newValue = currentValue.max(value);
-              maxValueCount = max(maxValueCount, valueCount);
+              maxValueCount = math.max(maxValueCount, valueCount);
 
               switch (valueCount) {
                 case 4:
@@ -520,8 +538,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
             switch (maxValueCount) {
               case 4:
-                maxValue = max(max(currentValue.x, currentValue.y),
-                    max(currentValue.w, currentValue.z));
+                maxValue = math.max(math.max(currentValue.x, currentValue.y),
+                    math.max(currentValue.w, currentValue.z));
                 if (maxValue == currentValue.x) {
                   maxValueIndex = maxValueIndex.x;
                 } else if (maxValue == currentValue.y) {
@@ -533,8 +551,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
                 }
                 break;
               case 3:
-                maxValue =
-                    max(max(currentValue.x, currentValue.y), currentValue.z);
+                maxValue = math.max(
+                    math.max(currentValue.x, currentValue.y), currentValue.z);
                 if (maxValue == currentValue.x) {
                   maxValueIndex = maxValueIndex.x;
                 } else if (maxValue == currentValue.y) {
@@ -544,7 +562,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
                 }
                 break;
               case 2:
-                maxValue = max(currentValue.x, currentValue.y);
+                maxValue = math.max(currentValue.x, currentValue.y);
                 if (maxValue == currentValue.x) {
                   maxValueIndex = maxValueIndex.x;
                 } else if (maxValue == currentValue.y) {
@@ -568,19 +586,27 @@ class NDArrayBlockedImpl extends NDArrayBase {
     } else {
       var resultDescriptor = descriptor.reshape(newDimensions: newDimensions);
 
-      if (newDimensions[shape.dimensionCount - 1] ==
-              shape.dimensions[shape.dimensionCount - 1] &&
-          (newDimensions.length == 1 ||
-              newDimensions[shape.dimensionCount - 2] ==
-                  shape.dimensions[shape.dimensionCount - 2])) {
-        var resultDataInfo = new DataInfo(resultDescriptor);
+      var resultDataInfo = new DataInfo(resultDescriptor);
 
-        return new NDArrayBlockedImpl.raw(
-            data, resultDescriptor, resultDataInfo);
+      var resultData;
+      if (resultDataInfo.internalShape[
+                  resultDataInfo.internalShape.dimensionCount - 1] ==
+              dataInfo
+                  .internalShape[dataInfo.internalShape.dimensionCount - 1] &&
+          resultDataInfo.internalShape[
+                  resultDataInfo.internalShape.dimensionCount - 2] ==
+              dataInfo
+                  .internalShape[dataInfo.internalShape.dimensionCount - 2]) {
+        resultData = data;
       } else {
-        return elementWiseUnaryOperationInternal(
-            resultDescriptor, reuse, (value) => value);
+        resultData = _createData(resultDescriptor, resultDataInfo, reuse);
+
+        _elementWiseUnaryOperationData(this, resultData, resultDescriptor,
+            resultDataInfo, (value, valueCount) => value);
       }
+
+      return new NDArrayBlockedImpl.raw(
+          resultData, resultDescriptor, resultDataInfo);
     }
   }
 
@@ -588,14 +614,38 @@ class NDArrayBlockedImpl extends NDArrayBase {
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
       {void begin(), void onValue(value, int valueCount), dynamic end()}) {
-    if (keepDimensions) {
-      throw new UnimplementedError();
-    }
-
     var newReductionAxis =
         convertToValidReductionAxis(reductionAxis, shape.dimensionCount);
 
-    if (newReductionAxis.isNotEmpty) {
+    if (newReductionAxis.isEmpty) {
+      return this;
+    } else if (keepDimensions) {
+      assert(debug(
+          "OPT: NDArrayBlockedImpl(${descriptor.shape}).reduceOperationInternal($newReductionAxis, keepDimensions: $keepDimensions)"));
+
+      // TODO ottimizzare
+
+      var resultDataInfo = new DataInfo(resultDescriptor);
+
+      var resultData = _createData(resultDescriptor, resultDataInfo, reuse);
+
+      _reduceData(this, newReductionAxis, false, resultData, resultDescriptor,
+          resultDataInfo,
+          begin: begin, onValue: onValue, end: end);
+
+      var result = new NDArrayBlockedImpl.raw(
+          resultData, resultDescriptor, resultDataInfo);
+
+      var newDimensions = new List.generate(
+          shape.dimensions.length,
+          (index) =>
+              newReductionAxis.contains(index) ? 1 : shape.dimensions[index]);
+
+      return result.reshape(newDimensions: newDimensions);
+    } else {
+      assert(debug(
+          "NDArrayBlockedImpl(${descriptor.shape}).reduceOperationInternal($newReductionAxis, keepDimensions: $keepDimensions)"));
+
       var resultDataInfo = new DataInfo(resultDescriptor);
 
       var resultData = _createData(resultDescriptor, resultDataInfo, reuse);
@@ -606,8 +656,6 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
       return new NDArrayBlockedImpl.raw(
           resultData, resultDescriptor, resultDataInfo);
-    } else {
-      return this;
     }
   }
 
@@ -617,6 +665,9 @@ class NDArrayBlockedImpl extends NDArrayBase {
       {void begin(),
       void onValue(dimensionIndex, value, int valueCount),
       dynamic end()}) {
+    assert(debug(
+        "NDArrayBlockedImpl(${descriptor.shape}).argOperationInternal($axis)"));
+
     var resultDataInfo = new simple_impl.DataInfo.normalized(resultDescriptor);
 
     var resultData = simple_impl.createData(resultDescriptor, reuse);
@@ -629,117 +680,38 @@ class NDArrayBlockedImpl extends NDArrayBase {
   }
 
   @override
-  NDArrayBase elementWiseUnaryOperationInternal(
-      NDDescriptor resultDescriptor, NDArray reuse, unaryOperation(value)) {
+  NDArrayBase elementWiseUnaryOperationInternal(NDDescriptor resultDescriptor,
+      NDArray reuse, unaryOperation(value, int valueCount)) {
     var resultDataInfo = new DataInfo(resultDescriptor);
 
     var resultData = _createData(resultDescriptor, resultDataInfo, reuse);
 
-    var dimensionIndexes =
-        new List(resultDataInfo.internalShape.dimensionCount - 1);
-    var dataIndexes = new List(resultDataInfo.internalShape.dimensionCount - 1);
+    if (resultDescriptor.dataType.isBlocked && dataType.isBlocked) {
+      _elementWiseUnaryOperationDataBlocked(
+          this, resultData, resultDescriptor, resultDataInfo, unaryOperation);
+    } else {
+      _elementWiseUnaryOperationData(
+          this, resultData, resultDescriptor, resultDataInfo, unaryOperation);
+    }
 
-    dimensionIndexes[0] = 0;
-    dataIndexes[0] = 0;
+    return new NDArrayBlockedImpl.raw(
+        resultData, resultDescriptor, resultDataInfo);
+  }
 
-    var shapeIndex = 0;
-    var dataIndex = 0;
+  NDArrayBase elementWiseUnaryOperationInternalOld(
+      NDDescriptor resultDescriptor,
+      NDArray reuse,
+      unaryOperation(value, int valueCount)) {
+    var resultDataInfo = new DataInfo(resultDescriptor);
 
-    var valueIterable = _createValueIterable(this);
+    var resultData = _createData(resultDescriptor, resultDataInfo, reuse);
 
-    var valueIterator = valueIterable.iterator;
-
-    for (;;) {
-      if (dimensionIndexes[shapeIndex] <
-          resultDataInfo.internalShape[shapeIndex]) {
-        if (shapeIndex < resultDataInfo.internalShape.dimensionCount - 2) {
-          dataIndex = dataIndexes[shapeIndex];
-
-          shapeIndex++;
-
-          dimensionIndexes[shapeIndex] = 0;
-
-          dataIndexes[shapeIndex] = dataIndex;
-
-          continue;
-        } else {
-          for (var row = 0; row < resultDataInfo.rows; row++) {
-            var column;
-            for (column = 0;
-                column <
-                    resultDataInfo.dataColumns -
-                        resultDescriptor.dataType.blockSize;
-                column += resultDescriptor.dataType.blockSize) {
-              var value4 = new Float32x4(
-                  unaryOperation((valueIterator..moveNext()).current),
-                  unaryOperation((valueIterator..moveNext()).current),
-                  unaryOperation((valueIterator..moveNext()).current),
-                  unaryOperation((valueIterator..moveNext()).current));
-
-              resultData[dataIndex] = value4;
-
-              dataIndex += resultDataInfo.delta1;
-            }
-
-            var value4;
-            switch (resultDataInfo.lastBlockColumnCount) {
-              case 4:
-                value4 = new Float32x4(
-                    unaryOperation((valueIterator..moveNext()).current),
-                    unaryOperation((valueIterator..moveNext()).current),
-                    unaryOperation((valueIterator..moveNext()).current),
-                    unaryOperation((valueIterator..moveNext()).current));
-                break;
-              case 3:
-                value4 = new Float32x4(
-                    unaryOperation((valueIterator..moveNext()).current),
-                    unaryOperation((valueIterator..moveNext()).current),
-                    unaryOperation((valueIterator..moveNext()).current),
-                    0.0);
-                break;
-              case 2:
-                value4 = new Float32x4(
-                    unaryOperation((valueIterator..moveNext()).current),
-                    unaryOperation((valueIterator..moveNext()).current),
-                    0.0,
-                    0.0);
-                break;
-              case 1:
-                value4 = new Float32x4(
-                    unaryOperation((valueIterator..moveNext()).current),
-                    0.0,
-                    0.0,
-                    0.0);
-                break;
-            }
-
-            resultData[dataIndex] = value4;
-
-            dataIndex += resultDataInfo.delta1;
-
-            if (row & (resultDescriptor.dataType.blockSize - 1) <
-                resultDescriptor.dataType.blockSize - 1) {
-              dataIndex += resultDataInfo.delta2;
-            } else {
-              dataIndex += resultDataInfo.delta3;
-            }
-          }
-
-          shapeIndex--;
-        }
-      } else {
-        shapeIndex--;
-      }
-
-      if (shapeIndex >= 0) {
-        dimensionIndexes[shapeIndex]++;
-
-        dataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
-
-        dataIndex = dataIndexes[shapeIndex];
-      } else {
-        break;
-      }
+    if (resultDescriptor.dataType.isBlocked && dataType.isBlocked) {
+      _elementWiseUnaryOperationData(
+          this, resultData, resultDescriptor, resultDataInfo, unaryOperation);
+    } else {
+      _elementWiseUnaryOperationData(
+          this, resultData, resultDescriptor, resultDataInfo, unaryOperation);
     }
 
     return new NDArrayBlockedImpl.raw(
@@ -751,134 +723,19 @@ class NDArrayBlockedImpl extends NDArrayBase {
       NDArrayBase array2,
       NDDescriptor resultDescriptor,
       NDArray reuse,
-      binaryOperation(value1, value2)) {
+      binaryOperation(value1, value2, int valueCount)) {
     var resultDataInfo = new DataInfo(resultDescriptor);
 
     var resultData = _createData(resultDescriptor, resultDataInfo, reuse);
 
-    var dimensionIndexes =
-        new List(resultDataInfo.internalShape.dimensionCount - 1);
-    var dataIndexes = new List(resultDataInfo.internalShape.dimensionCount - 1);
-
-    dimensionIndexes[0] = 0;
-    dataIndexes[0] = 0;
-
-    var shapeIndex = 0;
-    var dataIndex = 0;
-
-    var valueIterable1 =
-        _createBroadCastedValueIterable(this, resultDescriptor, resultDataInfo);
-    var valueIterator1 = valueIterable1.iterator;
-
-    var valueIterable2 = _createBroadCastedValueIterable(
-        array2, resultDescriptor, resultDataInfo);
-    var valueIterator2 = valueIterable2.iterator;
-
-    for (;;) {
-      if (dimensionIndexes[shapeIndex] <
-          resultDataInfo.internalShape[shapeIndex]) {
-        if (shapeIndex < resultDataInfo.internalShape.dimensionCount - 2) {
-          dataIndex = dataIndexes[shapeIndex];
-
-          shapeIndex++;
-
-          dimensionIndexes[shapeIndex] = 0;
-
-          dataIndexes[shapeIndex] = dataIndex;
-
-          continue;
-        } else {
-          for (var row = 0; row < resultDataInfo.rows; row++) {
-            var column;
-            for (column = 0;
-                column <
-                    resultDataInfo.dataColumns -
-                        resultDescriptor.dataType.blockSize;
-                column += resultDescriptor.dataType.blockSize) {
-              var value4 = new Float32x4(
-                  binaryOperation((valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current),
-                  binaryOperation((valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current),
-                  binaryOperation((valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current),
-                  binaryOperation((valueIterator1..moveNext()).current,
-                      (valueIterator2..moveNext()).current));
-
-              resultData[dataIndex] = value4;
-
-              dataIndex += resultDataInfo.delta1;
-            }
-
-            var value4;
-            switch (resultDataInfo.lastBlockColumnCount) {
-              case 4:
-                value4 = new Float32x4(
-                    binaryOperation((valueIterator1..moveNext()).current,
-                        (valueIterator2..moveNext()).current),
-                    binaryOperation((valueIterator1..moveNext()).current,
-                        (valueIterator2..moveNext()).current),
-                    binaryOperation((valueIterator1..moveNext()).current,
-                        (valueIterator2..moveNext()).current),
-                    binaryOperation((valueIterator1..moveNext()).current,
-                        (valueIterator2..moveNext()).current));
-                break;
-              case 3:
-                value4 = new Float32x4(
-                    binaryOperation((valueIterator1..moveNext()).current,
-                        (valueIterator2..moveNext()).current),
-                    binaryOperation((valueIterator1..moveNext()).current,
-                        (valueIterator2..moveNext()).current),
-                    binaryOperation((valueIterator1..moveNext()).current,
-                        (valueIterator2..moveNext()).current),
-                    0.0);
-                break;
-              case 2:
-                value4 = new Float32x4(
-                    binaryOperation((valueIterator1..moveNext()).current,
-                        (valueIterator2..moveNext()).current),
-                    binaryOperation((valueIterator1..moveNext()).current,
-                        (valueIterator2..moveNext()).current),
-                    0.0,
-                    0.0);
-                break;
-              case 1:
-                value4 = new Float32x4(
-                    binaryOperation((valueIterator1..moveNext()).current,
-                        (valueIterator2..moveNext()).current),
-                    0.0,
-                    0.0,
-                    0.0);
-                break;
-            }
-
-            resultData[dataIndex] = value4;
-
-            dataIndex += resultDataInfo.delta1;
-
-            if (row & (resultDescriptor.dataType.blockSize - 1) <
-                resultDescriptor.dataType.blockSize - 1) {
-              dataIndex += resultDataInfo.delta2;
-            } else {
-              dataIndex += resultDataInfo.delta3;
-            }
-          }
-
-          shapeIndex--;
-        }
-      } else {
-        shapeIndex--;
-      }
-
-      if (shapeIndex >= 0) {
-        dimensionIndexes[shapeIndex]++;
-
-        dataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
-
-        dataIndex = dataIndexes[shapeIndex];
-      } else {
-        break;
-      }
+    if (resultDescriptor.dataType.isBlocked &&
+        dataType.isBlocked &&
+        array2.dataType.isBlocked) {
+      _elementWiseBinaryOperationDataBlocked(this, array2, resultData,
+          resultDescriptor, resultDataInfo, binaryOperation);
+    } else {
+      _elementWiseBinaryOperationData(this, array2, resultData,
+          resultDescriptor, resultDataInfo, binaryOperation);
     }
 
     return new NDArrayBlockedImpl.raw(
@@ -891,7 +748,10 @@ class NDArrayBlockedImpl extends NDArrayBase {
       NDArrayBase array3,
       NDDescriptor resultDescriptor,
       NDArray reuse,
-      ternaryOperation(value1, value2, value3)) {
+      ternaryOperation(value1, value2, value3, int valueCount)) {
+    assert(debug(
+        "NDArrayBlockedImpl(${descriptor.shape}).elementWiseTernaryOperationInternal(${array2.shape}, ${array3.shape}) blocked"));
+
     var resultDataInfo = new DataInfo(resultDescriptor);
 
     var resultData = _createData(resultDescriptor, resultDataInfo, reuse);
@@ -918,6 +778,9 @@ class NDArrayBlockedImpl extends NDArrayBase {
         array3, resultDescriptor, resultDataInfo);
     var valueIterator3 = valueIterable3.iterator;
 
+    var lastColumnIndex =
+        resultDataInfo.dataColumns - resultDescriptor.dataType.blockSize;
+
     for (;;) {
       if (dimensionIndexes[shapeIndex] <
           resultDataInfo.internalShape[shapeIndex]) {
@@ -935,27 +798,29 @@ class NDArrayBlockedImpl extends NDArrayBase {
           for (var row = 0; row < resultDataInfo.rows; row++) {
             var column;
             for (column = 0;
-                column <
-                    resultDataInfo.dataColumns -
-                        resultDescriptor.dataType.blockSize;
+                column < lastColumnIndex;
                 column += resultDescriptor.dataType.blockSize) {
               var value4 = new Float32x4(
                   ternaryOperation(
                       (valueIterator1..moveNext()).current,
                       (valueIterator2..moveNext()).current,
-                      (valueIterator3..moveNext()).current),
+                      (valueIterator3..moveNext()).current,
+                      1),
                   ternaryOperation(
                       (valueIterator1..moveNext()).current,
                       (valueIterator2..moveNext()).current,
-                      (valueIterator3..moveNext()).current),
+                      (valueIterator3..moveNext()).current,
+                      1),
                   ternaryOperation(
                       (valueIterator1..moveNext()).current,
                       (valueIterator2..moveNext()).current,
-                      (valueIterator3..moveNext()).current),
+                      (valueIterator3..moveNext()).current,
+                      1),
                   ternaryOperation(
                       (valueIterator1..moveNext()).current,
                       (valueIterator2..moveNext()).current,
-                      (valueIterator3..moveNext()).current));
+                      (valueIterator3..moveNext()).current,
+                      1));
 
               resultData[dataIndex] = value4;
 
@@ -969,34 +834,41 @@ class NDArrayBlockedImpl extends NDArrayBase {
                     ternaryOperation(
                         (valueIterator1..moveNext()).current,
                         (valueIterator2..moveNext()).current,
-                        (valueIterator3..moveNext()).current),
+                        (valueIterator3..moveNext()).current,
+                        1),
                     ternaryOperation(
                         (valueIterator1..moveNext()).current,
                         (valueIterator2..moveNext()).current,
-                        (valueIterator3..moveNext()).current),
+                        (valueIterator3..moveNext()).current,
+                        1),
                     ternaryOperation(
                         (valueIterator1..moveNext()).current,
                         (valueIterator2..moveNext()).current,
-                        (valueIterator3..moveNext()).current),
+                        (valueIterator3..moveNext()).current,
+                        1),
                     ternaryOperation(
                         (valueIterator1..moveNext()).current,
                         (valueIterator2..moveNext()).current,
-                        (valueIterator3..moveNext()).current));
+                        (valueIterator3..moveNext()).current,
+                        1));
                 break;
               case 3:
                 value4 = new Float32x4(
                     ternaryOperation(
                         (valueIterator1..moveNext()).current,
                         (valueIterator2..moveNext()).current,
-                        (valueIterator3..moveNext()).current),
+                        (valueIterator3..moveNext()).current,
+                        1),
                     ternaryOperation(
                         (valueIterator1..moveNext()).current,
                         (valueIterator2..moveNext()).current,
-                        (valueIterator3..moveNext()).current),
+                        (valueIterator3..moveNext()).current,
+                        1),
                     ternaryOperation(
                         (valueIterator1..moveNext()).current,
                         (valueIterator2..moveNext()).current,
-                        (valueIterator3..moveNext()).current),
+                        (valueIterator3..moveNext()).current,
+                        1),
                     0.0);
                 break;
               case 2:
@@ -1004,11 +876,13 @@ class NDArrayBlockedImpl extends NDArrayBase {
                     ternaryOperation(
                         (valueIterator1..moveNext()).current,
                         (valueIterator2..moveNext()).current,
-                        (valueIterator3..moveNext()).current),
+                        (valueIterator3..moveNext()).current,
+                        1),
                     ternaryOperation(
                         (valueIterator1..moveNext()).current,
                         (valueIterator2..moveNext()).current,
-                        (valueIterator3..moveNext()).current),
+                        (valueIterator3..moveNext()).current,
+                        1),
                     0.0,
                     0.0);
                 break;
@@ -1017,7 +891,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
                     ternaryOperation(
                         (valueIterator1..moveNext()).current,
                         (valueIterator2..moveNext()).current,
-                        (valueIterator3..moveNext()).current),
+                        (valueIterator3..moveNext()).current,
+                        1),
                     0.0,
                     0.0,
                     0.0);
@@ -1068,277 +943,143 @@ class NDArrayBlockedImpl extends NDArrayBase {
     print(data);
   }
 
-  void _transposeData(
-      NDArrayBlockedImpl sourceArray,
-      List<int> permutationAxis,
-      Float32x4List resultData,
-      NDDescriptor resultDescriptor,
-      DataInfo resultDataInfo) {
-    var dimension1s = sourceArray.dataType.isHBlocked
-        ? sourceArray.dataInfo.blockRows
-        : sourceArray.dataInfo.blockColumns;
-    var dimension2s = sourceArray.dataType.isHBlocked
-        ? sourceArray.dataInfo.blockColumns
-        : sourceArray.dataInfo.blockRows;
+  @override
+  NDArray abs({NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.abs(), reuse, (Float32x4 value, valueCount) => value.abs());
 
-    var newPermutationAxis =
-        permutationAxis.sublist(0, permutationAxis.length - 2);
-
-    var sourceStride = permute(sourceArray.dataInfo.stride, newPermutationAxis);
-    var sourceDimensions =
-        permute(sourceArray.dataInfo.dimensions, newPermutationAxis);
-
-    var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
-    var sourceDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
-    var targetDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
-
-    dimensionIndexes[0] = 0;
-    sourceDataIndexes[0] = 0;
-    targetDataIndexes[0] = 0;
-
-    var shapeIndex = 0;
-    var sourceDataIndex = 0;
-    var targetDataIndex = 0;
-
-    for (;;) {
-      if (dimensionIndexes[shapeIndex] < sourceDimensions[shapeIndex]) {
-        if (shapeIndex < resultDescriptor.shape.dimensionCount - 2) {
-          sourceDataIndex = sourceDataIndexes[shapeIndex];
-          targetDataIndex = targetDataIndexes[shapeIndex];
-
-          shapeIndex++;
-
-          dimensionIndexes[shapeIndex] = 0;
-          sourceDataIndexes[shapeIndex] = sourceDataIndex;
-          targetDataIndexes[shapeIndex] = targetDataIndex;
-
-          continue;
-        } else {
-          for (var dimension1 = 0; dimension1 < dimension1s; dimension1++) {
-            for (var dimension2 = 0; dimension2 < dimension2s; dimension2++) {
-              resultData[targetDataIndex++] =
-                  sourceArray.data[sourceDataIndex++];
-              resultData[targetDataIndex++] =
-                  sourceArray.data[sourceDataIndex++];
-              resultData[targetDataIndex++] =
-                  sourceArray.data[sourceDataIndex++];
-              resultData[targetDataIndex++] =
-                  sourceArray.data[sourceDataIndex++];
-            }
-          }
-
-          shapeIndex--;
+  @override
+  NDArray exp({NDArray reuse}) =>
+      elementWiseUnaryOperationInternal(descriptor.exp(), reuse,
+          (Float32x4 value, valueCount) {
+        switch (valueCount) {
+          case 4:
+            return new Float32x4(math.exp(value.x), math.exp(value.y),
+                math.exp(value.z), math.exp(value.w));
+          case 3:
+            return new Float32x4(
+                math.exp(value.x), math.exp(value.y), math.exp(value.z), 0.0);
+          case 2:
+            return new Float32x4(
+                math.exp(value.x), math.exp(value.y), 0.0, 0.0);
+          case 1:
+            return new Float32x4(math.exp(value.x), 0.0, 0.0, 0.0);
         }
-      } else {
-        shapeIndex--;
-      }
+      });
 
-      if (shapeIndex >= 0) {
-        dimensionIndexes[shapeIndex]++;
-        sourceDataIndexes[shapeIndex] += sourceStride[shapeIndex];
-        targetDataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
-        sourceDataIndex = sourceDataIndexes[shapeIndex];
-        targetDataIndex = targetDataIndexes[shapeIndex];
-      } else {
-        break;
-      }
-    }
+  @override
+  NDArray log({NDArray reuse}) =>
+      elementWiseUnaryOperationInternal(descriptor.log(), reuse,
+          (Float32x4 value, valueCount) {
+        switch (valueCount) {
+          case 4:
+            return new Float32x4(math.log(value.x), math.log(value.y),
+                math.log(value.z), math.log(value.w));
+          case 3:
+            return new Float32x4(
+                math.log(value.x), math.log(value.y), math.log(value.z), 0.0);
+          case 2:
+            return new Float32x4(
+                math.log(value.x), math.log(value.y), 0.0, 0.0);
+          case 1:
+            return new Float32x4(math.log(value.x), 0.0, 0.0, 0.0);
+        }
+      });
+
+  @override
+  NDArray neg({NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.neg(), reuse, (value, valueCount) => -value);
+
+  @override
+  NDArray not({NDArray reuse}) {
+    // TODO gestire i booleani
+
+    descriptor.not();
+
+    throw new StateError("DEAD CODE");
   }
 
-  void _transposeSwitchedData(
-      NDArrayBlockedImpl sourceArray,
-      List<int> permutationAxis,
-      Float32x4List resultData,
-      NDDescriptor resultDescriptor,
-      DataInfo resultDataInfo) {
-    var dimension1s = sourceArray.dataType.isHBlocked
-        ? sourceArray.dataInfo.blockRows
-        : sourceArray.dataInfo.blockColumns;
-    var dimension2s = sourceArray.dataType.isHBlocked
-        ? sourceArray.dataInfo.blockColumns
-        : sourceArray.dataInfo.blockRows;
+  @override
+  NDArray reciprocal({NDArray reuse}) =>
+      elementWiseUnaryOperationInternal(descriptor.reciprocal(), reuse,
+          (Float32x4 value, valueCount) {
+        var reciprocalValue = value.reciprocal();
 
-    var delta1 = (dimension1s - 1) << resultDescriptor.dataType.blockDepth;
-
-    var delta2 =
-        resultDescriptor.dataType.blockSize - dataInfo.matrixDataLength;
-
-    var newPermutationAxis =
-        permutationAxis.sublist(0, permutationAxis.length - 2);
-
-    var sourceStride = permute(sourceArray.dataInfo.stride, newPermutationAxis);
-    var sourceDimensions =
-        permute(sourceArray.dataInfo.dimensions, newPermutationAxis);
-
-    var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
-    var sourceDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
-    var targetDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
-
-    dimensionIndexes[0] = 0;
-    sourceDataIndexes[0] = 0;
-    targetDataIndexes[0] = 0;
-
-    var shapeIndex = 0;
-    var sourceDataIndex = 0;
-    var targetDataIndex = 0;
-
-    for (;;) {
-      if (dimensionIndexes[shapeIndex] < sourceDimensions[shapeIndex]) {
-        if (shapeIndex < resultDescriptor.shape.dimensionCount - 2) {
-          sourceDataIndex = sourceDataIndexes[shapeIndex];
-          targetDataIndex = targetDataIndexes[shapeIndex];
-
-          shapeIndex++;
-
-          dimensionIndexes[shapeIndex] = 0;
-          sourceDataIndexes[shapeIndex] = sourceDataIndex;
-          targetDataIndexes[shapeIndex] = targetDataIndex;
-
-          continue;
-        } else {
-          for (var dimension1 = 0; dimension1 < dimension1s; dimension1++) {
-            for (var dimension2 = 0; dimension2 < dimension2s; dimension2++) {
-              var a0 = sourceArray.data[sourceDataIndex++];
-              var a1 = sourceArray.data[sourceDataIndex++];
-              var a2 = sourceArray.data[sourceDataIndex++];
-              var a3 = sourceArray.data[sourceDataIndex++];
-
-              resultData[targetDataIndex++] =
-                  new Float32x4(a0.x, a1.x, a2.x, a3.x);
-              resultData[targetDataIndex++] =
-                  new Float32x4(a0.y, a1.y, a2.y, a3.y);
-              resultData[targetDataIndex++] =
-                  new Float32x4(a0.z, a1.z, a2.z, a3.z);
-              resultData[targetDataIndex++] =
-                  new Float32x4(a0.w, a1.w, a2.w, a3.w);
-
-              targetDataIndex += delta1;
-            }
-
-            targetDataIndex += delta2;
-          }
-
-          shapeIndex--;
+        switch (valueCount) {
+          case 4:
+            return reciprocalValue;
+          case 3:
+            return new Float32x4(
+                reciprocalValue.x, reciprocalValue.y, reciprocalValue.z, 0.0);
+          case 2:
+            return new Float32x4(
+                reciprocalValue.x, reciprocalValue.y, 0.0, 0.0);
+          case 1:
+            return new Float32x4(reciprocalValue.x, 0.0, 0.0, 0.0);
         }
-      } else {
-        shapeIndex--;
-      }
+      });
 
-      if (shapeIndex >= 0) {
-        dimensionIndexes[shapeIndex]++;
-        sourceDataIndexes[shapeIndex] += sourceStride[shapeIndex];
-        targetDataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
-        sourceDataIndex = sourceDataIndexes[shapeIndex];
-        targetDataIndex = targetDataIndexes[shapeIndex];
-      } else {
-        break;
-      }
-    }
+  @override
+  NDArray sign({NDArray reuse}) {
+    // TODO gestire gli interi
+
+    descriptor.sign();
+
+    throw new StateError("DEAD CODE");
   }
-}
 
-void _tileData(NDArrayBlockedImpl fromArray, List resultData,
-    NDDescriptor resultDescriptor, DataInfo resultDataInfo) {
-  var dimensionIndexes =
-      new List(resultDataInfo.internalShape.dimensionCount - 1);
-  var dataIndexes = new List(resultDataInfo.internalShape.dimensionCount - 1);
+  @override
+  NDArray add(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
 
-  dimensionIndexes[0] = 0;
-  dataIndexes[0] = 0;
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.add(array2.descriptor),
+        reuse,
+        (Float32x4 value1, Float32x4 value2, valueCount) => value1 + value2);
+  }
 
-  var shapeIndex = 0;
-  var dataIndex = 0;
+  @override
+  NDArray sub(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
 
-  var valueIterable =
-      _createTiledValueIterable(fromArray, resultDescriptor, resultDataInfo);
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.sub(array2.descriptor),
+        reuse,
+        (Float32x4 value1, Float32x4 value2, valueCount) => value1 - value2);
+  }
 
-  var valueIterator = valueIterable.iterator;
+  @override
+  NDArray mul(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
 
-  for (;;) {
-    if (dimensionIndexes[shapeIndex] <
-        resultDataInfo.internalShape[shapeIndex]) {
-      if (shapeIndex < resultDataInfo.internalShape.dimensionCount - 2) {
-        dataIndex = dataIndexes[shapeIndex];
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.mul(array2.descriptor),
+        reuse,
+        (Float32x4 value1, Float32x4 value2, valueCount) => value1 * value2);
+  }
 
-        shapeIndex++;
+  @override
+  NDArray div(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
 
-        dimensionIndexes[shapeIndex] = 0;
+    return elementWiseBinaryOperationInternal(
+        array2, descriptor.div(array2.descriptor), reuse,
+        (Float32x4 value1, Float32x4 value2, valueCount) {
+      var divValue = value1 / value2;
 
-        dataIndexes[shapeIndex] = dataIndex;
-
-        continue;
-      } else {
-        for (var row = 0; row < resultDataInfo.rows; row++) {
-          var column;
-          for (column = 0;
-              column <
-                  resultDataInfo.dataColumns -
-                      resultDescriptor.dataType.blockSize;
-              column += resultDescriptor.dataType.blockSize) {
-            var value4 = new Float32x4(
-                (valueIterator..moveNext()).current,
-                (valueIterator..moveNext()).current,
-                (valueIterator..moveNext()).current,
-                (valueIterator..moveNext()).current);
-
-            resultData[dataIndex] = value4;
-
-            dataIndex += resultDataInfo.delta1;
-          }
-
-          var value4;
-          switch (resultDataInfo.lastBlockColumnCount) {
-            case 4:
-              value4 = new Float32x4(
-                  (valueIterator..moveNext()).current,
-                  (valueIterator..moveNext()).current,
-                  (valueIterator..moveNext()).current,
-                  (valueIterator..moveNext()).current);
-              break;
-            case 3:
-              value4 = new Float32x4(
-                  (valueIterator..moveNext()).current,
-                  (valueIterator..moveNext()).current,
-                  (valueIterator..moveNext()).current,
-                  0.0);
-              break;
-            case 2:
-              value4 = new Float32x4((valueIterator..moveNext()).current,
-                  (valueIterator..moveNext()).current, 0.0, 0.0);
-              break;
-            case 1:
-              value4 = new Float32x4(
-                  (valueIterator..moveNext()).current, 0.0, 0.0, 0.0);
-              break;
-          }
-
-          resultData[dataIndex] = value4;
-
-          dataIndex += resultDataInfo.delta1;
-
-          if (row & (resultDescriptor.dataType.blockSize - 1) <
-              resultDescriptor.dataType.blockSize - 1) {
-            dataIndex += resultDataInfo.delta2;
-          } else {
-            dataIndex += resultDataInfo.delta3;
-          }
-        }
-
-        shapeIndex--;
+      switch (valueCount) {
+        case 4:
+          return divValue;
+        case 3:
+          return new Float32x4(divValue.x, divValue.y, divValue.z, 0.0);
+        case 2:
+          return new Float32x4(divValue.x, divValue.y, 0.0, 0.0);
+        case 1:
+          return new Float32x4(divValue.x, 0.0, 0.0, 0.0);
       }
-    } else {
-      shapeIndex--;
-    }
-
-    if (shapeIndex >= 0) {
-      dimensionIndexes[shapeIndex]++;
-
-      dataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
-
-      dataIndex = dataIndexes[shapeIndex];
-    } else {
-      break;
-    }
+    });
   }
 }
 
@@ -1411,46 +1152,18 @@ class DataInfo {
         ? descriptor.dataType.blockSize
         : lastBlockColumnOffset;
 
-    var delta1;
-    if (descriptor.dataType.isHBlocked) {
-      delta1 = descriptor.dataType.blockSize;
-    } else {
-      delta1 = dataRows;
-    }
-
-    var delta2;
-    if (descriptor.dataType.isHBlocked) {
-      delta2 = 1 - dataColumns;
-    } else {
-      delta2 = 1 - matrixDataLength;
-    }
-
-    var delta3;
-    if (descriptor.dataType.isHBlocked) {
-      delta3 = 1 - descriptor.dataType.blockSize;
-    } else {
-      delta3 = delta2;
-    }
+    var delta1 = dataRows;
+    var delta2 = 1 - matrixDataLength;
+    var delta3 = delta2;
 
     List<int> dimensions = new List.from(
         internalShape.dimensions.sublist(0, internalShape.dimensionCount - 2));
 
-    var rowIndex;
-    var columnIndex;
-
-    if (descriptor.dataType.isHBlocked) {
-      rowIndex = dimensions.length;
-      dimensions.add(blockRows);
-      columnIndex = dimensions.length;
-      dimensions.add(blockColumns);
-      dimensions.add(descriptor.dataType.blockSize);
-    } else {
-      columnIndex = dimensions.length;
-      dimensions.add(blockColumns);
-      rowIndex = dimensions.length;
-      dimensions.add(blockRows);
-      dimensions.add(descriptor.dataType.blockSize);
-    }
+    var columnIndex = dimensions.length;
+    dimensions.add(blockColumns);
+    var rowIndex = dimensions.length;
+    dimensions.add(blockRows);
+    dimensions.add(descriptor.dataType.blockSize);
 
     List<int> stride = new List(dimensions.length);
     var factor = 1;
@@ -1539,6 +1252,8 @@ class DataInfo {
 }
 
 Iterable<num> _createValueIterable(NDArrayBlockedImpl array) sync* {
+  assert(debug("_createValueIterable(${array.shape})"));
+
   var dimensionIndexes =
       new List(array.dataInfo.internalShape.dimensionCount - 1);
   var dataIndexes = new List(array.dataInfo.internalShape.dimensionCount - 1);
@@ -1548,6 +1263,8 @@ Iterable<num> _createValueIterable(NDArrayBlockedImpl array) sync* {
 
   var shapeIndex = 0;
   var dataIndex = 0;
+
+  var lastColumnIndex = array.dataInfo.dataColumns - array.dataType.blockSize;
 
   for (;;) {
     if (dimensionIndexes[shapeIndex] <
@@ -1566,7 +1283,7 @@ Iterable<num> _createValueIterable(NDArrayBlockedImpl array) sync* {
         for (var row = 0; row < array.dataInfo.rows; row++) {
           var column;
           for (column = 0;
-              column < array.dataInfo.dataColumns - array.dataType.blockSize;
+              column < lastColumnIndex;
               column += array.dataType.blockSize) {
             var value4 = array.data[dataIndex];
 
@@ -1657,6 +1374,9 @@ Iterable<num> _createHeadBroadCastedValueIterable(
     NDArrayBlockedImpl sourceArray,
     NDDescriptor resultDescriptor,
     DataInfo resultDataInfo) sync* {
+  assert(debug(
+      "_createHeadBroadCastedValueIterable(${sourceArray.shape}, resultDescriptor: ${resultDescriptor.shape})"));
+
   var broadcastedShape;
   var multiplier;
 
@@ -1670,6 +1390,9 @@ Iterable<num> _createHeadBroadCastedValueIterable(
     broadcastedShape = resultDescriptor.shape;
     multiplier = 1;
   }
+
+  var lastColumnIndex =
+      sourceArray.dataInfo.dataColumns - sourceArray.dataType.blockSize;
 
   for (var iteration = 0; iteration < multiplier; iteration++) {
     var dimensionIndexes =
@@ -1708,9 +1431,7 @@ Iterable<num> _createHeadBroadCastedValueIterable(
           for (var row = 0; row < sourceArray.dataInfo.rows; row++) {
             var column;
             for (column = 0;
-                column <
-                    sourceArray.dataInfo.dataColumns -
-                        sourceArray.dataType.blockSize;
+                column < lastColumnIndex;
                 column += sourceArray.dataType.blockSize) {
               var value4 = sourceArray.data[dataIndex];
 
@@ -1789,6 +1510,9 @@ Iterable<num> _createFullBroadCastedValueIterable(
     NDArrayBlockedImpl sourceArray,
     NDDescriptor resultDescriptor,
     DataInfo resultDataInfo) sync* {
+  assert(debug(
+      "_createFullBroadCastedValueIterable(${sourceArray.shape}, resultDescriptor: ${resultDescriptor.shape})"));
+
   var broadcastedShape;
   var multiplier;
 
@@ -1802,6 +1526,15 @@ Iterable<num> _createFullBroadCastedValueIterable(
     broadcastedShape = resultDataInfo.internalShape;
     multiplier = 1;
   }
+
+  var rowsMultiplier = broadcastedShape[broadcastedShape.dimensionCount - 2] ~/
+      sourceArray.dataInfo.rows;
+  var columnsMultiplier =
+      broadcastedShape[broadcastedShape.dimensionCount - 1] ~/
+          sourceArray.dataInfo.columns;
+
+  var lastColumnIndex =
+      sourceArray.dataInfo.dataColumns - sourceArray.dataType.blockSize;
 
   for (var iteration = 0; iteration < multiplier; iteration++) {
     var dimensionIndexes =
@@ -1820,13 +1553,6 @@ Iterable<num> _createFullBroadCastedValueIterable(
 
     var shapeIndex = 0;
     var dataIndex = 0;
-
-    var rowsMultiplier =
-        broadcastedShape[broadcastedShape.dimensionCount - 2] ~/
-            sourceArray.dataInfo.rows;
-    var columnsMultiplier =
-        broadcastedShape[broadcastedShape.dimensionCount - 1] ~/
-            sourceArray.dataInfo.columns;
 
     for (;;) {
       if (dimensionIndexes[shapeIndex] < broadcastedShape[shapeIndex]) {
@@ -1858,9 +1584,7 @@ Iterable<num> _createFullBroadCastedValueIterable(
                   columnIteration++) {
                 var column;
                 for (column = 0;
-                    column <
-                        sourceArray.dataInfo.dataColumns -
-                            sourceArray.dataType.blockSize;
+                    column < lastColumnIndex;
                     column += sourceArray.dataType.blockSize) {
                   var value4 = sourceArray.data[dataIndex];
 
@@ -1965,6 +1689,9 @@ Iterable<num> _createTiledValueIterable(NDArrayBlockedImpl sourceArray,
 
 Iterable<num> _createHeadTiledValueIterable(NDArrayBlockedImpl sourceArray,
     NDDescriptor resultDescriptor, DataInfo resultDataInfo) sync* {
+  assert(debug(
+      "_createHeadTiledValueIterable(${sourceArray.shape}, resultDescriptor: ${resultDescriptor.shape})"));
+
   var dimensionIndexes =
       new List(sourceArray.dataInfo.internalShape.dimensionCount - 1);
   var sourceDimensionIndexes =
@@ -1981,6 +1708,9 @@ Iterable<num> _createHeadTiledValueIterable(NDArrayBlockedImpl sourceArray,
 
   var shapeIndex = 0;
   var dataIndex = 0;
+
+  var lastColumnIndex =
+      sourceArray.dataInfo.dataColumns - sourceArray.dataType.blockSize;
 
   for (;;) {
     if (dimensionIndexes[shapeIndex] <
@@ -2001,9 +1731,7 @@ Iterable<num> _createHeadTiledValueIterable(NDArrayBlockedImpl sourceArray,
         for (var row = 0; row < sourceArray.dataInfo.rows; row++) {
           var column;
           for (column = 0;
-              column <
-                  sourceArray.dataInfo.dataColumns -
-                      sourceArray.dataType.blockSize;
+              column < lastColumnIndex;
               column += sourceArray.dataType.blockSize) {
             var value4 = sourceArray.data[dataIndex];
 
@@ -2079,6 +1807,9 @@ Iterable<num> _createHeadTiledValueIterable(NDArrayBlockedImpl sourceArray,
 
 Iterable<num> _createFullTiledValueIterable(NDArrayBlockedImpl sourceArray,
     NDDescriptor resultDescriptor, DataInfo resultDataInfo) sync* {
+  assert(debug(
+      "_createFullTiledValueIterable(${sourceArray.shape}, resultDescriptor: ${resultDescriptor.shape})"));
+
   var dimensionIndexes =
       new List(sourceArray.dataInfo.internalShape.dimensionCount - 1);
   var sourceDimensionIndexes =
@@ -2102,6 +1833,9 @@ Iterable<num> _createFullTiledValueIterable(NDArrayBlockedImpl sourceArray,
   var columnsMultiplier = resultDataInfo
           .internalShape[resultDataInfo.internalShape.dimensionCount - 1] ~/
       sourceArray.dataInfo.columns;
+
+  var lastColumnIndex =
+      sourceArray.dataInfo.dataColumns - sourceArray.dataType.blockSize;
 
   for (;;) {
     if (dimensionIndexes[shapeIndex] <
@@ -2133,9 +1867,7 @@ Iterable<num> _createFullTiledValueIterable(NDArrayBlockedImpl sourceArray,
                 columnIteration++) {
               var column;
               for (column = 0;
-                  column <
-                      sourceArray.dataInfo.dataColumns -
-                          sourceArray.dataType.blockSize;
+                  column < lastColumnIndex;
                   column += sourceArray.dataType.blockSize) {
                 var value4 = sourceArray.data[dataIndex];
 
@@ -2228,18 +1960,20 @@ List _createData(
   if (reuse != null && reuse.descriptor == descriptor) {
     return reuse.data;
   } else {
-    switch (descriptor.dataType) {
-      case NDDataType.float32HBlocked:
-      case NDDataType.float32VBlocked:
-        return new Float32x4List(dataInfo.dataLength);
-      default:
-        throw new StateError("DEAD CODE");
+    assert(debug("_createData(${descriptor.shape})"));
+
+    if (descriptor.dataType == NDDataType.float32VBlocked) {
+      return new Float32x4List(dataInfo.dataLength);
+    } else {
+      throw new StateError("DEAD CODE");
     }
   }
 }
 
 void _loadData(
     value, Float32x4List data, NDDescriptor descriptor, DataInfo dataInfo) {
+  assert(debug("_loadData(${descriptor.shape})"));
+
   var newValue = descriptor.shape.dimensionCount > 1
       ? value
       : (descriptor.shape.dimensionCount == 1
@@ -2259,6 +1993,8 @@ void _loadData(
 
   var shapeIndex = 0;
   var dataIndex = 0;
+
+  var lastColumnIndex = dataInfo.dataColumns - descriptor.dataType.blockSize;
 
   for (;;) {
     if (dimensionIndexes[shapeIndex] < dataInfo.internalShape[shapeIndex]) {
@@ -2282,7 +2018,7 @@ void _loadData(
 
           var column;
           for (column = 0;
-              column < dataInfo.dataColumns - descriptor.dataType.blockSize;
+              column < lastColumnIndex;
               column += descriptor.dataType.blockSize) {
             var value4 = new Float32x4(
                 rowValues[column].toDouble(),
@@ -2362,6 +2098,8 @@ void _generateData(generator(int index), Float32x4List data,
   var shapeIndex = 0;
   var dataIndex = 0;
 
+  var lastColumnIndex = dataInfo.dataColumns - descriptor.dataType.blockSize;
+
   for (;;) {
     if (dimensionIndexes[shapeIndex] < dataInfo.internalShape[shapeIndex]) {
       if (shapeIndex < dataInfo.internalShape.dimensionCount - 2) {
@@ -2377,7 +2115,7 @@ void _generateData(generator(int index), Float32x4List data,
         for (var row = 0; row < dataInfo.rows; row++) {
           var column;
           for (column = 0;
-              column < dataInfo.dataColumns - descriptor.dataType.blockSize;
+              column < lastColumnIndex;
               column += descriptor.dataType.blockSize) {
             var value4 = new Float32x4(
                 generator(i).toDouble(),
@@ -2449,62 +2187,13 @@ void _generateData(generator(int index), Float32x4List data,
 
 void _castData(NDArrayBase fromArray, List data, NDDescriptor descriptor,
     DataInfo dataInfo) {
-  if (fromArray.dataType.isHBlocked && descriptor.dataType.isVBlocked) {
-    _castBlockedData(fromArray, data, descriptor, dataInfo);
-  } else if (fromArray.dataType.isVBlocked && descriptor.dataType.isHBlocked) {
-    _castBlockedData(fromArray, data, descriptor, dataInfo);
-  } else if (fromArray.dataType.isFloat && descriptor.dataType.isFloat) {
+  if (fromArray.dataType.isFloat && descriptor.dataType.isFloat) {
     _castFromFloatData(fromArray, data, descriptor, dataInfo);
   } else if (fromArray.dataType.isInteger && descriptor.dataType.isFloat) {
     _castFromIntData(fromArray, data, descriptor, dataInfo);
   } else {
     throw new UnsupportedError(
         "Cast from ${fromArray.dataType} to ${descriptor.dataType}");
-  }
-}
-
-void _castBlockedData(NDArrayBlockedImpl fromArray, List resultData,
-    NDDescriptor resultDescriptor, DataInfo resultDataInfo) {
-  var multiplier;
-  if (resultDataInfo.internalShape.dimensionCount > 2) {
-    multiplier = resultDataInfo.internalShape.length ~/
-        (resultDataInfo.rows * resultDataInfo.columns);
-  } else {
-    multiplier = 1;
-  }
-
-  var dimension1s = fromArray.dataType.isHBlocked
-      ? resultDataInfo.blockRows
-      : resultDataInfo.blockColumns;
-  var dimension2s = fromArray.dataType.isHBlocked
-      ? resultDataInfo.blockColumns
-      : resultDataInfo.blockRows;
-
-  var delta1 = (dimension1s - 1) << resultDescriptor.dataType.blockDepth;
-
-  var delta2 =
-      resultDescriptor.dataType.blockSize - resultDataInfo.matrixDataLength;
-
-  var delta3 = -(delta1 + delta2);
-
-  var sourceDataIndex = 0;
-  var targetDataIndex = 0;
-
-  for (var iteration = 0; iteration < multiplier; iteration++) {
-    for (var dimension1 = 0; dimension1 < dimension1s; dimension1++) {
-      for (var dimension2 = 0; dimension2 < dimension2s; dimension2++) {
-        resultData[targetDataIndex++] = fromArray.data[sourceDataIndex++];
-        resultData[targetDataIndex++] = fromArray.data[sourceDataIndex++];
-        resultData[targetDataIndex++] = fromArray.data[sourceDataIndex++];
-        resultData[targetDataIndex++] = fromArray.data[sourceDataIndex++];
-
-        targetDataIndex += delta1;
-      }
-
-      targetDataIndex += delta2;
-    }
-
-    targetDataIndex += delta3;
   }
 }
 
@@ -2535,12 +2224,13 @@ void _castFromFloatData(NDArrayBase fromArray, List resultData,
 
         continue;
       } else {
+        var lastColumnIndex =
+            resultDataInfo.dataColumns - resultDescriptor.dataType.blockSize;
+
         for (var row = 0; row < resultDataInfo.rows; row++) {
           var column;
           for (column = 0;
-              column <
-                  resultDataInfo.dataColumns -
-                      resultDescriptor.dataType.blockSize;
+              column < lastColumnIndex;
               column += resultDescriptor.dataType.blockSize) {
             var value4 = new Float32x4(
                 (valueIterator..moveNext()).current,
@@ -2622,6 +2312,9 @@ void _castFromIntData(NDArrayBase fromArray, List resultData,
   var shapeIndex = 0;
   var dataIndex = 0;
 
+  var lastColumnIndex =
+      resultDataInfo.dataColumns - resultDescriptor.dataType.blockSize;
+
   for (;;) {
     if (dimensionIndexes[shapeIndex] <
         resultDataInfo.internalShape[shapeIndex]) {
@@ -2639,9 +2332,7 @@ void _castFromIntData(NDArrayBase fromArray, List resultData,
         for (var row = 0; row < resultDataInfo.rows; row++) {
           var column;
           for (column = 0;
-              column <
-                  resultDataInfo.dataColumns -
-                      resultDescriptor.dataType.blockSize;
+              column < lastColumnIndex;
               column += resultDescriptor.dataType.blockSize) {
             var value4 = new Float32x4(
                 (valueIterator..moveNext()).current.toDouble(),
@@ -2718,158 +2409,89 @@ void _castFromIntData(NDArrayBase fromArray, List resultData,
 
 void _matMulData(NDArrayBlockedImpl array1, NDArrayBlockedImpl array2,
     List resultData, NDDescriptor resultDescriptor, DataInfo resultDataInfo) {
-  var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
-  var sourceDataIndexes1 = new List(resultDescriptor.shape.dimensionCount - 1);
-  var sourceDataIndexes2 = new List(resultDescriptor.shape.dimensionCount - 1);
-  var targetDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var multiplier;
+  if (resultDataInfo.internalShape.dimensionCount > 2) {
+    multiplier = resultDataInfo.internalShape.length ~/
+        (resultDataInfo.rows * resultDataInfo.columns);
+  } else {
+    multiplier = 1;
+  }
 
-  dimensionIndexes[0] = 0;
-  sourceDataIndexes1[0] = 0;
-  sourceDataIndexes2[0] = 0;
-  targetDataIndexes[0] = 0;
+  var delta1 = (array1.dataInfo.blockRows - 1) << array1.dataType.blockDepth;
 
-  var shapeIndex = 0;
+  var delta2 = array1.dataType.blockSize - array1.dataInfo.matrixDataLength;
+
+  var delta3 = -(delta1 + delta2);
+
   var sourceDataIndex1 = 0;
   var sourceDataIndex2 = 0;
   var targetDataIndex = 0;
 
-  for (;;) {
-    if (dimensionIndexes[shapeIndex] < resultDescriptor.shape[shapeIndex]) {
-      if (shapeIndex < resultDescriptor.shape.dimensionCount - 2) {
-        sourceDataIndex1 = sourceDataIndexes1[shapeIndex];
-        sourceDataIndex2 = sourceDataIndexes2[shapeIndex];
-        targetDataIndex = targetDataIndexes[shapeIndex];
+  for (var iteration = 0; iteration < multiplier; iteration++) {
+    var initialSourceDataIndex1 = sourceDataIndex1;
 
-        shapeIndex++;
+    for (var column2 = 0;
+        column2 < array2.dataInfo.dataColumns;
+        column2 += array2.dataType.blockSize) {
+      var initialSourceDataIndex2 = sourceDataIndex2;
 
-        dimensionIndexes[shapeIndex] = 0;
+      sourceDataIndex1 = initialSourceDataIndex1;
 
-        sourceDataIndexes1[shapeIndex] = sourceDataIndex1;
-        sourceDataIndexes2[shapeIndex] = sourceDataIndex2;
-        targetDataIndexes[shapeIndex] = targetDataIndex;
+      for (var row1 = 0;
+          row1 < array1.dataInfo.dataRows;
+          row1 += array1.dataType.blockSize) {
+        sourceDataIndex2 = initialSourceDataIndex2;
 
-        continue;
-      } else {
-        var initialSourceDataIndex2 = sourceDataIndex2;
+        var result0 = _zero;
+        var result1 = _zero;
+        var result2 = _zero;
+        var result3 = _zero;
 
-        for (var row1 = 0;
-            row1 < array1.dataInfo.dataRows;
-            row1 += array1.dataType.blockSize) {
-          var initialSourceDataIndex1 = sourceDataIndex1;
+        for (var i = 0;
+            i < array1.dataInfo.dataColumns;
+            i += array1.dataType.blockSize) {
+          var b0 = array2.data[sourceDataIndex2++];
+          var b1 = array2.data[sourceDataIndex2++];
+          var b2 = array2.data[sourceDataIndex2++];
+          var b3 = array2.data[sourceDataIndex2++];
 
-          sourceDataIndex2 = initialSourceDataIndex2;
+          var a0 = array1.data[sourceDataIndex1++];
+          result0 += a0.shuffle(Float32x4.XXXX) * b0 +
+              a0.shuffle(Float32x4.YYYY) * b1 +
+              a0.shuffle(Float32x4.ZZZZ) * b2 +
+              a0.shuffle(Float32x4.WWWW) * b3;
 
-          for (var column2 = 0;
-              column2 < array2.dataInfo.dataColumns;
-              column2 += array2.dataType.blockSize) {
-            sourceDataIndex1 = initialSourceDataIndex1;
+          var a1 = array1.data[sourceDataIndex1++];
+          result1 += a1.shuffle(Float32x4.XXXX) * b0 +
+              a1.shuffle(Float32x4.YYYY) * b1 +
+              a1.shuffle(Float32x4.ZZZZ) * b2 +
+              a1.shuffle(Float32x4.WWWW) * b3;
 
-            var result0 = _zero;
-            var result1 = _zero;
-            var result2 = _zero;
-            var result3 = _zero;
+          var a2 = array1.data[sourceDataIndex1++];
+          result2 += a2.shuffle(Float32x4.XXXX) * b0 +
+              a2.shuffle(Float32x4.YYYY) * b1 +
+              a2.shuffle(Float32x4.ZZZZ) * b2 +
+              a2.shuffle(Float32x4.WWWW) * b3;
 
-            for (var i = 0;
-                i < array1.dataInfo.dataColumns;
-                i += array1.dataType.blockSize) {
-              var b0 = array2.data[sourceDataIndex2++];
-              var b1 = array2.data[sourceDataIndex2++];
-              var b2 = array2.data[sourceDataIndex2++];
-              var b3 = array2.data[sourceDataIndex2++];
+          var a3 = array1.data[sourceDataIndex1++];
+          result3 += a3.shuffle(Float32x4.XXXX) * b0 +
+              a3.shuffle(Float32x4.YYYY) * b1 +
+              a3.shuffle(Float32x4.ZZZZ) * b2 +
+              a3.shuffle(Float32x4.WWWW) * b3;
 
-              var a0 = array1.data[sourceDataIndex1++];
-              result0 += a0.shuffle(Float32x4.XXXX) * b0 +
-                  a0.shuffle(Float32x4.YYYY) * b1 +
-                  a0.shuffle(Float32x4.ZZZZ) * b2 +
-                  a0.shuffle(Float32x4.WWWW) * b3;
-
-              var a1 = array1.data[sourceDataIndex1++];
-              result1 += a1.shuffle(Float32x4.XXXX) * b0 +
-                  a1.shuffle(Float32x4.YYYY) * b1 +
-                  a1.shuffle(Float32x4.ZZZZ) * b2 +
-                  a1.shuffle(Float32x4.WWWW) * b3;
-
-              var a2 = array1.data[sourceDataIndex1++];
-              result2 += a2.shuffle(Float32x4.XXXX) * b0 +
-                  a2.shuffle(Float32x4.YYYY) * b1 +
-                  a2.shuffle(Float32x4.ZZZZ) * b2 +
-                  a2.shuffle(Float32x4.WWWW) * b3;
-
-              var a3 = array1.data[sourceDataIndex1++];
-              result3 += a3.shuffle(Float32x4.XXXX) * b0 +
-                  a3.shuffle(Float32x4.YYYY) * b1 +
-                  a3.shuffle(Float32x4.ZZZZ) * b2 +
-                  a3.shuffle(Float32x4.WWWW) * b3;
-            }
-
-            resultData[targetDataIndex++] = result0;
-            resultData[targetDataIndex++] = result1;
-            resultData[targetDataIndex++] = result2;
-            resultData[targetDataIndex++] = result3;
-          }
+          sourceDataIndex1 += delta1;
         }
 
-        shapeIndex--;
+        resultData[targetDataIndex++] = result0;
+        resultData[targetDataIndex++] = result1;
+        resultData[targetDataIndex++] = result2;
+        resultData[targetDataIndex++] = result3;
+
+        sourceDataIndex1 += delta2;
       }
-    } else {
-      shapeIndex--;
     }
 
-    if (shapeIndex >= 0) {
-      dimensionIndexes[shapeIndex]++;
-
-      sourceDataIndexes1[shapeIndex] += array1.dataInfo.stride[shapeIndex];
-      sourceDataIndexes2[shapeIndex] += array2.dataInfo.stride[shapeIndex];
-      targetDataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
-
-      sourceDataIndex1 = sourceDataIndexes1[shapeIndex];
-      sourceDataIndex2 = sourceDataIndexes2[shapeIndex];
-      targetDataIndex = targetDataIndexes[shapeIndex];
-    } else {
-      break;
-    }
-  }
-}
-
-void _identityData(NDArrayBlockedImpl sourceArray, Float32x4List targetData,
-    NDDescriptor targetDescriptor, DataInfo targetDataInfo) {
-  var targetDimensionIndexes = new List(targetDataInfo.dimensions.length);
-  var targetDataIndexes = new List(targetDataInfo.dimensions.length);
-
-  targetDimensionIndexes[0] = 0;
-  targetDataIndexes[0] = 0;
-
-  var sourceDataIndex = 0;
-  var targetDataIndex = 0;
-  var targetShapeIndex = 0;
-
-  for (;;) {
-    if (targetDimensionIndexes[targetShapeIndex] <
-        targetDataInfo.dimensions[targetShapeIndex]) {
-      if (targetShapeIndex < targetDataInfo.dimensions.length - 1) {
-        targetDataIndex = targetDataIndexes[targetShapeIndex];
-
-        targetShapeIndex++;
-
-        targetDimensionIndexes[targetShapeIndex] = 0;
-        targetDataIndexes[targetShapeIndex] = targetDataIndex;
-
-        continue;
-      } else {
-        targetData[targetDataIndex] = sourceArray.data[sourceDataIndex++];
-      }
-    } else {
-      targetShapeIndex--;
-    }
-
-    if (targetShapeIndex >= 0) {
-      targetDimensionIndexes[targetShapeIndex]++;
-      targetDataIndexes[targetShapeIndex] +=
-          targetDataInfo.stride[targetShapeIndex];
-      targetDataIndex = targetDataIndexes[targetShapeIndex];
-    } else {
-      break;
-    }
+    sourceDataIndex1 += delta3;
   }
 }
 
@@ -2891,29 +2513,21 @@ void _reduceData(
   bool isColumnsReduction =
       axis.contains(sourceArray.descriptor.shape.dimensionCount - 1);
 
-  if (sourceArray.dataType.isHBlocked) {
-    if (sourceArray.shape.dimensionCount == 1) {
-      axis = new Set.from([1]);
-    } else if (isRowsReduction) {
-      axis.add(sourceArray.descriptor.shape.dimensionCount);
-    }
-  } else {
-    if (sourceArray.shape.dimensionCount == 1) {
-      axis = new Set.from([0]);
-    } else if (isRowsReduction && isColumnsReduction) {
-      axis.remove(sourceArray.descriptor.shape.dimensionCount - 2);
-      axis.remove(sourceArray.descriptor.shape.dimensionCount - 1);
-      axis.add(sourceArray.descriptor.shape.dimensionCount - 1);
-      axis.add(sourceArray.descriptor.shape.dimensionCount);
-      axis.add(sourceArray.descriptor.shape.dimensionCount - 2);
-    } else if (isRowsReduction) {
-      axis.remove(sourceArray.descriptor.shape.dimensionCount - 2);
-      axis.add(sourceArray.descriptor.shape.dimensionCount - 1);
-      axis.add(sourceArray.descriptor.shape.dimensionCount);
-    } else if (isColumnsReduction) {
-      axis.remove(sourceArray.descriptor.shape.dimensionCount - 1);
-      axis.add(sourceArray.descriptor.shape.dimensionCount - 2);
-    }
+  if (sourceArray.shape.dimensionCount == 1) {
+    axis = new Set.from([0]);
+  } else if (isRowsReduction && isColumnsReduction) {
+    axis.remove(sourceArray.descriptor.shape.dimensionCount - 2);
+    axis.remove(sourceArray.descriptor.shape.dimensionCount - 1);
+    axis.add(sourceArray.descriptor.shape.dimensionCount - 1);
+    axis.add(sourceArray.descriptor.shape.dimensionCount);
+    axis.add(sourceArray.descriptor.shape.dimensionCount - 2);
+  } else if (isRowsReduction) {
+    axis.remove(sourceArray.descriptor.shape.dimensionCount - 2);
+    axis.add(sourceArray.descriptor.shape.dimensionCount - 1);
+    axis.add(sourceArray.descriptor.shape.dimensionCount);
+  } else if (isColumnsReduction) {
+    axis.remove(sourceArray.descriptor.shape.dimensionCount - 1);
+    axis.add(sourceArray.descriptor.shape.dimensionCount - 2);
   }
 
   var newReductionAxis = axis.toList(growable: false);
@@ -2921,36 +2535,18 @@ void _reduceData(
   List<int> targetPermutedIndexes =
       new List.generate(targetDataInfo.dimensions.length, (index) => index);
   if (targetDescriptor.shape.dimensionCount > 1) {
-    if (sourceArray.dataType.isHBlocked) {
-      if (isRowsReduction || isColumnsReduction) {
-        var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
-        targetPermutedIndexes[targetPermutedIndexes.length - 1] =
-            targetPermutedIndexes[targetPermutedIndexes.length - 2];
-        targetPermutedIndexes[targetPermutedIndexes.length - 2] = tempIndex;
-        tempIndex =
-            targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 3);
-        targetPermutedIndexes.add(tempIndex);
-      }
-    } else {
-      if (isRowsReduction || isColumnsReduction) {
-        var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
-        targetPermutedIndexes[targetPermutedIndexes.length - 1] =
-            targetPermutedIndexes[targetPermutedIndexes.length - 3];
-        targetPermutedIndexes[targetPermutedIndexes.length - 3] = tempIndex;
-        tempIndex =
-            targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 2);
-        targetPermutedIndexes.add(tempIndex);
-      }
+    if (isRowsReduction || isColumnsReduction) {
+      var tempIndex = targetPermutedIndexes[targetPermutedIndexes.length - 1];
+      targetPermutedIndexes[targetPermutedIndexes.length - 1] =
+          targetPermutedIndexes[targetPermutedIndexes.length - 3];
+      targetPermutedIndexes[targetPermutedIndexes.length - 3] = tempIndex;
+      tempIndex =
+          targetPermutedIndexes.removeAt(targetPermutedIndexes.length - 2);
+      targetPermutedIndexes.add(tempIndex);
     }
   } else if (targetDescriptor.shape.dimensionCount == 1) {
-    if (sourceArray.dataType.isHBlocked) {
-      if (isRowsReduction || isColumnsReduction) {
-        targetPermutedIndexes = [1, 0, 2];
-      }
-    } else {
-      if (isRowsReduction || isColumnsReduction) {
-        targetPermutedIndexes = [0, 1, 2];
-      }
+    if (isRowsReduction || isColumnsReduction) {
+      targetPermutedIndexes = [0, 1, 2];
     }
   }
 
@@ -2968,53 +2564,22 @@ void _reduceData(
   var delta2;
 
   if (targetDescriptor.shape.dimensionCount > 1) {
-    if (sourceArray.dataType.isHBlocked) {
-      if (isRowsReduction && isColumnsReduction) {
-        sourceTargetRowIndex = sourceArray.dataInfo.dimensions.length -
-            newReductionAxis.length -
-            2;
-        delta1 =
-            targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
+    if (isRowsReduction && isColumnsReduction) {
+      sourceTargetRowIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length - 2;
+      delta1 = 0;
 
-        sourceTargetColumnIndex = sourceArray.dataInfo.dimensions.length -
-            newReductionAxis.length -
-            1;
-        delta2 = targetDescriptor.dataType.blockSize;
-      } else if (isRowsReduction) {
-        sourceTargetRowIndex = sourceArray.dataInfo.dimensions.length -
-            newReductionAxis.length -
-            2;
-        delta1 =
-            targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
-      } else if (isColumnsReduction) {
-        sourceTargetRowIndex = sourceArray.dataInfo.dimensions.length -
-            newReductionAxis.length -
-            3;
-        delta1 =
-            targetDataInfo.dataColumns - targetDescriptor.dataType.blockSize;
-      }
-    } else {
-      if (isRowsReduction && isColumnsReduction) {
-        sourceTargetRowIndex = sourceArray.dataInfo.dimensions.length -
-            newReductionAxis.length -
-            2;
-        delta1 = 0;
-
-        sourceTargetColumnIndex = sourceArray.dataInfo.dimensions.length -
-            newReductionAxis.length -
-            1;
-        delta2 = targetDataInfo.dataRows;
-      } else if (isRowsReduction) {
-        sourceTargetRowIndex = sourceArray.dataInfo.dimensions.length -
-            newReductionAxis.length -
-            2;
-        delta1 = 0;
-      } else if (isColumnsReduction) {
-        sourceTargetRowIndex = sourceArray.dataInfo.dimensions.length -
-            newReductionAxis.length -
-            3;
-        delta1 = 0;
-      }
+      sourceTargetColumnIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length - 1;
+      delta2 = targetDataInfo.dataRows;
+    } else if (isRowsReduction) {
+      sourceTargetRowIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length - 2;
+      delta1 = 0;
+    } else if (isColumnsReduction) {
+      sourceTargetRowIndex =
+          sourceArray.dataInfo.dimensions.length - newReductionAxis.length - 3;
+      delta1 = 0;
     }
   } else if (targetDescriptor.shape.dimensionCount == 1) {
     if (isRowsReduction && isColumnsReduction) {
@@ -3295,29 +2860,21 @@ void _argData(NDArrayBlockedImpl sourceArray, int axis, Uint32List targetData,
   bool isColumnsReduction =
       axisSet.contains(sourceArray.descriptor.shape.dimensionCount - 1);
 
-  if (sourceArray.dataType.isHBlocked) {
-    if (sourceArray.shape.dimensionCount == 1) {
-      axisSet = new Set.from([1]);
-    } else if (isRowsReduction) {
-      axisSet.add(sourceArray.descriptor.shape.dimensionCount);
-    }
-  } else {
-    if (sourceArray.shape.dimensionCount == 1) {
-      axisSet = new Set.from([0]);
-    } else if (isRowsReduction && isColumnsReduction) {
-      axisSet.remove(sourceArray.descriptor.shape.dimensionCount - 2);
-      axisSet.remove(sourceArray.descriptor.shape.dimensionCount - 1);
-      axisSet.add(sourceArray.descriptor.shape.dimensionCount - 1);
-      axisSet.add(sourceArray.descriptor.shape.dimensionCount);
-      axisSet.add(sourceArray.descriptor.shape.dimensionCount - 2);
-    } else if (isRowsReduction) {
-      axisSet.remove(sourceArray.descriptor.shape.dimensionCount - 2);
-      axisSet.add(sourceArray.descriptor.shape.dimensionCount - 1);
-      axisSet.add(sourceArray.descriptor.shape.dimensionCount);
-    } else if (isColumnsReduction) {
-      axisSet.remove(sourceArray.descriptor.shape.dimensionCount - 1);
-      axisSet.add(sourceArray.descriptor.shape.dimensionCount - 2);
-    }
+  if (sourceArray.shape.dimensionCount == 1) {
+    axisSet = new Set.from([0]);
+  } else if (isRowsReduction && isColumnsReduction) {
+    axisSet.remove(sourceArray.descriptor.shape.dimensionCount - 2);
+    axisSet.remove(sourceArray.descriptor.shape.dimensionCount - 1);
+    axisSet.add(sourceArray.descriptor.shape.dimensionCount - 1);
+    axisSet.add(sourceArray.descriptor.shape.dimensionCount);
+    axisSet.add(sourceArray.descriptor.shape.dimensionCount - 2);
+  } else if (isRowsReduction) {
+    axisSet.remove(sourceArray.descriptor.shape.dimensionCount - 2);
+    axisSet.add(sourceArray.descriptor.shape.dimensionCount - 1);
+    axisSet.add(sourceArray.descriptor.shape.dimensionCount);
+  } else if (isColumnsReduction) {
+    axisSet.remove(sourceArray.descriptor.shape.dimensionCount - 1);
+    axisSet.add(sourceArray.descriptor.shape.dimensionCount - 2);
   }
 
   var newReductionAxis = axisSet.toList(growable: false);
@@ -3329,16 +2886,9 @@ void _argData(NDArrayBlockedImpl sourceArray, int axis, Uint32List targetData,
       sourcePermutedIndexes.where((index) => !axisSet.contains(index)).toList();
 
   if (!isRowsReduction && !isColumnsReduction) {
-    if (sourceArray.dataType.isHBlocked) {
-      var tempIndex = sourcePermutedIndexes[sourcePermutedIndexes.length - 1];
-      sourcePermutedIndexes[sourcePermutedIndexes.length - 1] =
-          sourcePermutedIndexes[sourcePermutedIndexes.length - 2];
-      sourcePermutedIndexes[sourcePermutedIndexes.length - 2] = tempIndex;
-    } else {
-      var tempIndex =
-          sourcePermutedIndexes.removeAt(sourcePermutedIndexes.length - 3);
-      sourcePermutedIndexes.add(tempIndex);
-    }
+    var tempIndex =
+        sourcePermutedIndexes.removeAt(sourcePermutedIndexes.length - 3);
+    sourcePermutedIndexes.add(tempIndex);
   }
 
   sourcePermutedIndexes.addAll(newReductionAxis);
@@ -3544,4 +3094,746 @@ void _argData(NDArrayBlockedImpl sourceArray, int axis, Uint32List targetData,
       break;
     }
   }
+}
+
+void _transposeData(
+    NDArrayBlockedImpl sourceArray,
+    List<int> permutationAxis,
+    Float32x4List resultData,
+    NDDescriptor resultDescriptor,
+    DataInfo resultDataInfo) {
+  var newPermutationAxis =
+      permutationAxis.sublist(0, permutationAxis.length - 2);
+
+  var sourceStride = permute(sourceArray.dataInfo.stride, newPermutationAxis);
+  var sourceDimensions =
+      permute(sourceArray.dataInfo.dimensions, newPermutationAxis);
+
+  var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var sourceDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var targetDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+
+  dimensionIndexes[0] = 0;
+  sourceDataIndexes[0] = 0;
+  targetDataIndexes[0] = 0;
+
+  var shapeIndex = 0;
+  var sourceDataIndex = 0;
+  var targetDataIndex = 0;
+
+  for (;;) {
+    if (dimensionIndexes[shapeIndex] < sourceDimensions[shapeIndex]) {
+      if (shapeIndex < resultDescriptor.shape.dimensionCount - 2) {
+        sourceDataIndex = sourceDataIndexes[shapeIndex];
+        targetDataIndex = targetDataIndexes[shapeIndex];
+
+        shapeIndex++;
+
+        dimensionIndexes[shapeIndex] = 0;
+        sourceDataIndexes[shapeIndex] = sourceDataIndex;
+        targetDataIndexes[shapeIndex] = targetDataIndex;
+
+        continue;
+      } else {
+        for (var dimension1 = 0;
+            dimension1 < sourceArray.dataInfo.blockColumns;
+            dimension1++) {
+          for (var dimension2 = 0;
+              dimension2 < sourceArray.dataInfo.blockRows;
+              dimension2++) {
+            resultData[targetDataIndex++] = sourceArray.data[sourceDataIndex++];
+            resultData[targetDataIndex++] = sourceArray.data[sourceDataIndex++];
+            resultData[targetDataIndex++] = sourceArray.data[sourceDataIndex++];
+            resultData[targetDataIndex++] = sourceArray.data[sourceDataIndex++];
+          }
+        }
+
+        shapeIndex--;
+      }
+    } else {
+      shapeIndex--;
+    }
+
+    if (shapeIndex >= 0) {
+      dimensionIndexes[shapeIndex]++;
+      sourceDataIndexes[shapeIndex] += sourceStride[shapeIndex];
+      targetDataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
+      sourceDataIndex = sourceDataIndexes[shapeIndex];
+      targetDataIndex = targetDataIndexes[shapeIndex];
+    } else {
+      break;
+    }
+  }
+}
+
+void _transposeSwitchedData(
+    NDArrayBlockedImpl sourceArray,
+    List<int> permutationAxis,
+    Float32x4List resultData,
+    NDDescriptor resultDescriptor,
+    DataInfo resultDataInfo) {
+  var delta1 = (sourceArray.dataInfo.blockColumns - 1) <<
+      resultDescriptor.dataType.blockDepth;
+
+  var delta2 = resultDescriptor.dataType.blockSize -
+      sourceArray.dataInfo.matrixDataLength;
+
+  var newPermutationAxis =
+      permutationAxis.sublist(0, permutationAxis.length - 2);
+
+  var sourceStride = permute(sourceArray.dataInfo.stride, newPermutationAxis);
+  var sourceDimensions =
+      permute(sourceArray.dataInfo.dimensions, newPermutationAxis);
+
+  var dimensionIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var sourceDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+  var targetDataIndexes = new List(resultDescriptor.shape.dimensionCount - 1);
+
+  dimensionIndexes[0] = 0;
+  sourceDataIndexes[0] = 0;
+  targetDataIndexes[0] = 0;
+
+  var shapeIndex = 0;
+  var sourceDataIndex = 0;
+  var targetDataIndex = 0;
+
+  for (;;) {
+    if (dimensionIndexes[shapeIndex] < sourceDimensions[shapeIndex]) {
+      if (shapeIndex < resultDescriptor.shape.dimensionCount - 2) {
+        sourceDataIndex = sourceDataIndexes[shapeIndex];
+        targetDataIndex = targetDataIndexes[shapeIndex];
+
+        shapeIndex++;
+
+        dimensionIndexes[shapeIndex] = 0;
+        sourceDataIndexes[shapeIndex] = sourceDataIndex;
+        targetDataIndexes[shapeIndex] = targetDataIndex;
+
+        continue;
+      } else {
+        for (var dimension1 = 0;
+            dimension1 < sourceArray.dataInfo.blockColumns;
+            dimension1++) {
+          for (var dimension2 = 0;
+              dimension2 < sourceArray.dataInfo.blockRows;
+              dimension2++) {
+            var a0 = sourceArray.data[sourceDataIndex++];
+            var a1 = sourceArray.data[sourceDataIndex++];
+            var a2 = sourceArray.data[sourceDataIndex++];
+            var a3 = sourceArray.data[sourceDataIndex++];
+
+            resultData[targetDataIndex++] =
+                new Float32x4(a0.x, a1.x, a2.x, a3.x);
+            resultData[targetDataIndex++] =
+                new Float32x4(a0.y, a1.y, a2.y, a3.y);
+            resultData[targetDataIndex++] =
+                new Float32x4(a0.z, a1.z, a2.z, a3.z);
+            resultData[targetDataIndex++] =
+                new Float32x4(a0.w, a1.w, a2.w, a3.w);
+
+            targetDataIndex += delta1;
+          }
+
+          targetDataIndex += delta2;
+        }
+
+        shapeIndex--;
+      }
+    } else {
+      shapeIndex--;
+    }
+
+    if (shapeIndex >= 0) {
+      dimensionIndexes[shapeIndex]++;
+      sourceDataIndexes[shapeIndex] += sourceStride[shapeIndex];
+      targetDataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
+      sourceDataIndex = sourceDataIndexes[shapeIndex];
+      targetDataIndex = targetDataIndexes[shapeIndex];
+    } else {
+      break;
+    }
+  }
+}
+
+void _tileData(NDArrayBlockedImpl fromArray, List resultData,
+    NDDescriptor resultDescriptor, DataInfo resultDataInfo) {
+  var dimensionIndexes =
+      new List(resultDataInfo.internalShape.dimensionCount - 1);
+  var dataIndexes = new List(resultDataInfo.internalShape.dimensionCount - 1);
+
+  dimensionIndexes[0] = 0;
+  dataIndexes[0] = 0;
+
+  var shapeIndex = 0;
+  var dataIndex = 0;
+
+  var valueIterable =
+      _createTiledValueIterable(fromArray, resultDescriptor, resultDataInfo);
+
+  var valueIterator = valueIterable.iterator;
+
+  var lastColumnIndex =
+      resultDataInfo.dataColumns - resultDescriptor.dataType.blockSize;
+
+  for (;;) {
+    if (dimensionIndexes[shapeIndex] <
+        resultDataInfo.internalShape[shapeIndex]) {
+      if (shapeIndex < resultDataInfo.internalShape.dimensionCount - 2) {
+        dataIndex = dataIndexes[shapeIndex];
+
+        shapeIndex++;
+
+        dimensionIndexes[shapeIndex] = 0;
+
+        dataIndexes[shapeIndex] = dataIndex;
+
+        continue;
+      } else {
+        for (var row = 0; row < resultDataInfo.rows; row++) {
+          var column;
+          for (column = 0;
+              column < lastColumnIndex;
+              column += resultDescriptor.dataType.blockSize) {
+            var value4 = new Float32x4(
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current);
+
+            resultData[dataIndex] = value4;
+
+            dataIndex += resultDataInfo.delta1;
+          }
+
+          var value4;
+          switch (resultDataInfo.lastBlockColumnCount) {
+            case 4:
+              value4 = new Float32x4(
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current);
+              break;
+            case 3:
+              value4 = new Float32x4(
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  0.0);
+              break;
+            case 2:
+              value4 = new Float32x4((valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current, 0.0, 0.0);
+              break;
+            case 1:
+              value4 = new Float32x4(
+                  (valueIterator..moveNext()).current, 0.0, 0.0, 0.0);
+              break;
+          }
+
+          resultData[dataIndex] = value4;
+
+          dataIndex += resultDataInfo.delta1;
+
+          if (row & (resultDescriptor.dataType.blockSize - 1) <
+              resultDescriptor.dataType.blockSize - 1) {
+            dataIndex += resultDataInfo.delta2;
+          } else {
+            dataIndex += resultDataInfo.delta3;
+          }
+        }
+
+        shapeIndex--;
+      }
+    } else {
+      shapeIndex--;
+    }
+
+    if (shapeIndex >= 0) {
+      dimensionIndexes[shapeIndex]++;
+
+      dataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
+
+      dataIndex = dataIndexes[shapeIndex];
+    } else {
+      break;
+    }
+  }
+}
+
+void _elementWiseUnaryOperationData(
+    NDArrayBlockedImpl sourceArray,
+    List resultData,
+    NDDescriptor resultDescriptor,
+    DataInfo resultDataInfo,
+    unaryOperation(value, int valueCount)) {
+  assert(debug(
+      "NDArrayBlockedImpl(${resultDescriptor.shape}).elementWiseUnaryOperationData()"));
+
+  var dimensionIndexes =
+      new List(resultDataInfo.internalShape.dimensionCount - 1);
+  var dataIndexes = new List(resultDataInfo.internalShape.dimensionCount - 1);
+
+  dimensionIndexes[0] = 0;
+  dataIndexes[0] = 0;
+
+  var shapeIndex = 0;
+  var dataIndex = 0;
+
+  var valueIterable = _createValueIterable(sourceArray);
+
+  var valueIterator = valueIterable.iterator;
+
+  var lastColumnIndex =
+      resultDataInfo.dataColumns - resultDescriptor.dataType.blockSize;
+
+  for (;;) {
+    if (dimensionIndexes[shapeIndex] <
+        resultDataInfo.internalShape[shapeIndex]) {
+      if (shapeIndex < resultDataInfo.internalShape.dimensionCount - 2) {
+        dataIndex = dataIndexes[shapeIndex];
+
+        shapeIndex++;
+
+        dimensionIndexes[shapeIndex] = 0;
+
+        dataIndexes[shapeIndex] = dataIndex;
+
+        continue;
+      } else {
+        for (var row = 0; row < resultDataInfo.rows; row++) {
+          var column;
+          for (column = 0;
+              column < lastColumnIndex;
+              column += resultDescriptor.dataType.blockSize) {
+            var value4 = new Float32x4(
+                unaryOperation((valueIterator..moveNext()).current, 1),
+                unaryOperation((valueIterator..moveNext()).current, 1),
+                unaryOperation((valueIterator..moveNext()).current, 1),
+                unaryOperation((valueIterator..moveNext()).current, 1));
+
+            resultData[dataIndex] = value4;
+
+            dataIndex += resultDataInfo.delta1;
+          }
+
+          var value4;
+          switch (resultDataInfo.lastBlockColumnCount) {
+            case 4:
+              value4 = new Float32x4(
+                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  unaryOperation((valueIterator..moveNext()).current, 1));
+              break;
+            case 3:
+              value4 = new Float32x4(
+                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  0.0);
+              break;
+            case 2:
+              value4 = new Float32x4(
+                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  0.0,
+                  0.0);
+              break;
+            case 1:
+              value4 = new Float32x4(
+                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  0.0,
+                  0.0,
+                  0.0);
+              break;
+          }
+
+          resultData[dataIndex] = value4;
+
+          dataIndex += resultDataInfo.delta1;
+
+          if (row & (resultDescriptor.dataType.blockSize - 1) <
+              resultDescriptor.dataType.blockSize - 1) {
+            dataIndex += resultDataInfo.delta2;
+          } else {
+            dataIndex += resultDataInfo.delta3;
+          }
+        }
+
+        shapeIndex--;
+      }
+    } else {
+      shapeIndex--;
+    }
+
+    if (shapeIndex >= 0) {
+      dimensionIndexes[shapeIndex]++;
+
+      dataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
+
+      dataIndex = dataIndexes[shapeIndex];
+    } else {
+      break;
+    }
+  }
+}
+
+void _elementWiseUnaryOperationDataBlocked(
+    NDArrayBlockedImpl sourceArray,
+    List resultData,
+    NDDescriptor resultDescriptor,
+    DataInfo resultDataInfo,
+    unaryOperation(value, int valueCount)) {
+  assert(debug(
+      "NDArrayBlockedImpl(${resultDescriptor.shape}).elementWiseUnaryOperationDataBlocked()"));
+
+  var multiplier;
+  if (resultDataInfo.internalShape.dimensionCount > 2) {
+    multiplier = resultDataInfo.internalShape.length ~/
+        (resultDataInfo.rows * resultDataInfo.columns);
+  } else {
+    multiplier = 1;
+  }
+
+  var delta1 =
+      resultDescriptor.dataType.blockSize - resultDataInfo.lastBlockRowCount;
+
+  var lastColumnIndex =
+      resultDataInfo.dataColumns - resultDescriptor.dataType.blockSize;
+
+  var dataIndex = 0;
+
+  for (var iteration = 0; iteration < multiplier; iteration++) {
+    for (var column = 0;
+        column < resultDataInfo.dataColumns;
+        column += resultDescriptor.dataType.blockSize) {
+      var columnCount =
+          column < lastColumnIndex ? 4 : resultDataInfo.lastBlockColumnCount;
+
+      for (var row = 0; row < resultDataInfo.rows; row++) {
+        resultData[dataIndex] =
+            unaryOperation(sourceArray.data[dataIndex], columnCount);
+
+        dataIndex++;
+      }
+
+      dataIndex += delta1;
+    }
+  }
+}
+
+void _elementWiseBinaryOperationDataBlocked(
+    NDArrayBlockedImpl array1,
+    NDArrayBlockedImpl array2,
+    List resultData,
+    NDDescriptor resultDescriptor,
+    DataInfo resultDataInfo,
+    binaryOperation(value1, value2, int valueCount)) {
+  assert(debug(
+      "NDArrayBlockedImpl(${array1.shape}).elementWiseBinaryOperationDataBlocked(${array2.descriptor})"));
+
+  var source1Stride =
+      _calculateBroadcastedStride(resultDataInfo.internalShape, array1);
+  var source2Stride =
+      _calculateBroadcastedStride(resultDataInfo.internalShape, array2);
+  var targetStride = new List.from(resultDataInfo.stride
+      .sublist(0, resultDataInfo.internalShape.dimensionCount - 2));
+
+  var isSource1BroadcastedRows = source1Stride[source1Stride.length - 2] == 0;
+  var isSource1BroadcastedColumns =
+      source1Stride[source1Stride.length - 1] == 0;
+
+  var isSource2BroadcastedRows = source2Stride[source2Stride.length - 2] == 0;
+  var isSource2BroadcastedColumns =
+      source2Stride[source2Stride.length - 1] == 0;
+
+  var targetDelta =
+      resultDescriptor.dataType.blockSize - resultDataInfo.lastBlockRowCount;
+
+  int source1Delta1 = isSource1BroadcastedRows
+      ? (isSource1BroadcastedColumns ? 0 : array1.dataType.blockSize)
+      : (isSource1BroadcastedColumns ? -array1.dataInfo.rows : targetDelta);
+  int source1Delta2 = isSource1BroadcastedRows ? 0 : 1;
+
+  int source2Delta1 = isSource2BroadcastedRows
+      ? (isSource2BroadcastedColumns ? 0 : array2.dataType.blockSize)
+      : (isSource2BroadcastedColumns ? -array2.dataInfo.rows : targetDelta);
+  int source2Delta2 = isSource2BroadcastedRows ? 0 : 1;
+
+  var lastColumnIndex =
+      resultDataInfo.dataColumns - resultDescriptor.dataType.blockSize;
+
+  var dimensionIndexes =
+      new List(resultDataInfo.internalShape.dimensionCount - 1);
+
+  var source1DataIndexes =
+      new List(resultDataInfo.internalShape.dimensionCount - 1);
+  var source2DataIndexes =
+      new List(resultDataInfo.internalShape.dimensionCount - 1);
+  var targetDataIndexes =
+      new List(resultDataInfo.internalShape.dimensionCount - 1);
+
+  dimensionIndexes[0] = 0;
+  source1DataIndexes[0] = 0;
+  source2DataIndexes[0] = 0;
+  targetDataIndexes[0] = 0;
+
+  var shapeIndex = 0;
+  var source1DataIndex = 0;
+  var source2DataIndex = 0;
+  var targetDataIndex = 0;
+
+  for (;;) {
+    if (dimensionIndexes[shapeIndex] <
+        resultDataInfo.internalShape[shapeIndex]) {
+      if (shapeIndex < resultDataInfo.internalShape.dimensionCount - 2) {
+        source1DataIndex = source1DataIndexes[shapeIndex];
+        source2DataIndex = source2DataIndexes[shapeIndex];
+        targetDataIndex = targetDataIndexes[shapeIndex];
+
+        shapeIndex++;
+
+        dimensionIndexes[shapeIndex] = 0;
+
+        source1DataIndexes[shapeIndex] = source1DataIndex;
+        source2DataIndexes[shapeIndex] = source2DataIndex;
+        targetDataIndexes[shapeIndex] = targetDataIndex;
+
+        continue;
+      } else {
+        for (var column = 0;
+            column < resultDataInfo.dataColumns;
+            column += resultDescriptor.dataType.blockSize) {
+          var columnCount = column < lastColumnIndex
+              ? 4
+              : resultDataInfo.lastBlockColumnCount;
+
+          for (var row = 0; row < resultDataInfo.rows; row++) {
+            var value1 = array1.data[source1DataIndex];
+            var value2 = array2.data[source2DataIndex];
+
+            if (isSource1BroadcastedColumns) {
+              switch (columnCount) {
+                case 4:
+                  value1 = new Float32x4.splat(value1.x);
+                  break;
+                case 3:
+                  value1 = new Float32x4(value1.x, value1.x, value1.x, 0.0);
+                  break;
+                case 2:
+                  value1 = new Float32x4(value1.x, value1.x, 0.0, 0.0);
+                  break;
+                case 1:
+                  value1 = new Float32x4(value1.x, 0.0, 0.0, 0.0);
+                  break;
+              }
+            }
+
+            if (isSource2BroadcastedColumns) {
+              switch (columnCount) {
+                case 4:
+                  value2 = new Float32x4.splat(value2.x);
+                  break;
+                case 3:
+                  value2 = new Float32x4(value2.x, value2.x, value2.x, 0.0);
+                  break;
+                case 2:
+                  value2 = new Float32x4(value2.x, value2.x, 0.0, 0.0);
+                  break;
+                case 1:
+                  value2 = new Float32x4(value2.x, 0.0, 0.0, 0.0);
+                  break;
+              }
+            }
+
+            resultData[targetDataIndex] =
+                binaryOperation(value1, value2, columnCount);
+
+            source1DataIndex += source1Delta2;
+            source2DataIndex += source2Delta2;
+            targetDataIndex++;
+          }
+
+          source1DataIndex += source1Delta1;
+          source2DataIndex += source2Delta1;
+          targetDataIndex += targetDelta;
+        }
+
+        shapeIndex--;
+      }
+    } else {
+      shapeIndex--;
+    }
+
+    if (shapeIndex >= 0) {
+      dimensionIndexes[shapeIndex]++;
+
+      source1DataIndexes[shapeIndex] += source1Stride[shapeIndex];
+      source2DataIndexes[shapeIndex] += source2Stride[shapeIndex];
+      targetDataIndexes[shapeIndex] += targetStride[shapeIndex];
+
+      source1DataIndex = source1DataIndexes[shapeIndex];
+      source2DataIndex = source2DataIndexes[shapeIndex];
+      targetDataIndex = targetDataIndexes[shapeIndex];
+    } else {
+      break;
+    }
+  }
+}
+
+void _elementWiseBinaryOperationData(
+    NDArrayBase array1,
+    NDArrayBase array2,
+    List resultData,
+    NDDescriptor resultDescriptor,
+    DataInfo resultDataInfo,
+    binaryOperation(value1, value2, int valueCount)) {
+  assert(debug(
+      "NDArrayBlockedImpl(${array1.shape}).elementWiseBinaryOperationData(${array2.descriptor})"));
+
+  var dimensionIndexes =
+      new List(resultDataInfo.internalShape.dimensionCount - 1);
+  var dataIndexes = new List(resultDataInfo.internalShape.dimensionCount - 1);
+
+  dimensionIndexes[0] = 0;
+  dataIndexes[0] = 0;
+
+  var shapeIndex = 0;
+  var dataIndex = 0;
+
+  var valueIterable1 =
+      _createBroadCastedValueIterable(array1, resultDescriptor, resultDataInfo);
+  var valueIterator1 = valueIterable1.iterator;
+
+  var valueIterable2 =
+      _createBroadCastedValueIterable(array2, resultDescriptor, resultDataInfo);
+  var valueIterator2 = valueIterable2.iterator;
+
+  var lastColumnIndex =
+      resultDataInfo.dataColumns - resultDescriptor.dataType.blockSize;
+
+  for (;;) {
+    if (dimensionIndexes[shapeIndex] <
+        resultDataInfo.internalShape[shapeIndex]) {
+      if (shapeIndex < resultDataInfo.internalShape.dimensionCount - 2) {
+        dataIndex = dataIndexes[shapeIndex];
+
+        shapeIndex++;
+
+        dimensionIndexes[shapeIndex] = 0;
+
+        dataIndexes[shapeIndex] = dataIndex;
+
+        continue;
+      } else {
+        for (var row = 0; row < resultDataInfo.rows; row++) {
+          var column;
+          for (column = 0;
+              column < lastColumnIndex;
+              column += resultDescriptor.dataType.blockSize) {
+            var value4 = new Float32x4(
+                binaryOperation((valueIterator1..moveNext()).current,
+                    (valueIterator2..moveNext()).current, 1),
+                binaryOperation((valueIterator1..moveNext()).current,
+                    (valueIterator2..moveNext()).current, 1),
+                binaryOperation((valueIterator1..moveNext()).current,
+                    (valueIterator2..moveNext()).current, 1),
+                binaryOperation((valueIterator1..moveNext()).current,
+                    (valueIterator2..moveNext()).current, 1));
+
+            resultData[dataIndex] = value4;
+
+            dataIndex += resultDataInfo.delta1;
+          }
+
+          var value4;
+          switch (resultDataInfo.lastBlockColumnCount) {
+            case 4:
+              value4 = new Float32x4(
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current, 1),
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current, 1),
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current, 1),
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current, 1));
+              break;
+            case 3:
+              value4 = new Float32x4(
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current, 1),
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current, 1),
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current, 1),
+                  0.0);
+              break;
+            case 2:
+              value4 = new Float32x4(
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current, 1),
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current, 1),
+                  0.0,
+                  0.0);
+              break;
+            case 1:
+              value4 = new Float32x4(
+                  binaryOperation((valueIterator1..moveNext()).current,
+                      (valueIterator2..moveNext()).current, 1),
+                  0.0,
+                  0.0,
+                  0.0);
+              break;
+          }
+
+          resultData[dataIndex] = value4;
+
+          dataIndex += resultDataInfo.delta1;
+
+          if (row & (resultDescriptor.dataType.blockSize - 1) <
+              resultDescriptor.dataType.blockSize - 1) {
+            dataIndex += resultDataInfo.delta2;
+          } else {
+            dataIndex += resultDataInfo.delta3;
+          }
+        }
+
+        shapeIndex--;
+      }
+    } else {
+      shapeIndex--;
+    }
+
+    if (shapeIndex >= 0) {
+      dimensionIndexes[shapeIndex]++;
+
+      dataIndexes[shapeIndex] += resultDataInfo.stride[shapeIndex];
+
+      dataIndex = dataIndexes[shapeIndex];
+    } else {
+      break;
+    }
+  }
+}
+
+List<int> _calculateBroadcastedStride(
+    NDShape broadcastedShape, NDArrayBlockedImpl array) {
+  var dimensionDelta =
+      broadcastedShape.dimensionCount - array.shape.dimensionCount;
+
+  return new List.generate(broadcastedShape.dimensionCount - 1, (index) {
+    if (index < dimensionDelta || array.shape[index - dimensionDelta] == 1) {
+      return 0;
+    } else {
+      return array.dataInfo.stride[index - dimensionDelta];
+    }
+  })
+    ..add(broadcastedShape.dimensionCount - 1 < dimensionDelta ||
+            array.shape[broadcastedShape.dimensionCount - 1 - dimensionDelta] ==
+                1
+        ? 0
+        : 1);
 }

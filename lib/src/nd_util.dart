@@ -8,3 +8,8 @@ List<T> permute<T>(List<T> list, List<int> permutedIndexes) {
   }
   return newList;
 }
+
+bool debug(Object object) {
+  print("DEBUG: $object");
+  return true;
+}

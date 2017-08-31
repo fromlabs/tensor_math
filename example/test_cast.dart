@@ -9,7 +9,7 @@ final iterableEquality = new DeepCollectionEquality();
 void main() {
   functionalTest();
 
-  // performanceTest();
+  performanceTest();
 }
 
 void functionalTest() {
@@ -17,19 +17,9 @@ void functionalTest() {
 
   NDArrayBlockedImpl fromArray = new tm.NDArray.generate(
       shape, (index) => index + 1,
-      dataType: tm.NDDataType.float32HBlocked);
-
-  NDArrayBlockedImpl toArray = fromArray.cast(tm.NDDataType.float32VBlocked);
-
-  if (!iterableEquality.equals(fromArray.toValue(), toArray.toValue())) {
-    throw new StateError(
-        "not equals: ${fromArray.toValue()} ${toArray.toValue()}");
-  }
-
-  fromArray = new tm.NDArray.generate(shape, (index) => index + 1,
       dataType: tm.NDDataType.float32VBlocked);
 
-  toArray = fromArray.cast(tm.NDDataType.float32HBlocked);
+  NDArrayBlockedImpl toArray = fromArray.cast(tm.NDDataType.float32VBlocked);
 
   if (!iterableEquality.equals(fromArray.toValue(), toArray.toValue())) {
     throw new StateError(
@@ -38,11 +28,11 @@ void functionalTest() {
 }
 
 void performanceTest() {
-  test([10, 10, 10, 10], tm.NDDataType.float32HBlocked,
-      tm.NDDataType.float32VBlocked, 1000000);
+  test([10, 10, 10, 10], tm.NDDataType.float32, tm.NDDataType.float32VBlocked,
+      10000);
 
-  test([10, 10, 10, 10], tm.NDDataType.float32VBlocked,
-      tm.NDDataType.float32HBlocked, 1000000);
+  test([10, 10, 10, 10], tm.NDDataType.float32, tm.NDDataType.float32VBlocked,
+      100000);
 }
 
 void allPerformanceTest() {}

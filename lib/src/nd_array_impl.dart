@@ -2,6 +2,7 @@
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
 import "dart:typed_data";
+import "dart:math" as math;
 
 import "package:collection/collection.dart";
 
@@ -122,7 +123,7 @@ class NDArrayImpl extends NDArrayBase {
       var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var resultData = elementWiseUnaryOperationInternal(
-          resultDescriptor, reuse, (value) => value)._data;
+          resultDescriptor, reuse, (value, valueCount) => value)._data;
 
       return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
     }
@@ -142,7 +143,7 @@ class NDArrayImpl extends NDArrayBase {
         resultData = _data;
       } else {
         resultData = elementWiseUnaryOperationInternal(
-            resultDescriptor, reuse, (value) => value)._data;
+            resultDescriptor, reuse, (value, valueCount) => value)._data;
       }
 
       return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
@@ -307,6 +308,78 @@ class NDArrayImpl extends NDArrayBase {
   }
 
   @override
+  NDArray abs({NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.abs(), reuse, (value, valueCount) => value.abs());
+
+  @override
+  NDArray exp({NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.exp(), reuse, (value, valueCount) => math.exp(value));
+
+  @override
+  NDArray reciprocal({NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.reciprocal(), reuse, (value, valueCount) => 1 / value);
+
+  @override
+  NDArray log({NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.log(), reuse, (value, valueCount) => math.log(value));
+
+  @override
+  NDArray neg({NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.neg(), reuse, (value, valueCount) => -value);
+
+  @override
+  NDArray sign({NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.sign(), reuse, (value, valueCount) => value.sign());
+
+  @override
+  NDArray not({NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.not(), reuse, (value, valueCount) => !value);
+
+  @override
+  NDArray add(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
+
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.add(array2.descriptor),
+        reuse,
+        (value1, value2, valueCount) => value1 + value2);
+  }
+
+  @override
+  NDArray sub(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
+
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.sub(array2.descriptor),
+        reuse,
+        (value1, value2, valueCount) => value1 - value2);
+  }
+
+  @override
+  NDArray mul(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
+
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.mul(array2.descriptor),
+        reuse,
+        (value1, value2, valueCount) => value1 * value2);
+  }
+
+  @override
+  NDArray div(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
+
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.div(array2.descriptor),
+        reuse,
+        (value1, value2, valueCount) => value1 / value2);
+  }
+
+  @override
   NDArray reduceSum(
       {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
     var resultDescriptor = descriptor.reduceSum(
@@ -415,15 +488,15 @@ class NDArrayImpl extends NDArrayBase {
       "<value: ${toValue()}, shape: $shape, dataType: $dataType, stride: $_dataInfo.stride, offset: $_dataInfo.offset>";
 
   @override
-  NDArrayImpl elementWiseUnaryOperationInternal(
-      NDDescriptor resultDescriptor, NDArray reuse, unaryOperation(value)) {
+  NDArrayImpl elementWiseUnaryOperationInternal(NDDescriptor resultDescriptor,
+      NDArray reuse, unaryOperation(value, int valueCount)) {
     var resultData = createData(resultDescriptor, reuse);
     var resultDataInfo;
 
     if (shape.isScalar) {
       resultDataInfo = new DataInfo(_dataInfo.stride, 0);
 
-      resultData[0] = unaryOperation(_data[_dataInfo.offset]);
+      resultData[0] = unaryOperation(_data[_dataInfo.offset], 1);
     } else {
       resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
@@ -439,7 +512,8 @@ class NDArrayImpl extends NDArrayBase {
             var axeDimension = shape[shapeIndex];
             var axeStride = _dataInfo.stride[shapeIndex];
             while (dimensionIndex++ < axeDimension) {
-              resultData[resultDataIndex++] = unaryOperation(_data[dataIndex]);
+              resultData[resultDataIndex++] =
+                  unaryOperation(_data[dataIndex], 1);
               dataIndex += axeStride;
             }
           } else {
@@ -465,7 +539,7 @@ class NDArrayImpl extends NDArrayBase {
       covariant NDArrayImpl array2,
       NDDescriptor resultDescriptor,
       NDArray reuse,
-      binaryOperation(value1, value2)) {
+      binaryOperation(value1, value2, int valueCount)) {
     var resultShape = resultDescriptor.shape;
     var resultData = createData(resultDescriptor, reuse);
     var resultDataInfo;
@@ -474,7 +548,7 @@ class NDArrayImpl extends NDArrayBase {
       resultDataInfo = new DataInfo(_dataInfo.stride, 0);
 
       resultData[0] = binaryOperation(
-          _data[_dataInfo.offset], array2._data[array2._dataInfo.offset]);
+          _data[_dataInfo.offset], array2._data[array2._dataInfo.offset], 1);
     } else {
       resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
@@ -492,7 +566,7 @@ class NDArrayImpl extends NDArrayBase {
         if (dimensionIndex < resultShape[shapeIndex]) {
           if (shapeIndex == resultShape.dimensionCount - 1) {
             resultData[resultDataIndex++] =
-                binaryOperation(_data[data1Index], array2._data[data2Index]);
+                binaryOperation(_data[data1Index], array2._data[data2Index], 1);
             data1Index += stride1[shapeIndex];
             data2Index += stride2[shapeIndex];
             dimensionIndex++;
@@ -523,7 +597,7 @@ class NDArrayImpl extends NDArrayBase {
       covariant NDArrayImpl array3,
       NDDescriptor resultDescriptor,
       NDArray reuse,
-      ternaryOperation(value1, value2, value3)) {
+      ternaryOperation(value1, value2, value3, int valueCount)) {
     var resultShape = resultDescriptor.shape;
     var resultData = createData(resultDescriptor, reuse);
     var resultDataInfo;
@@ -534,7 +608,8 @@ class NDArrayImpl extends NDArrayBase {
       resultData[0] = ternaryOperation(
           _data[_dataInfo.offset],
           array2._data[array2._dataInfo.offset],
-          array3._data[array3._dataInfo.offset]);
+          array3._data[array3._dataInfo.offset],
+          1);
     } else {
       resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
@@ -558,7 +633,7 @@ class NDArrayImpl extends NDArrayBase {
         if (dimensionIndex < resultShape[shapeIndex]) {
           if (shapeIndex == resultShape.dimensionCount - 1) {
             resultData[resultDataIndex++] = ternaryOperation(_data[data1Index],
-                array2._data[data2Index], array3._data[data3Index]);
+                array2._data[data2Index], array3._data[data3Index], 1);
             data1Index += data1Delta;
             data2Index += data2Delta;
             data3Index += data3Delta;
@@ -597,6 +672,8 @@ class NDArrayImpl extends NDArrayBase {
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
       {void begin(), void onValue(value, int valueCount), dynamic end()}) {
+    var beginCalled = false;
+
     var newReductionAxis =
         convertToValidReductionAxis(reductionAxis, shape.dimensionCount);
 
@@ -626,7 +703,12 @@ class NDArrayImpl extends NDArrayBase {
       var resultDataIndex = 0;
       var dimensionIndex = dimensionIndexes[0] = 0;
 
-      if (resultDescriptor.shape.dimensionCount == 0) {
+      // TODO rifare check con keepDimensions
+      if ((!keepDimensions && resultDescriptor.shape.dimensionCount == 0) ||
+          (keepDimensions &&
+              resultDescriptor.shape.dimensionCount ==
+                  newReductionAxis.length)) {
+        beginCalled = true;
         begin();
       }
 
@@ -634,10 +716,15 @@ class NDArrayImpl extends NDArrayBase {
         if (dimensionIndex < dimensions[shapeIndex]) {
           if (shapeIndex ==
               shape.dimensionCount - newReductionAxis.length - 1) {
+            if (beginCalled) {
+              throw new StateError("Begin already called");
+            }
+            beginCalled = true;
             begin();
           }
 
           if (shapeIndex == shape.dimensionCount - 1) {
+            beginCalled = false;
             onValue(_data[dataIndex], 1);
 
             dataIndex += stride[shapeIndex];
@@ -850,16 +937,18 @@ void _castConvertedData(NDArrayBase fromArray, List data,
 }
 
 List<int> _calculateBroadcastedStride(
-        NDShape broadcastedShape, NDArrayImpl array) =>
-    new List.generate(broadcastedShape.dimensionCount, (index) {
-      var dimensionDelta =
-          broadcastedShape.dimensionCount - array.shape.dimensionCount;
-      if (index < dimensionDelta || array.shape[index - dimensionDelta] == 1) {
-        return 0;
-      } else {
-        return array._dataInfo.stride[index - dimensionDelta];
-      }
-    }, growable: false);
+    NDShape broadcastedShape, NDArrayImpl array) {
+  var dimensionDelta =
+      broadcastedShape.dimensionCount - array.shape.dimensionCount;
+
+  return new List.generate(broadcastedShape.dimensionCount, (index) {
+    if (index < dimensionDelta || array.shape[index - dimensionDelta] == 1) {
+      return 0;
+    } else {
+      return array._dataInfo.stride[index - dimensionDelta];
+    }
+  }, growable: false);
+}
 
 List createData(NDDescriptor descriptor, NDArrayImpl reuse) {
   if (descriptor.dataType == NDDataType.unknown) {

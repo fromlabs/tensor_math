@@ -17,8 +17,6 @@ void performanceTest() {
   test1(shape, reductionAxis, 100000);
 
   test2(shape, reductionAxis, 100000);
-
-  test3(shape, reductionAxis, 100000);
 }
 
 void test1(List<int> shape, List<int> reductionAxis, int steps) {
@@ -37,21 +35,6 @@ void test1(List<int> shape, List<int> reductionAxis, int steps) {
 }
 
 void test2(List<int> shape, List<int> reductionAxis, int steps) {
-  var watch = new Stopwatch();
-  watch.start();
-
-  var array1 = new tm.NDArray.generate(shape, (index) => index + 1,
-      dataType: tm.NDDataType.float32HBlocked);
-
-  for (var i = 0; i < steps; i++) {
-    array1.reduceSum(reductionAxis: reductionAxis);
-  }
-
-  print(
-      "Elapsed in ${watch.elapsedMilliseconds} ms with a throughput ${1000 * steps / watch.elapsedMilliseconds} 1/s");
-}
-
-void test3(List<int> shape, List<int> reductionAxis, int steps) {
   var watch = new Stopwatch();
   watch.start();
 
@@ -79,18 +62,6 @@ void functionalTest(List<int> shape, List<int> reductionAxis) {
   var value;
 
   value = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32HBlocked)
-      .reduceSum(reductionAxis: reductionAxis)
-      .toValue();
-
-  if (!iterableEquality.equals(value, expectedValue)) {
-    print(value);
-    print(expectedValue);
-
-    throw new StateError("not equals");
-  }
-
-  value = new tm.NDArray.generate(shape, (index) => index + 1,
           dataType: tm.NDDataType.float32VBlocked)
       .reduceSum(reductionAxis: reductionAxis)
       .toValue();
@@ -116,18 +87,6 @@ void functionalTest2(List<int> shape, List<int> reductionAxis) {
   var value;
 
   value = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32HBlocked)
-      .reduceMean(reductionAxis: reductionAxis)
-      .toValue();
-
-  if (!iterableEquality.equals(value, expectedValue)) {
-    print(value);
-    print(expectedValue);
-
-    throw new StateError("not equals");
-  }
-
-  value = new tm.NDArray.generate(shape, (index) => index + 1,
           dataType: tm.NDDataType.float32VBlocked)
       .reduceMean(reductionAxis: reductionAxis)
       .toValue();
@@ -151,18 +110,6 @@ void functionalTest3(List<int> shape, List<int> reductionAxis) {
   print(expectedValue);
 
   var value;
-
-  value = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32HBlocked)
-      .reduceMax(reductionAxis: reductionAxis)
-      .toValue();
-
-  if (!iterableEquality.equals(value, expectedValue)) {
-    print(value);
-    print(expectedValue);
-
-    throw new StateError("not equals");
-  }
 
   value = new tm.NDArray.generate(shape, (index) => index + 1,
           dataType: tm.NDDataType.float32VBlocked)

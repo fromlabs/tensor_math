@@ -37,17 +37,6 @@ void functionalTest(List<int> shape, int axis) {
 
   var value;
 
-  value = new tm.NDArray(initialValue, dataType: tm.NDDataType.float32HBlocked)
-      .argMax(axis: axis)
-      .toValue();
-
-  if (!iterableEquality.equals(value, expectedValue)) {
-    print(value);
-    print(expectedValue);
-
-    throw new StateError("not equals");
-  }
-
   value = new tm.NDArray(initialValue, dataType: tm.NDDataType.float32VBlocked)
       .argMax(axis: axis)
       .toValue();

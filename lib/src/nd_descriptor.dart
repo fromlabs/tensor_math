@@ -109,13 +109,7 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor matMul(covariant NDDescriptor descriptor2,
       {covariant NDDescriptor reuse}) {
-    if (this.dataType.isBlocked) {
-      if (this.dataType != NDDataType.float32HBlocked ||
-          descriptor2.dataType != NDDataType.float32VBlocked) {
-        throw new UnsupportedError(
-            "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
-      }
-    } else if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
+    if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
     } else if (!dataType.isNumeric) {
@@ -438,7 +432,7 @@ class NDDescriptor implements NDObject {
   NDDescriptor elementWiseUnaryOperation(
           {@required NDDataType resultDataType,
           covariant NDDescriptor reuse,
-          unaryOperation(value)}) =>
+          unaryOperation(value, int valueCount)}) =>
       new NDDescriptor(shape: shape, dataType: resultDataType);
 
   @override
@@ -446,7 +440,7 @@ class NDDescriptor implements NDObject {
           {NDDataType dataType2,
           @required NDDataType resultDataType,
           covariant NDDescriptor reuse,
-          binaryOperation(value1, value2)}) =>
+          binaryOperation(value1, value2, int valueCount)}) =>
       broadcast(descriptor2, resultDataType: resultDataType);
 
   @override
@@ -456,7 +450,7 @@ class NDDescriptor implements NDObject {
           NDDataType dataType3,
           @required NDDataType resultDataType,
           covariant NDDescriptor reuse,
-          ternaryOperation(value1, value2, value3)}) =>
+          ternaryOperation(value1, value2, value3, int valueCount)}) =>
       broadcast(descriptor2, resultDataType: resultDataType)
           .broadcast(descriptor3, resultDataType: resultDataType);
 

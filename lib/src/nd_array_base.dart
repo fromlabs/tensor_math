@@ -1,8 +1,6 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
-import "dart:math" as math;
-
 import "package:meta/meta.dart";
 
 import 'nd_descriptor.dart';
@@ -102,21 +100,21 @@ abstract class NDArrayBase implements NDArray {
 
   Iterable get valueIterable;
 
-  NDArrayBase elementWiseUnaryOperationInternal(
-      NDDescriptor resultDescriptor, NDArray reuse, unaryOperation(value));
+  NDArrayBase elementWiseUnaryOperationInternal(NDDescriptor resultDescriptor,
+      NDArray reuse, unaryOperation(value, int valueCount));
 
   NDArrayBase elementWiseBinaryOperationInternal(
       NDArrayBase array2,
       NDDescriptor resultDescriptor,
       NDArray reuse,
-      binaryOperation(value1, value2));
+      binaryOperation(value1, value2, int valueCount));
 
   NDArrayBase elementWiseTernaryOperationInternal(
       NDArrayBase array2,
       NDArrayBase array3,
       NDDescriptor resultDescriptor,
       NDArray reuse,
-      ternaryOperation(value1, value2, value3));
+      ternaryOperation(value1, value2, value3, int valueCount));
 
   NDArray reduceOperationInternal(List<int> reductionAxis, bool keepDimensions,
       NDDescriptor resultDescriptor, NDArray reuse,
@@ -180,56 +178,6 @@ abstract class NDArrayBase implements NDArray {
   }
 
   @override
-  NDArray abs({NDArray reuse}) => elementWiseUnaryOperationInternal(
-      descriptor.abs(), reuse, (value) => value.abs());
-
-  @override
-  NDArray exp({NDArray reuse}) => elementWiseUnaryOperationInternal(
-      descriptor.exp(), reuse, (value) => math.exp(value));
-
-  @override
-  NDArray reciprocal({NDArray reuse}) => elementWiseUnaryOperationInternal(
-      descriptor.reciprocal(), reuse, (value) => 1 / value);
-
-  @override
-  NDArray log({NDArray reuse}) => elementWiseUnaryOperationInternal(
-      descriptor.log(), reuse, (value) => math.log(value));
-
-  @override
-  NDArray neg({NDArray reuse}) => elementWiseUnaryOperationInternal(
-      descriptor.neg(), reuse, (value) => -value);
-
-  @override
-  NDArray sign({NDArray reuse}) => elementWiseUnaryOperationInternal(
-      descriptor.sign(), reuse, (value) => value.sign());
-
-  @override
-  NDArray not({NDArray reuse}) => elementWiseUnaryOperationInternal(
-      descriptor.not(), reuse, (value) => !value);
-
-  @override
-  NDArray add(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return elementWiseBinaryOperationInternal(
-        array2,
-        descriptor.add(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 + value2);
-  }
-
-  @override
-  NDArray div(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return elementWiseBinaryOperationInternal(
-        array2,
-        descriptor.div(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 / value2);
-  }
-
-  @override
   NDArray isGreater(value2, {NDArray reuse}) {
     var array2 = toNDArray(value2, dataType: dataType);
 
@@ -237,7 +185,7 @@ abstract class NDArrayBase implements NDArray {
         array2,
         descriptor.isGreater(array2.descriptor),
         reuse,
-        (value1, value2) => value1 > value2);
+        (value1, value2, valueCount) => value1 > value2);
   }
 
   @override
@@ -248,7 +196,7 @@ abstract class NDArrayBase implements NDArray {
         array2,
         descriptor.isGreaterOrEqual(array2.descriptor),
         reuse,
-        (value1, value2) => value1 >= value2);
+        (value1, value2, valueCount) => value1 >= value2);
   }
 
   @override
@@ -259,7 +207,7 @@ abstract class NDArrayBase implements NDArray {
         array2,
         descriptor.isLess(array2.descriptor),
         reuse,
-        (value1, value2) => value1 < value2);
+        (value1, value2, valueCount) => value1 < value2);
   }
 
   @override
@@ -270,18 +218,7 @@ abstract class NDArrayBase implements NDArray {
         array2,
         descriptor.isLessOrEqual(array2.descriptor),
         reuse,
-        (value1, value2) => value1 <= value2);
-  }
-
-  @override
-  NDArray mul(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return elementWiseBinaryOperationInternal(
-        array2,
-        descriptor.mul(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 * value2);
+        (value1, value2, valueCount) => value1 <= value2);
   }
 
   @override
@@ -292,7 +229,7 @@ abstract class NDArrayBase implements NDArray {
         array2,
         descriptor.isEqual(array2.descriptor),
         reuse,
-        (value1, value2) => value1 == value2);
+        (value1, value2, valueCount) => value1 == value2);
   }
 
   @override
@@ -303,18 +240,7 @@ abstract class NDArrayBase implements NDArray {
         array2,
         descriptor.isNotEqual(array2.descriptor),
         reuse,
-        (value1, value2) => value1 != value2);
-  }
-
-  @override
-  NDArray sub(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return elementWiseBinaryOperationInternal(
-        array2,
-        descriptor.sub(array2.descriptor),
-        reuse,
-        (value1, value2) => value1 - value2);
+        (value1, value2, valueCount) => value1 != value2);
   }
 
   @override
@@ -357,7 +283,7 @@ abstract class NDArrayBase implements NDArray {
         elseArray,
         resultDescriptor,
         reuse,
-        (value1, value2, value3) => value1 ? value2 : value3);
+        (value1, value2, value3, valueCount) => value1 ? value2 : value3);
   }
 
   @override
@@ -368,7 +294,7 @@ abstract class NDArrayBase implements NDArray {
   NDArray elementWiseUnaryOperation(
           {NDDataType resultDataType,
           covariant NDArray reuse,
-          unaryOperation(value)}) =>
+          unaryOperation(value, int valueCount)}) =>
       elementWiseUnaryOperationInternal(
           descriptor.elementWiseUnaryOperation(resultDataType: resultDataType),
           reuse,
@@ -379,7 +305,7 @@ abstract class NDArrayBase implements NDArray {
       {NDDataType dataType2,
       @required NDDataType resultDataType,
       covariant NDArray reuse,
-      binaryOperation(value1, value2)}) {
+      binaryOperation(value1, value2, int valueCount)}) {
     var array2 = toNDArray(value2, dataType: dataType2);
 
     return elementWiseBinaryOperationInternal(
@@ -397,7 +323,7 @@ abstract class NDArrayBase implements NDArray {
       NDDataType dataType3,
       NDDataType resultDataType,
       covariant NDArray reuse,
-      ternaryOperation(value1, value2, value3)}) {
+      ternaryOperation(value1, value2, value3, int valueCount)}) {
     var array2 = toNDArray(value2, dataType: dataType2);
     var array3 = toNDArray(value3, dataType: dataType3);
 
@@ -422,7 +348,7 @@ abstract class NDArrayBase implements NDArray {
       @required dynamic end()}) {
     var resultDescriptor = descriptor.reduceOperation(
         reductionAxis: reductionAxis,
-        keepDimensions: keepDimensions,
+        keepDimensions: false, // TODO implementare keepDimensions
         resultDataType: resultDataType);
 
     return reduceOperationInternal(
