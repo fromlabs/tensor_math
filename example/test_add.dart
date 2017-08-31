@@ -18,7 +18,7 @@ void main() {
   functionalTest([], [10]);
   functionalTest([10], [10, 10]);
 
-  performanceTest();
+  // performanceTest();
 }
 
 void functionalTest(List<int> shape1, List<int> shape2) {

@@ -5,16 +5,14 @@ import "package:tensor_math/tensor_math.dart" as tm;
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  functionalTest();
+  functionalTest([2, 2, 8, 8], [1, 0, 2, 3]);
+  functionalTest([10, 10, 10, 10], [1, 0, 2, 3]);
+  functionalTest([10, 10, 10, 10], [1, 0, 3, 2]);
 
-  // performanceTest();
+  //performanceTest();
 }
 
-void functionalTest() {
-  var shape = [1, 1];
-  var permutationAxis = [1, 0];
-  // var permutationAxis = [1, 0, 3, 2];
-
+void functionalTest(List<int> shape, List<int> permutationAxis) {
   var expectedValue = new tm.NDArray.generate(shape, (index) => index + 1,
           dataType: tm.NDDataType.float32)
       .transpose(permutationAxis: permutationAxis)

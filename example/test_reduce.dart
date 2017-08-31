@@ -5,7 +5,28 @@ import "package:tensor_math/tensor_math.dart" as tm;
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  functionalTest([128], null);
+  functionalTest([2, 2, 4], [0]);
+
+  return;
+
+  functionalTest([5, 1], [1]);
+
+  functionalTest([2, 8, 8], [2]);
+  functionalTest([3, 4, 10, 10], [0, 1]);
+  functionalTest([3, 4, 10, 10], [2]);
+  functionalTest([3, 4, 10, 10], [3]);
+  functionalTest([3, 4, 10, 10], [2, 3]);
+  functionalTest([3, 4, 10, 10], [0, 1, 2, 3]);
+
+  return;
+
+  functionalTest([3, 4, 10, 10], [0, 1]);
+
+
+
+
+  //functionalTest([10, 10, 10, 10], [3]);
+  //functionalTest([10, 10, 10, 10], [2, 3]);
 
   // performanceTest();
 }
@@ -50,14 +71,17 @@ void test2(List<int> shape, List<int> reductionAxis, int steps) {
 }
 
 void functionalTest(List<int> shape, List<int> reductionAxis) {
+  print("shape: $shape");
+  print("reductionAxis: $reductionAxis");
+
   var array = new tm.NDArray.generate(shape, (index) => index + 1,
       dataType: tm.NDDataType.float32);
 
-  print(array.toValue());
+  // print(array.toValue());
 
   var expectedValue = array.reduceSum(reductionAxis: reductionAxis).toValue();
 
-  print(expectedValue);
+  // print(expectedValue);
 
   var value;
 

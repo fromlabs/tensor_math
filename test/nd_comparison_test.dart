@@ -589,27 +589,5 @@ void main() {
       test([2, 2, 2, 2], [2, 2, 4, 1]);
       test([4, 4, 11, 13], [1, 1, 52, 44]);
     });
-
-    test('Tile tests', () {
-      var test = (List<int> shape, List<int> multiplies) {
-        var array = new tm.NDArray.generate(shape, (index) => index + 1,
-            dataType: tm.NDDataType.float32);
-        var expectedArray = array.tile(multiplies);
-
-        var value = array.toValue();
-        var expectedValue = expectedArray.toValue();
-
-        var vArray =
-            new tm.NDArray(value, dataType: tm.NDDataType.float32VBlocked);
-
-        expect(vArray.tile(multiplies).toValue(), equals(expectedValue));
-      };
-
-      test([4, 4], [1, 2]);
-      test([2, 4, 4], [1, 1, 2]);
-      test([2, 2, 4, 4], [1, 1, 1, 2]);
-      test([2, 2, 11, 13], [1, 1, 1, 2]);
-      test([2, 2, 11, 13], [2, 2, 2, 2]);
-    });
   });
 }

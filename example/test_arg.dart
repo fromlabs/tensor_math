@@ -1,3 +1,5 @@
+import "dart:math" as math;
+
 import 'package:collection/collection.dart';
 
 import "package:tensor_math/tensor_math.dart" as tm;
@@ -5,14 +7,17 @@ import "package:tensor_math/tensor_math.dart" as tm;
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  functionalTest([10], 0);
+  functionalTest([2, 2, 4], 0);
 
-  functionalTest([10, 10], 0);
-  functionalTest([10, 10], 1);
+  return;
 
   functionalTest([10, 10, 10], 0);
   functionalTest([10, 10, 10], 1);
   functionalTest([10, 10, 10], 2);
+
+  functionalTest([10, 10], 0);
+  functionalTest([10, 10], 1);
+  functionalTest([10], 0);
 }
 
 void functionalTest(List<int> shape, int axis) {
@@ -21,7 +26,7 @@ void functionalTest(List<int> shape, int axis) {
   List list = new tm.NDArray.generate(shape, (index) => index + 1,
       dataType: tm.NDDataType.float32).reshape(newDimensions: [-1]).toValue();
 
-  list.shuffle();
+  list.shuffle(new math.Random(0));
 
   var initialValue = new tm.NDArray(list, dataType: tm.NDDataType.float32)
       .reshape(newDimensions: shape)
