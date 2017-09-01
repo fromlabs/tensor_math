@@ -48,8 +48,8 @@ abstract class NDArrayBase implements NDArray {
   final NDDescriptor descriptor;
 
   factory NDArrayBase(value, NDDataType dataType, NDArray reuse) {
-    var shape = _calculateShape(value);
-    var newDataType = dataType ?? _calculateDataType(value);
+    var shape = calculateShape(value);
+    var newDataType = dataType ?? calculateDataType(value);
     var descriptor = new NDDescriptor(shape: shape, dataType: newDataType);
 
     if (newDataType.isBlocked) {
@@ -62,7 +62,7 @@ abstract class NDArrayBase implements NDArray {
   factory NDArrayBase.filled(
       List<int> dimensions, fillValue, NDDataType dataType, NDArray reuse) {
     var shape = new NDShape(dimensions);
-    var newDataType = dataType ?? _calculateDataType(fillValue);
+    var newDataType = dataType ?? calculateDataType(fillValue);
     var descriptor = new NDDescriptor(shape: shape, dataType: newDataType);
 
     if (newDataType.isBlocked) {
@@ -75,7 +75,7 @@ abstract class NDArrayBase implements NDArray {
   factory NDArrayBase.generate(List<int> dimensions, Function generator,
       NDDataType dataType, NDArray reuse) {
     var shape = new NDShape(dimensions);
-    var newDataType = dataType ?? _calculateDataType(generator(0));
+    var newDataType = dataType ?? calculateDataType(generator(0));
     var descriptor = new NDDescriptor(shape: shape, dataType: newDataType);
 
     if (newDataType.isBlocked) {
@@ -178,72 +178,6 @@ abstract class NDArrayBase implements NDArray {
   }
 
   @override
-  NDArray isGreater(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return elementWiseBinaryOperationInternal(
-        array2,
-        descriptor.isGreater(array2.descriptor),
-        reuse,
-        (value1, value2, valueCount) => value1 > value2);
-  }
-
-  @override
-  NDArray isGreaterOrEqual(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return elementWiseBinaryOperationInternal(
-        array2,
-        descriptor.isGreaterOrEqual(array2.descriptor),
-        reuse,
-        (value1, value2, valueCount) => value1 >= value2);
-  }
-
-  @override
-  NDArray isLess(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return elementWiseBinaryOperationInternal(
-        array2,
-        descriptor.isLess(array2.descriptor),
-        reuse,
-        (value1, value2, valueCount) => value1 < value2);
-  }
-
-  @override
-  NDArray isLessOrEqual(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return elementWiseBinaryOperationInternal(
-        array2,
-        descriptor.isLessOrEqual(array2.descriptor),
-        reuse,
-        (value1, value2, valueCount) => value1 <= value2);
-  }
-
-  @override
-  NDArray isEqual(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return elementWiseBinaryOperationInternal(
-        array2,
-        descriptor.isEqual(array2.descriptor),
-        reuse,
-        (value1, value2, valueCount) => value1 == value2);
-  }
-
-  @override
-  NDArray isNotEqual(value2, {NDArray reuse}) {
-    var array2 = toNDArray(value2, dataType: dataType);
-
-    return elementWiseBinaryOperationInternal(
-        array2,
-        descriptor.isNotEqual(array2.descriptor),
-        reuse,
-        (value1, value2, valueCount) => value1 != value2);
-  }
-
-  @override
   NDArray operator *(value2) => mul(value2);
 
   @override
@@ -269,22 +203,6 @@ abstract class NDArrayBase implements NDArray {
 
   @override
   NDArray operator >=(value2) => isGreaterOrEqual(value2);
-
-  @override
-  NDArray select(thenValue, elseValue, {NDDataType dataType, NDArray reuse}) {
-    var thenArray = toNDArray(thenValue, dataType: dataType);
-    var elseArray = toNDArray(elseValue, dataType: dataType);
-
-    var resultDescriptor =
-        descriptor.select(thenArray.descriptor, elseArray.descriptor);
-
-    return elementWiseTernaryOperationInternal(
-        thenArray,
-        elseArray,
-        resultDescriptor,
-        reuse,
-        (value1, value2, value3, valueCount) => value1 ? value2 : value3);
-  }
 
   @override
   NDArray cast(NDDataType toDataType, {NDArray reuse}) =>
@@ -370,7 +288,7 @@ abstract class NDArrayBase implements NDArray {
   }
 }
 
-NDShape _calculateShape(value) {
+NDShape calculateShape(value) {
   var dimensions = [];
   dynamic element = value;
   while (element is List) {
@@ -380,7 +298,7 @@ NDShape _calculateShape(value) {
   return new NDShape(dimensions);
 }
 
-NDDataType _calculateDataType(value) {
+NDDataType calculateDataType(value) {
   dynamic firstValue = value;
   while (firstValue is List) {
     firstValue = firstValue[0];

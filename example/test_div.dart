@@ -39,9 +39,9 @@ void functionalTest(List<int> shape1, List<int> shape2) {
   print(expectedValue);
 
   var value = (new tm.NDArray.generate(shape1, (index) => index + 1,
-              dataType: tm.NDDataType.float32VBlocked) /
+              dataType: tm.NDDataType.float32Blocked) /
           new tm.NDArray.generate(shape2, (index) => shapeLength2 - index,
-              dataType: tm.NDDataType.float32VBlocked))
+              dataType: tm.NDDataType.float32Blocked))
       .toValue();
 
   if (!iterableEquality.equals(value, expectedValue)) {

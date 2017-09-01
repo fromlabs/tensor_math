@@ -380,6 +380,88 @@ class NDArrayImpl extends NDArrayBase {
   }
 
   @override
+  NDArray isGreater(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
+
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.isGreater(array2.descriptor),
+        reuse,
+        (value1, value2, valueCount) => value1 > value2);
+  }
+
+  @override
+  NDArray isGreaterOrEqual(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
+
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.isGreaterOrEqual(array2.descriptor),
+        reuse,
+        (value1, value2, valueCount) => value1 >= value2);
+  }
+
+  @override
+  NDArray isLess(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
+
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.isLess(array2.descriptor),
+        reuse,
+        (value1, value2, valueCount) => value1 < value2);
+  }
+
+  @override
+  NDArray isLessOrEqual(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
+
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.isLessOrEqual(array2.descriptor),
+        reuse,
+        (value1, value2, valueCount) => value1 <= value2);
+  }
+
+  @override
+  NDArray isEqual(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
+
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.isEqual(array2.descriptor),
+        reuse,
+        (value1, value2, valueCount) => value1 == value2);
+  }
+
+  @override
+  NDArray isNotEqual(value2, {NDArray reuse}) {
+    var array2 = toNDArray(value2, dataType: dataType);
+
+    return elementWiseBinaryOperationInternal(
+        array2,
+        descriptor.isNotEqual(array2.descriptor),
+        reuse,
+        (value1, value2, valueCount) => value1 != value2);
+  }
+
+  @override
+  NDArray select(thenValue, elseValue, {NDDataType dataType, NDArray reuse}) {
+    var thenArray = toNDArray(thenValue, dataType: dataType);
+    var elseArray = toNDArray(elseValue, dataType: dataType);
+
+    var resultDescriptor =
+        descriptor.select(thenArray.descriptor, elseArray.descriptor);
+
+    return elementWiseTernaryOperationInternal(
+        thenArray,
+        elseArray,
+        resultDescriptor,
+        reuse,
+        (value1, value2, value3, valueCount) => value1 ? value2 : value3);
+  }
+
+  @override
   NDArray reduceSum(
       {List<int> reductionAxis, bool keepDimensions = false, NDArray reuse}) {
     var resultDescriptor = descriptor.reduceSum(
@@ -485,7 +567,7 @@ class NDArrayImpl extends NDArrayBase {
 
   @override
   String toString() =>
-      "<value: ${toValue()}, shape: $shape, dataType: $dataType, stride: $_dataInfo.stride, offset: $_dataInfo.offset>";
+      "<value: ${toValue()}, shape: $shape, dataType: $dataType>";
 
   @override
   NDArrayImpl elementWiseUnaryOperationInternal(NDDescriptor resultDescriptor,
@@ -881,9 +963,6 @@ void _generateData(generator(int index), List data, NDDescriptor descriptor) {
   if (descriptor.dataType.isFloat) {
     _generateConvertedData(
         generator, data, descriptor, (num value) => value.toDouble());
-  } else if (descriptor.dataType.isInteger) {
-    _generateConvertedData(
-        generator, data, descriptor, (num value) => value.toInt());
   } else {
     _generateConvertedData(generator, data, descriptor, (value) => value);
   }
@@ -898,9 +977,9 @@ void _generateConvertedData(generator(int index), List data,
 
 void _castData(NDArrayBase fromArray, List data, NDDescriptor descriptor) {
   if ((fromArray.dataType.isFloat && descriptor.dataType.isFloat) ||
-      (fromArray.dataType.isInteger && descriptor.dataType.isInteger)) {
-    return _castConvertedData(
-        fromArray, data, descriptor, (num value) => value);
+      (fromArray.dataType.isInteger && descriptor.dataType.isInteger) ||
+      (fromArray.dataType.isBoolean && descriptor.dataType.isBoolean)) {
+    return _castConvertedData(fromArray, data, descriptor, (value) => value);
   } else if (fromArray.dataType.isFloat && descriptor.dataType.isInteger) {
     return _castConvertedData(
         fromArray, data, descriptor, (double value) => value.toInt());
@@ -982,7 +1061,6 @@ List createData(NDDescriptor descriptor, NDArrayImpl reuse) {
       case NDDataType.uint64:
         return new Uint64List(descriptor.shape.length);
       case NDDataType.boolean:
-        // TODO rivedere con typed data
         return new List<bool>(descriptor.shape.length);
       case NDDataType.string:
         return new List<String>(descriptor.shape.length);

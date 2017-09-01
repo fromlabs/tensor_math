@@ -7,7 +7,8 @@ import "package:tensor_math/tensor_math.dart" as tm;
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  functionalTest([2, 2, 4], 0);
+  //functionalTest([2, 8, 8], 0);
+  functionalTest([12, 128, 200], 1);
 
   return;
 
@@ -36,13 +37,13 @@ void functionalTest(List<int> shape, int axis) {
 
   print(array.toValue());
 
-  var expectedValue = array.argMax(axis: axis).toValue();
+  var expectedValue = array.argMax(axis: axis).cast(tm.NDDataType.float32).toValue();
 
   print(expectedValue);
 
   var value;
 
-  value = new tm.NDArray(initialValue, dataType: tm.NDDataType.float32VBlocked)
+  value = new tm.NDArray(initialValue, dataType: tm.NDDataType.float32Blocked)
       .argMax(axis: axis)
       .toValue();
 

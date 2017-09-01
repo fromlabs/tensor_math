@@ -109,7 +109,7 @@ void main() {
           equals(value),
         );
         expect(
-          new tm.NDArray(value, dataType: tm.NDDataType.float32VBlocked)
+          new tm.NDArray(value, dataType: tm.NDDataType.float32Blocked)
               .toValue(),
           equals(value),
         );
@@ -134,7 +134,7 @@ void main() {
             .toValue();
         expect(
             new tm.NDArray.generate(shape, (index) => index + 1,
-                    dataType: tm.NDDataType.float32VBlocked)
+                    dataType: tm.NDDataType.float32Blocked)
                 .toValue(),
             equals(expectedValue));
       };
@@ -158,19 +158,19 @@ void main() {
         var iArray = new tm.NDArray.generate(shape, (index) => index + 1,
             dataType: tm.NDDataType.int64);
         var vArray = new tm.NDArray.generate(shape, (index) => index + 1,
-            dataType: tm.NDDataType.float32VBlocked);
+            dataType: tm.NDDataType.float32Blocked);
 
         var expectedFValue = fArray.toValue();
         var expectedIValue = iArray.toValue();
 
-        expect(fArray.cast(tm.NDDataType.float32VBlocked).toValue(),
+        expect(fArray.cast(tm.NDDataType.float32Blocked).toValue(),
             equals(expectedFValue));
-        expect(fArray.cast(tm.NDDataType.float32VBlocked).toValue(),
+        expect(fArray.cast(tm.NDDataType.float32Blocked).toValue(),
             equals(expectedFValue));
 
         expect(vArray.cast(tm.NDDataType.float32).toValue(),
             equals(expectedFValue));
-        expect(vArray.cast(tm.NDDataType.float32VBlocked).toValue(),
+        expect(vArray.cast(tm.NDDataType.float32Blocked).toValue(),
             equals(expectedFValue));
         expect(
             vArray.cast(tm.NDDataType.int64).toValue(), equals(expectedIValue));
@@ -197,7 +197,7 @@ void main() {
 
         expect(
             new tm.NDArray.generate(shape, (index) => index + 1,
-                    dataType: tm.NDDataType.float32VBlocked)
+                    dataType: tm.NDDataType.float32Blocked)
                 .reduceSum(reductionAxis: reductionAxis)
                 .toValue(),
             equals(expectedValue));
@@ -232,7 +232,7 @@ void main() {
 
         expect(
             new tm.NDArray.generate(shape, (index) => index + 1,
-                    dataType: tm.NDDataType.float32VBlocked)
+                    dataType: tm.NDDataType.float32Blocked)
                 .reduceMean(reductionAxis: reductionAxis)
                 .toValue(),
             equals(expectedValue));
@@ -267,7 +267,7 @@ void main() {
 
         expect(
             new tm.NDArray.generate(shape, (index) => index + 1,
-                    dataType: tm.NDDataType.float32VBlocked)
+                    dataType: tm.NDDataType.float32Blocked)
                 .reduceMax(reductionAxis: reductionAxis)
                 .toValue(),
             equals(expectedValue));
@@ -302,7 +302,7 @@ void main() {
 
         expect(
             new tm.NDArray.generate(shape, (index) => index + 1,
-                    dataType: tm.NDDataType.float32VBlocked)
+                    dataType: tm.NDDataType.float32Blocked)
                 .reduceSum(reductionAxis: reductionAxis, keepDimensions: true)
                 .toValue(),
             equals(expectedValue));
@@ -347,7 +347,7 @@ void main() {
 
         expect(
             new tm.NDArray(initialValue,
-                    dataType: tm.NDDataType.float32VBlocked)
+                    dataType: tm.NDDataType.float32Blocked)
                 .argMax(axis: axis)
                 .toValue(),
             equals(expectedValue));
@@ -387,10 +387,10 @@ void main() {
 
         expect(
             new tm.NDArray.generate(shape1, (index) => index + 1,
-                    dataType: tm.NDDataType.float32VBlocked)
+                    dataType: tm.NDDataType.float32Blocked)
                 .matMul(new tm.NDArray.generate(
                     shape2, (index) => shapeLength2 - index,
-                    dataType: tm.NDDataType.float32VBlocked))
+                    dataType: tm.NDDataType.float32Blocked))
                 .toValue(),
             equals(expectedValue));
       };
@@ -420,7 +420,7 @@ void main() {
 
         expect(
             new tm.NDArray.generate(shape, (index) => index + 1,
-                    dataType: tm.NDDataType.float32VBlocked)
+                    dataType: tm.NDDataType.float32Blocked)
                 .transpose(permutationAxis: permutationAxis)
                 .toValue(),
             equals(expectedValue));
@@ -456,7 +456,7 @@ void main() {
 
         expect(
             new tm.NDArray.generate(shape, (index) => index + 1,
-                    dataType: tm.NDDataType.float32VBlocked)
+                    dataType: tm.NDDataType.float32Blocked)
                 .tile(multiplies)
                 .toValue(),
             equals(expectedValue));
@@ -497,7 +497,7 @@ void main() {
             .toValue();
         expect(
             new tm.NDArray.generate(shape, (index) => index + 1,
-                    dataType: tm.NDDataType.float32VBlocked)
+                    dataType: tm.NDDataType.float32Blocked)
                 .neg()
                 .toValue(),
             equals(expectedValue));
@@ -544,10 +544,10 @@ void main() {
         var expectedValue = expectedArray.toValue();
 
         var vArray1 =
-            new tm.NDArray(value1, dataType: tm.NDDataType.float32VBlocked);
+            new tm.NDArray(value1, dataType: tm.NDDataType.float32Blocked);
 
         var vArray2 =
-            new tm.NDArray(value2, dataType: tm.NDDataType.float32VBlocked);
+            new tm.NDArray(value2, dataType: tm.NDDataType.float32Blocked);
 
         expect(vArray1.add(vArray2).toValue(), equals(expectedValue));
       };
@@ -574,7 +574,7 @@ void main() {
                 .reshape(newDimensions: newShape)
                 .toValue();
         expect(
-            new tm.NDArray(value, dataType: tm.NDDataType.float32VBlocked)
+            new tm.NDArray(value, dataType: tm.NDDataType.float32Blocked)
                 .reshape(newDimensions: newShape)
                 .toValue(),
             equals(expectedValue));

@@ -125,7 +125,7 @@ class NDDescriptor implements NDObject {
   NDDescriptor not({covariant NDDescriptor reuse}) {
     if (!dataType.isBoolean) {
       throw new UnsupportedError(
-          "NDArray($dataType)): supported only ${NDDataType.boolean}");
+          "NDArray($dataType)): supported only boolean types");
     }
 
     return this;
@@ -141,7 +141,9 @@ class NDDescriptor implements NDObject {
 
     return new NDDescriptor(
         shape: shape.broadcast(descriptor2.shape),
-        dataType: NDDataType.boolean);
+        dataType: dataType.isBlocked
+            ? NDDataType.booleanBlocked
+            : NDDataType.boolean);
   }
 
   @override
@@ -154,7 +156,9 @@ class NDDescriptor implements NDObject {
 
     return new NDDescriptor(
         shape: shape.broadcast(descriptor2.shape),
-        dataType: NDDataType.boolean);
+        dataType: dataType.isBlocked
+            ? NDDataType.booleanBlocked
+            : NDDataType.boolean);
   }
 
   @override
@@ -167,7 +171,9 @@ class NDDescriptor implements NDObject {
 
     return new NDDescriptor(
         shape: shape.broadcast(descriptor2.shape),
-        dataType: NDDataType.boolean);
+        dataType: dataType.isBlocked
+            ? NDDataType.booleanBlocked
+            : NDDataType.boolean);
   }
 
   @override
@@ -180,7 +186,9 @@ class NDDescriptor implements NDObject {
 
     return new NDDescriptor(
         shape: shape.broadcast(descriptor2.shape),
-        dataType: NDDataType.boolean);
+        dataType: dataType.isBlocked
+            ? NDDataType.booleanBlocked
+            : NDDataType.boolean);
   }
 
   @override
@@ -193,7 +201,9 @@ class NDDescriptor implements NDObject {
 
     return new NDDescriptor(
         shape: shape.broadcast(descriptor2.shape),
-        dataType: NDDataType.boolean);
+        dataType: dataType.isBlocked
+            ? NDDataType.booleanBlocked
+            : NDDataType.boolean);
   }
 
   @override
@@ -206,7 +216,9 @@ class NDDescriptor implements NDObject {
 
     return new NDDescriptor(
         shape: shape.broadcast(descriptor2.shape),
-        dataType: NDDataType.boolean);
+        dataType: dataType.isBlocked
+            ? NDDataType.booleanBlocked
+            : NDDataType.boolean);
   }
 
   @override
@@ -215,7 +227,7 @@ class NDDescriptor implements NDObject {
       {covariant NDDescriptor reuse}) {
     if (!this.dataType.isBoolean) {
       throw new UnsupportedError(
-          "Select on NDArray(${this.dataType}) condition: supported only ${NDDataType.boolean}");
+          "Select on NDArray(${this.dataType}) condition: supported only boolean types");
     } else if (!thenDescriptor.dataType
         .isCompatibleWith(elseDescriptor.dataType)) {
       throw new UnsupportedError(
@@ -246,7 +258,9 @@ class NDDescriptor implements NDObject {
           dataType: resultDataType);
 
   NDDescriptor arg({int axis = 0}) => new NDDescriptor(
-      shape: shape.arg(axis: axis), dataType: NDDataType.uint32);
+      shape: shape.arg(axis: axis),
+      dataType:
+          dataType.isBlocked ? NDDataType.int32Blocked : NDDataType.uint32);
 
   @override
   NDDescriptor reduceAny(
@@ -255,13 +269,15 @@ class NDDescriptor implements NDObject {
       covariant NDDescriptor reuse}) {
     if (!dataType.isBoolean) {
       throw new UnsupportedError(
-          "Reduce any on NDArray($dataType) condition: supported only ${NDDataType.boolean}");
+          "Reduce any on NDArray($dataType) condition: supported only boolean types");
     }
 
     return reduce(
         reductionAxis: reductionAxis,
         keepDimensions: keepDimensions,
-        resultDataType: NDDataType.boolean);
+        resultDataType: dataType.isBlocked
+            ? NDDataType.booleanBlocked
+            : NDDataType.boolean);
   }
 
   @override

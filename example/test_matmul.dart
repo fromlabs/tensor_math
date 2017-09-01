@@ -29,9 +29,9 @@ void functionalTest(List<int> shape1, List<int> shape2) {
       .toValue();
 
   var value = new tm.NDArray.generate(shape1, (index) => index + 1,
-          dataType: tm.NDDataType.float32VBlocked)
+          dataType: tm.NDDataType.float32Blocked)
       .matMul(new tm.NDArray.generate(shape2, (index) => shapeLength2 - index,
-          dataType: tm.NDDataType.float32VBlocked))
+          dataType: tm.NDDataType.float32Blocked))
       .toValue();
 
   if (!iterableEquality.equals(value, expectedValue)) {
@@ -75,9 +75,9 @@ void test2(List<int> shape1, List<int> shape2, int steps) {
   var shapeLength2 = shape2.reduce((v1, v2) => v1 * v2);
 
   var array1 = new tm.NDArray.generate(shape1, (index) => index + 1,
-      dataType: tm.NDDataType.float32VBlocked);
+      dataType: tm.NDDataType.float32Blocked);
   var array2 = new tm.NDArray.generate(shape2, (index) => shapeLength2 - index,
-      dataType: tm.NDDataType.float32VBlocked);
+      dataType: tm.NDDataType.float32Blocked);
 
   for (var i = 0; i < steps; i++) {
     array1.matMul(array2);

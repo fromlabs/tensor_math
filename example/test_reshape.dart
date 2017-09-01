@@ -34,7 +34,7 @@ void functionalTest(List<int> shape, List<int> newShape) {
   var value;
 
   value = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32VBlocked)
+          dataType: tm.NDDataType.float32Blocked)
       .reshape(newDimensions: newShape)
       .toValue();
 

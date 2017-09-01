@@ -132,11 +132,9 @@ class NDShape {
   NDShape _reduce({List<int> reductionAxis, bool keepDimensions = false}) {
     if (hasUnknownDimensions) {
       return this;
-    } else if (dimensionCount == 0) {
-      throw new StateError("Can't reduce a scalar");
     } else {
-      var newReductionAxis = convertToValidReductionAxis(
-          reductionAxis, dimensionCount);
+      var newReductionAxis =
+          convertToValidReductionAxis(reductionAxis, dimensionCount);
 
       if (newReductionAxis.length > dimensionCount) {
         throw new ArgumentError.value(newReductionAxis, "reduction axis",
@@ -385,11 +383,7 @@ class NDShape {
 
 List<int> convertToValidReductionAxis(List<int> reductionAxis, int dimension) {
   if (reductionAxis == null) {
-    if (dimension > 0) {
-      return new List.generate(dimension, (index) => index);
-    } else {
-      return null;
-    }
+    return new List.generate(dimension, (index) => index);
   } else {
     return new List.from(reductionAxis)..sort();
   }

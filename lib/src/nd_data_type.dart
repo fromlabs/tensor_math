@@ -16,7 +16,7 @@ class NDDataType {
 
   static const NDDataType float32 =
       const NDDataType._(isFloat: true, depth: 32);
-  static const NDDataType float32VBlocked =
+  static const NDDataType float32Blocked =
       const NDDataType._(isFloat: true, depth: 32, blockDepth: 2);
   static const NDDataType float64 =
       const NDDataType._(isFloat: true, depth: 64);
@@ -31,6 +31,8 @@ class NDDataType {
       const NDDataType._(isInteger: true, isUnsigned: true, depth: 16);
   static const NDDataType int32 =
       const NDDataType._(isInteger: true, depth: 32);
+  static const NDDataType int32Blocked =
+      const NDDataType._(isInteger: true, depth: 32, blockDepth: 2);
   static const NDDataType uint32 =
       const NDDataType._(isInteger: true, isUnsigned: true, depth: 32);
   static const NDDataType int64 =
@@ -38,6 +40,8 @@ class NDDataType {
   static const NDDataType uint64 =
       const NDDataType._(isInteger: true, isUnsigned: true, depth: 64);
   static const NDDataType boolean = const NDDataType._(isBoolean: true);
+  static const NDDataType booleanBlocked =
+      const NDDataType._(isBoolean: true, blockDepth: 2);
   static const NDDataType string = const NDDataType._(isString: true);
   static const NDDataType generic = const NDDataType._(isGeneric: true);
   static const NDDataType unknown = const NDDataType._();
@@ -64,7 +68,8 @@ class NDDataType {
       this == toDataType ||
       (isNumeric && toDataType.isNumeric) ||
       (isNumeric && toDataType.isBoolean) ||
-      (isBoolean && toDataType.isNumeric);
+      (isBoolean && toDataType.isNumeric) ||
+      (isBoolean && toDataType.isBoolean);
 
   bool isCompatibleWith(NDDataType dataType2) =>
       isUnknown || dataType2.isUnknown || this == dataType2;
@@ -86,8 +91,8 @@ class NDDataType {
     switch (this) {
       case float32:
         return "float32";
-      case float32VBlocked:
-        return "float32VBlocked";
+      case float32Blocked:
+        return "float32Blocked";
       case float64:
         return "float64";
       case uint8:
@@ -100,6 +105,8 @@ class NDDataType {
         return "uint16";
       case int32:
         return "int32";
+      case int32Blocked:
+        return "int32Blocked";
       case uint32:
         return "uint32";
       case int64:
@@ -108,6 +115,8 @@ class NDDataType {
         return "uint64";
       case boolean:
         return "boolean";
+      case booleanBlocked:
+        return "booleanBlocked";
       case string:
         return "string";
       case generic:

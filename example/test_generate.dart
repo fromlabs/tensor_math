@@ -9,12 +9,12 @@ void main() {
 
   print(equality.equals(
       new tm.NDArray.zeros(shape, dataType: tm.NDDataType.float32).toValue(),
-      new tm.NDArray.zeros(shape, dataType: tm.NDDataType.float32VBlocked)
+      new tm.NDArray.zeros(shape, dataType: tm.NDDataType.float32Blocked)
           .toValue()));
 
   print(equality.equals(
       new tm.NDArray.ones(shape, dataType: tm.NDDataType.float32).toValue(),
-      new tm.NDArray.ones(shape, dataType: tm.NDDataType.float32VBlocked)
+      new tm.NDArray.ones(shape, dataType: tm.NDDataType.float32Blocked)
           .toValue()));
 
   print(equality.equals(
@@ -22,6 +22,6 @@ void main() {
               dataType: tm.NDDataType.float32)
           .toValue(),
       new tm.NDArray.generate(shape, (index) => index + 1,
-              dataType: tm.NDDataType.float32VBlocked)
+              dataType: tm.NDDataType.float32Blocked)
           .toValue()));
 }

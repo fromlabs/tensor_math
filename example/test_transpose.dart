@@ -21,7 +21,7 @@ void functionalTest(List<int> shape, List<int> permutationAxis) {
   print(expectedValue);
 
   var value = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32VBlocked)
+          dataType: tm.NDDataType.float32Blocked)
       .transpose(permutationAxis: permutationAxis)
       .toValue();
 
@@ -35,7 +35,7 @@ void functionalTest(List<int> shape, List<int> permutationAxis) {
 void performanceTest() {
   test([10, 10, 10, 10], [0, 1, 3, 2], tm.NDDataType.float32, 10000000);
 
-  test([10, 10, 10, 10], [0, 1, 3, 2], tm.NDDataType.float32VBlocked, 100000);
+  test([10, 10, 10, 10], [0, 1, 3, 2], tm.NDDataType.float32Blocked, 100000);
 }
 
 void test(List<int> shape, List<int> permutationAxis, tm.NDDataType dataType,

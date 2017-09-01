@@ -5,7 +5,53 @@ import "package:tensor_math/tensor_math.dart" as tm;
 final iterableEquality = new DeepCollectionEquality();
 
 void main() {
-  functionalTest([2, 2, 4], [0]);
+  print(new tm.NDArray.generate([10], (index) => index + 1,
+          dataType: tm.NDDataType.float32Blocked)
+      .reduceSum(reductionAxis: null));
+
+  print(new tm.NDArray.generate([10], (index) => index + 1,
+      dataType: tm.NDDataType.float32Blocked)
+      .reduceSum(reductionAxis: []));
+
+  print(new tm.NDArray.generate([], (index) => index + 1,
+      dataType: tm.NDDataType.float32Blocked)
+      .reduceSum(reductionAxis: null));
+
+  print(new tm.NDArray.generate([], (index) => index + 1,
+      dataType: tm.NDDataType.float32Blocked)
+      .reduceSum(reductionAxis: []));
+
+  print(new tm.NDArray.generate([], (index) => index + 1,
+      dataType: tm.NDDataType.float32Blocked)
+      .reduceSum(reductionAxis: [0]));
+
+  var array = new tm.NDArray([
+    [true, false],
+    [false, false],
+    [true, false]
+  ], dataType: tm.NDDataType.booleanBlocked);
+
+  print(array.not());
+  print(array.reduceAny(reductionAxis: [0]));
+  print(array.reduceAny(reductionAxis: [1]));
+  print(array.reduceAny(reductionAxis: [0, 1]));
+
+  array = new tm.NDArray([
+    [true, false],
+    [false, false],
+    [true, false]
+  ]);
+
+  print(array.not());
+  print(array.reduceAny(reductionAxis: [0]));
+  print(array.reduceAny(reductionAxis: [1]));
+  print(array.reduceAny(reductionAxis: [0, 1]));
+
+  //functionalTest([12, 128, 200], [0]);
+  //functionalTest([12, 128, 200], [1]);
+  //functionalTest([12, 128, 200], [2]);
+  //functionalTest([128, 200], [0]);
+  //functionalTest([128, 200], [1]);
 
   return;
 
@@ -21,9 +67,6 @@ void main() {
   return;
 
   functionalTest([3, 4, 10, 10], [0, 1]);
-
-
-
 
   //functionalTest([10, 10, 10, 10], [3]);
   //functionalTest([10, 10, 10, 10], [2, 3]);
@@ -60,7 +103,7 @@ void test2(List<int> shape, List<int> reductionAxis, int steps) {
   watch.start();
 
   var array1 = new tm.NDArray.generate(shape, (index) => index + 1,
-      dataType: tm.NDDataType.float32VBlocked);
+      dataType: tm.NDDataType.float32Blocked);
 
   for (var i = 0; i < steps; i++) {
     array1.reduceSum(reductionAxis: reductionAxis);
@@ -86,7 +129,7 @@ void functionalTest(List<int> shape, List<int> reductionAxis) {
   var value;
 
   value = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32VBlocked)
+          dataType: tm.NDDataType.float32Blocked)
       .reduceSum(reductionAxis: reductionAxis)
       .toValue();
 
@@ -111,7 +154,7 @@ void functionalTest2(List<int> shape, List<int> reductionAxis) {
   var value;
 
   value = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32VBlocked)
+          dataType: tm.NDDataType.float32Blocked)
       .reduceMean(reductionAxis: reductionAxis)
       .toValue();
 
@@ -136,7 +179,7 @@ void functionalTest3(List<int> shape, List<int> reductionAxis) {
   var value;
 
   value = new tm.NDArray.generate(shape, (index) => index + 1,
-          dataType: tm.NDDataType.float32VBlocked)
+          dataType: tm.NDDataType.float32Blocked)
       .reduceMax(reductionAxis: reductionAxis)
       .toValue();
 
