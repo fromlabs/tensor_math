@@ -97,13 +97,60 @@ class NDShape {
   NDShape transpose({List<int> permutationAxis}) =>
       _transpose(permutationAxis: permutationAxis);
 
+  NDShape conv2d(
+      {NDShape kernel, NDShape bias, List<int> strides = const [1, 1]}) {
+    if (hasUnknownDimensions) {
+      // TODO si potrebbe dedurre l'ouput depth dal kernel
+
+      return new NDShape();
+    } else {
+      if (dimensionCount != 4) {
+        throw new ArgumentError("Shape dimension count must be 4");
+      }
+
+      // TODO check su input depth e kernel uguali
+
+      var outputHeight =
+          dimensions[1] != null ? (dimensions[1] / strides[0]).ceil() : null;
+      var outputWidth =
+          dimensions[2] != null ? (dimensions[2] / strides[1]).ceil() : null;
+      var outputDepth = !kernel.hasUnknownDimensions ? kernel[3] : null;
+
+      return new NDShape(
+          [dimensions[0], outputHeight, outputWidth, outputDepth]);
+    }
+  }
+
+  NDShape maxPool({List<int> kernelShape}) {
+    if (hasUnknownDimensions) {
+      // TODO si potrebbe dedurre l'ouput depth dal kernel
+
+      return new NDShape();
+    } else {
+      if (dimensionCount != 4) {
+        throw new ArgumentError("Shape dimension count must be 4");
+      }
+
+      var outputHeight = dimensions[1] != null
+          ? (dimensions[1] / kernelShape[0]).ceil()
+          : null;
+      var outputWidth = dimensions[2] != null
+          ? (dimensions[2] / kernelShape[1]).ceil()
+          : null;
+      var outputDepth = dimensions[3];
+
+      return new NDShape(
+          [dimensions[0], outputHeight, outputWidth, outputDepth]);
+    }
+  }
+
   NDShape _merge(NDShape shape2) {
     if (dimensionCount != null && shape2.dimensionCount != null) {
       if (dimensionCount == shape2.dimensionCount) {
         var resultDimensions = new List(dimensionCount);
 
         for (var i = 0; i < resultDimensions.length; i++) {
-          var dimension1 = this.dimensions[i];
+          var dimension1 = dimensions[i];
           var dimension2 = shape2.dimensions[i];
           if (dimension1 != null && dimension2 != null) {
             if (dimension1 == dimension2) {

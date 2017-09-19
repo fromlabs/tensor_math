@@ -21,10 +21,6 @@ void main() {
       dataType: tm.NDDataType.float32Blocked)
       .reduceSum(reductionAxis: []));
 
-  print(new tm.NDArray.generate([], (index) => index + 1,
-      dataType: tm.NDDataType.float32Blocked)
-      .reduceSum(reductionAxis: [0]));
-
   var array = new tm.NDArray([
     [true, false],
     [false, false],

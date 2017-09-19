@@ -386,7 +386,7 @@ class NDArrayBlockedImpl extends NDArrayBase {
           simpleDataType = NDDataType.boolean;
         }
 
-        // TODO ottimizzare
+        // TODO ottimizzabile
         return cast(simpleDataType)
             .transpose(permutationAxis: newPermutationAxis)
             .cast(dataType, reuse: reuse);
@@ -651,15 +651,13 @@ class NDArrayBlockedImpl extends NDArrayBase {
                 total = newValue;
                 break;
               case 3:
-                total = new Int32x4.bool(
-                    newValue.flagX, newValue.flagY, newValue.flagZ, false);
+                total = new Int32x4(newValue.x, newValue.y, newValue.y, 0);
                 break;
               case 2:
-                total = new Int32x4.bool(
-                    newValue.flagX, newValue.flagY, false, false);
+                total = new Int32x4(newValue.x, newValue.y, 0, 0);
                 break;
               case 1:
-                total = new Int32x4.bool(newValue.flagX, false, false, false);
+                total = new Int32x4(newValue.x, 0, 0, 0);
             }
           } else {
             var currentValue = total;
@@ -1015,8 +1013,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
         // TODO verificare casi in cui si possa ottimizzare
         resultData = _createData(resultDescriptor, resultDataInfo, reuse);
 
-        _elementWiseUnaryOperationData(this, resultData, resultDescriptor,
-            resultDataInfo, (value, valueCount) => value);
+        _identityOperationData(
+            this, resultData, resultDescriptor, resultDataInfo);
       }
 
       return new NDArrayBlockedImpl.raw(
@@ -1353,12 +1351,11 @@ class NDArrayBlockedImpl extends NDArrayBase {
           case 4:
             return result;
           case 3:
-            return new Int32x4.bool(
-                result.flagX, result.flagY, result.flagZ, false);
+            return new Int32x4(result.x, result.y, result.z, 0);
           case 2:
-            return new Int32x4.bool(result.flagX, result.flagY, false, false);
+            return new Int32x4(result.x, result.y, 0, 0);
           case 1:
-            return new Int32x4.bool(result.flagX, false, false, false);
+            return new Int32x4(result.x, 0, 0, 0);
         }
       });
     } else {
@@ -1396,12 +1393,11 @@ class NDArrayBlockedImpl extends NDArrayBase {
           case 4:
             return result;
           case 3:
-            return new Int32x4.bool(
-                result.flagX, result.flagY, result.flagZ, false);
+            return new Int32x4(result.x, result.y, result.z, 0);
           case 2:
-            return new Int32x4.bool(result.flagX, result.flagY, false, false);
+            return new Int32x4(result.x, result.y, 0, 0);
           case 1:
-            return new Int32x4.bool(result.flagX, false, false, false);
+            return new Int32x4(result.x, 0, 0, 0);
         }
       });
     } else {
@@ -1439,12 +1435,11 @@ class NDArrayBlockedImpl extends NDArrayBase {
           case 4:
             return result;
           case 3:
-            return new Int32x4.bool(
-                result.flagX, result.flagY, result.flagZ, false);
+            return new Int32x4(result.x, result.y, result.z, 0);
           case 2:
-            return new Int32x4.bool(result.flagX, result.flagY, false, false);
+            return new Int32x4(result.x, result.y, 0, 0);
           case 1:
-            return new Int32x4.bool(result.flagX, false, false, false);
+            return new Int32x4(result.x, 0, 0, 0);
         }
       });
     } else {
@@ -1482,12 +1477,11 @@ class NDArrayBlockedImpl extends NDArrayBase {
           case 4:
             return result;
           case 3:
-            return new Int32x4.bool(
-                result.flagX, result.flagY, result.flagZ, false);
+            return new Int32x4(result.x, result.y, result.z, 0);
           case 2:
-            return new Int32x4.bool(result.flagX, result.flagY, false, false);
+            return new Int32x4(result.x, result.y, 0, 0);
           case 1:
-            return new Int32x4.bool(result.flagX, false, false, false);
+            return new Int32x4(result.x, 0, 0, 0);
         }
       });
     } else {
@@ -1525,12 +1519,11 @@ class NDArrayBlockedImpl extends NDArrayBase {
           case 4:
             return result;
           case 3:
-            return new Int32x4.bool(
-                result.flagX, result.flagY, result.flagZ, false);
+            return new Int32x4(result.x, result.y, result.z, 0);
           case 2:
-            return new Int32x4.bool(result.flagX, result.flagY, false, false);
+            return new Int32x4(result.x, result.y, 0, 0);
           case 1:
-            return new Int32x4.bool(result.flagX, false, false, false);
+            return new Int32x4(result.x, 0, 0, 0);
         }
       });
     } else {
@@ -1568,12 +1561,11 @@ class NDArrayBlockedImpl extends NDArrayBase {
           case 4:
             return result;
           case 3:
-            return new Int32x4.bool(
-                result.flagX, result.flagY, result.flagZ, false);
+            return new Int32x4(result.x, result.y, result.z, 0);
           case 2:
-            return new Int32x4.bool(result.flagX, result.flagY, false, false);
+            return new Int32x4(result.x, result.y, 0, 0);
           case 1:
-            return new Int32x4.bool(result.flagX, false, false, false);
+            return new Int32x4(result.x, 0, 0, 0);
         }
       });
     } else {
@@ -1675,6 +1667,24 @@ class NDArrayBlockedImpl extends NDArrayBase {
         }
       });
     }
+  }
+
+  @override
+  NDArray conv2d(
+      {kernel,
+      bias,
+      List<int> strides = const [1, 1],
+      covariant NDArray reuse}) {
+    // TODO to implement NDArrayBlockedImpl.conv2d
+    throw new UnimplementedError(
+        "to implement NDArrayBlockedImpl.conv2d: $this");
+  }
+
+  @override
+  NDArray maxPool({List<int> kernelShape, covariant NDArray reuse}) {
+    // TODO to implement NDArrayBlockedImpl.maxPool
+    throw new UnimplementedError(
+        "to implement NDArrayBlockedImpl.maxPool: $this");
   }
 }
 
@@ -4804,14 +4814,10 @@ void _transposeSwitchedDataBoolean(
             Int32x4 a2 = sourceArray.data[sourceDataIndex++];
             Int32x4 a3 = sourceArray.data[sourceDataIndex++];
 
-            resultData[targetDataIndex++] =
-                new Int32x4.bool(a0.flagX, a1.flagX, a2.flagX, a3.flagX);
-            resultData[targetDataIndex++] =
-                new Int32x4.bool(a0.flagY, a1.flagY, a2.flagY, a3.flagY);
-            resultData[targetDataIndex++] =
-                new Int32x4.bool(a0.flagZ, a1.flagZ, a2.flagZ, a3.flagZ);
-            resultData[targetDataIndex++] =
-                new Int32x4.bool(a0.flagW, a1.flagW, a2.flagW, a3.flagW);
+            resultData[targetDataIndex++] = new Int32x4(a0.x, a1.x, a2.x, a3.x);
+            resultData[targetDataIndex++] = new Int32x4(a0.y, a1.y, a2.y, a3.y);
+            resultData[targetDataIndex++] = new Int32x4(a0.z, a1.z, a2.z, a3.z);
+            resultData[targetDataIndex++] = new Int32x4(a0.w, a1.w, a2.w, a3.w);
 
             targetDataIndex += delta1;
           }
@@ -5273,34 +5279,28 @@ void _tileDataBoolean(NDArrayBlockedImpl fromArray, Int32x4List resultData,
   }
 }
 
-// TODO rinminare in una specie di identity
-void _elementWiseUnaryOperationData(
-    NDArrayBlockedImpl sourceArray,
-    List resultData,
-    NDDescriptor resultDescriptor,
-    DataInfo resultDataInfo,
-    unaryOperation(value, int valueCount)) {
+void _identityOperationData(NDArrayBlockedImpl sourceArray, List resultData,
+    NDDescriptor resultDescriptor, DataInfo resultDataInfo) {
   switch (resultDescriptor.dataType) {
     case NDDataType.float32Blocked:
-      return _elementWiseUnaryOperationDataFloat(sourceArray, resultData,
-          resultDescriptor, resultDataInfo, unaryOperation);
+      return _identityOperationDataFloat(
+          sourceArray, resultData, resultDescriptor, resultDataInfo);
     case NDDataType.int32Blocked:
-      return _elementWiseUnaryOperationDataInt(sourceArray, resultData,
-          resultDescriptor, resultDataInfo, unaryOperation);
+      return _identityOperationDataInt(
+          sourceArray, resultData, resultDescriptor, resultDataInfo);
     case NDDataType.booleanBlocked:
-      return _elementWiseUnaryOperationDataBoolean(sourceArray, resultData,
-          resultDescriptor, resultDataInfo, unaryOperation);
+      return _identityOperationDataBoolean(
+          sourceArray, resultData, resultDescriptor, resultDataInfo);
     default:
       throw new StateError("DEAD CODE");
   }
 }
 
-void _elementWiseUnaryOperationDataFloat(
+void _identityOperationDataFloat(
     NDArrayBlockedImpl sourceArray,
     Float32x4List resultData,
     NDDescriptor resultDescriptor,
-    DataInfo resultDataInfo,
-    double unaryOperation(value, int valueCount)) {
+    DataInfo resultDataInfo) {
   var dimensionIndexes =
       new List(resultDataInfo.internalShape.dimensionCount - 1);
   var dataIndexes = new List(resultDataInfo.internalShape.dimensionCount - 1);
@@ -5338,10 +5338,10 @@ void _elementWiseUnaryOperationDataFloat(
               column < lastColumnIndex;
               column += resultDescriptor.dataType.blockSize) {
             var value4 = new Float32x4(
-                unaryOperation((valueIterator..moveNext()).current, 1),
-                unaryOperation((valueIterator..moveNext()).current, 1),
-                unaryOperation((valueIterator..moveNext()).current, 1),
-                unaryOperation((valueIterator..moveNext()).current, 1));
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current);
 
             resultData[dataIndex] = value4;
 
@@ -5352,31 +5352,25 @@ void _elementWiseUnaryOperationDataFloat(
           switch (resultDataInfo.lastBlockColumnCount) {
             case 4:
               value4 = new Float32x4(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1));
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current);
               break;
             case 3:
               value4 = new Float32x4(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
                   0.0);
               break;
             case 2:
-              value4 = new Float32x4(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  0.0,
-                  0.0);
+              value4 = new Float32x4((valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current, 0.0, 0.0);
               break;
             case 1:
               value4 = new Float32x4(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  0.0,
-                  0.0,
-                  0.0);
+                  (valueIterator..moveNext()).current, 0.0, 0.0, 0.0);
               break;
           }
 
@@ -5410,12 +5404,11 @@ void _elementWiseUnaryOperationDataFloat(
   }
 }
 
-void _elementWiseUnaryOperationDataInt(
+void _identityOperationDataInt(
     NDArrayBlockedImpl sourceArray,
     Int32x4List resultData,
     NDDescriptor resultDescriptor,
-    DataInfo resultDataInfo,
-    int unaryOperation(value, int valueCount)) {
+    DataInfo resultDataInfo) {
   var dimensionIndexes =
       new List(resultDataInfo.internalShape.dimensionCount - 1);
   var dataIndexes = new List(resultDataInfo.internalShape.dimensionCount - 1);
@@ -5453,10 +5446,10 @@ void _elementWiseUnaryOperationDataInt(
               column < lastColumnIndex;
               column += resultDescriptor.dataType.blockSize) {
             var value4 = new Int32x4(
-                unaryOperation((valueIterator..moveNext()).current, 1),
-                unaryOperation((valueIterator..moveNext()).current, 1),
-                unaryOperation((valueIterator..moveNext()).current, 1),
-                unaryOperation((valueIterator..moveNext()).current, 1));
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current);
 
             resultData[dataIndex] = value4;
 
@@ -5467,31 +5460,25 @@ void _elementWiseUnaryOperationDataInt(
           switch (resultDataInfo.lastBlockColumnCount) {
             case 4:
               value4 = new Int32x4(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1));
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current);
               break;
             case 3:
               value4 = new Int32x4(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
                   0);
               break;
             case 2:
-              value4 = new Int32x4(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  0,
-                  0);
+              value4 = new Int32x4((valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current, 0, 0);
               break;
             case 1:
-              value4 = new Int32x4(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  0,
-                  0,
-                  0);
+              value4 =
+                  new Int32x4((valueIterator..moveNext()).current, 0, 0, 0);
               break;
           }
 
@@ -5525,12 +5512,11 @@ void _elementWiseUnaryOperationDataInt(
   }
 }
 
-void _elementWiseUnaryOperationDataBoolean(
+void _identityOperationDataBoolean(
     NDArrayBlockedImpl sourceArray,
     Int32x4List resultData,
     NDDescriptor resultDescriptor,
-    DataInfo resultDataInfo,
-    bool unaryOperation(value, int valueCount)) {
+    DataInfo resultDataInfo) {
   var dimensionIndexes =
       new List(resultDataInfo.internalShape.dimensionCount - 1);
   var dataIndexes = new List(resultDataInfo.internalShape.dimensionCount - 1);
@@ -5568,10 +5554,10 @@ void _elementWiseUnaryOperationDataBoolean(
               column < lastColumnIndex;
               column += resultDescriptor.dataType.blockSize) {
             var value4 = new Int32x4.bool(
-                unaryOperation((valueIterator..moveNext()).current, 1),
-                unaryOperation((valueIterator..moveNext()).current, 1),
-                unaryOperation((valueIterator..moveNext()).current, 1),
-                unaryOperation((valueIterator..moveNext()).current, 1));
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current,
+                (valueIterator..moveNext()).current);
 
             resultData[dataIndex] = value4;
 
@@ -5582,31 +5568,25 @@ void _elementWiseUnaryOperationDataBoolean(
           switch (resultDataInfo.lastBlockColumnCount) {
             case 4:
               value4 = new Int32x4.bool(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1));
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current);
               break;
             case 3:
               value4 = new Int32x4.bool(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current,
                   false);
               break;
             case 2:
-              value4 = new Int32x4.bool(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  false,
-                  false);
+              value4 = new Int32x4.bool((valueIterator..moveNext()).current,
+                  (valueIterator..moveNext()).current, false, false);
               break;
             case 1:
               value4 = new Int32x4.bool(
-                  unaryOperation((valueIterator..moveNext()).current, 1),
-                  false,
-                  false,
-                  false);
+                  (valueIterator..moveNext()).current, false, false, false);
               break;
           }
 

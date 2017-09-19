@@ -494,6 +494,44 @@ class NDDescriptor implements NDObject {
       this.arg(axis: axis);
 
   @override
+  NDDescriptor conv2d(
+      {covariant NDDescriptor kernel,
+      covariant NDDescriptor bias,
+      List<int> strides = const [1, 1],
+      covariant NDDescriptor reuse}) {
+    if (!dataType.isFloat) {
+      throw new UnsupportedError(
+          "NDArray($dataType)): supported only float data type");
+    }
+
+    if (!kernel.dataType.isFloat) {
+      throw new UnsupportedError(
+          "NDArray(${kernel.dataType})): supported only float data type");
+    }
+
+    if (bias != null && !bias.dataType.isFloat) {
+      throw new UnsupportedError(
+          "NDArray(${bias.dataType}) is not compatible with NDArray(${bias.dataType})");
+    }
+
+    return new NDDescriptor(
+        shape: shape.conv2d(
+            kernel: kernel.shape, bias: bias?.shape, strides: strides),
+        dataType: dataType);
+  }
+
+  @override
+  NDDescriptor maxPool({List<int> kernelShape, covariant NDDescriptor reuse}) {
+    if (!dataType.isFloat) {
+      throw new UnsupportedError(
+          "NDArray($dataType)): supported only float data type");
+    }
+
+    return new NDDescriptor(
+        shape: shape.maxPool(kernelShape: kernelShape), dataType: dataType);
+  }
+
+  @override
   String toString() =>
       "[Descriptor: shape: ${shape.dimensions}, dataType: $dataType]";
 }

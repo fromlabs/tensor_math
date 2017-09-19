@@ -14,6 +14,7 @@ import "nd_array.dart";
 import "nd_array_base.dart";
 
 import "nd_util.dart";
+import 'package:tensor_math/src/nd_object.dart';
 
 class NDArrayImpl extends NDArrayBase {
   final List _data;
@@ -142,6 +143,8 @@ class NDArrayImpl extends NDArrayBase {
       if (isNormalized) {
         resultData = _data;
       } else {
+        // TODO se le dimensioni sono adiacenti si potrebbe ottimizzare e ricardere nel caso precedente
+
         resultData = elementWiseUnaryOperationInternal(
             resultDescriptor, reuse, (value, valueCount) => value)._data;
       }
@@ -909,7 +912,170 @@ class NDArrayImpl extends NDArrayBase {
 
     return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
   }
+
+  @override
+  NDArray conv2d(
+      {kernel,
+      bias,
+      List<int> strides = const [1, 1],
+      covariant NDArray reuse}) {
+    var kernel2 = toNDArray(kernel, dataType: dataType);
+    var bias2 = bias != null ? toNDArray(bias, dataType: dataType) : null;
+
+    var resultDescriptor = descriptor.conv2d(
+        kernel: kernel2.descriptor, bias: bias2?.descriptor, strides: strides);
+
+    var inputDepth = shape.dimensions.last;
+
+    var kernelHeight = kernel.shape[0];
+    var kernelWidth = kernel.shape[1];
+
+    var outputDepth = resultDescriptor.shape.dimensions.last;
+
+    NDArray inputPatches = _calculateConv2dPatches(
+        kernel2.shape.dimensions, strides, resultDescriptor);
+
+    var kernelReshaped = kernel.reshape(
+        newDimensions: [kernelHeight * kernelWidth * inputDepth, outputDepth]);
+
+    var convolution = inputPatches.matMul(kernelReshaped);
+
+    if (bias2 != null) {
+      convolution = convolution.add(bias2);
+    }
+
+    return convolution.reshape(
+        newDimensions: resultDescriptor.shape.dimensions);
+  }
+
+  @override
+  NDArray maxPool({List<int> kernelShape, covariant NDArray reuse}) {
+    var resultDescriptor = descriptor.maxPool(kernelShape: kernelShape);
+
+    var kernelHeight = kernelShape[0];
+    var kernelWidth = kernelShape[1];
+
+    var outputDepth = resultDescriptor.shape.dimensions.last;
+
+    NDArray inputPatches =
+        _calculateConv2dPatches(kernelShape, kernelShape, resultDescriptor);
+
+    inputPatches = inputPatches
+        .reshape(newDimensions: [-1, kernelHeight * kernelWidth, outputDepth]);
+
+    var reduction = inputPatches.reduceMax(reductionAxis: [1]);
+
+    return reduction.reshape(newDimensions: resultDescriptor.shape.dimensions);
+  }
+
+  NDArray _calculateConv2dPatches(List<int> kernelShape, List<int> strides2,
+      NDDescriptor outputDescriptor) {
+    var batchSize = shape[0];
+    var inputHeight = shape[1];
+    var inputWidth = shape[2];
+    var inputDepth = shape[3];
+
+    var kernelHeight = kernelShape[0];
+    var kernelWidth = kernelShape[1];
+
+    var outputHeight = outputDescriptor.shape[1];
+    var outputWidth = outputDescriptor.shape[2];
+
+    var vStride = strides2[0];
+    var hStride = strides2[1];
+
+    var padAlongHeight;
+    if (inputHeight % vStride == 0) {
+      padAlongHeight = math.max(kernelHeight - vStride, 0);
+    } else {
+      padAlongHeight = math.max(kernelHeight - (inputHeight % vStride), 0);
+    }
+
+    var padAlongWidth;
+    if (inputWidth % hStride == 0) {
+      padAlongWidth = math.max(kernelWidth - hStride, 0);
+    } else {
+      padAlongWidth = math.max(kernelWidth - (inputWidth % hStride), 0);
+    }
+
+    var padTop = padAlongHeight ~/ 2;
+    var padBottom = padAlongHeight - padTop;
+    var padLeft = padAlongWidth ~/ 2;
+    var padRight = padAlongWidth - padLeft;
+
+    var resultDescriptor = new NDDescriptor(
+        shape: new NDShape([
+          batchSize * outputHeight * outputWidth,
+          kernelHeight * kernelWidth * inputDepth
+        ]),
+        dataType: outputDescriptor.dataType);
+
+    var resultDataInfo = new DataInfo.normalized(resultDescriptor);
+
+    var resultData = createData(resultDescriptor, null);
+
+    var targetDataIndex = 0;
+
+    var sourceDataIndex = _dataInfo.offset;
+
+    var batchSourceDataIndex = sourceDataIndex;
+    for (var batch = 0; batch < batchSize; batch++) {
+      sourceDataIndex = batchSourceDataIndex;
+
+      var inputYSourceDataIndex = sourceDataIndex;
+      for (var inputY = 0; inputY < inputHeight; inputY += vStride) {
+        sourceDataIndex = inputYSourceDataIndex;
+
+        var inputXSourceDataIndex = sourceDataIndex;
+        for (var inputX = 0; inputX < inputWidth; inputX += hStride) {
+          sourceDataIndex = inputXSourceDataIndex;
+
+          var kernelYSourceDataIndex =
+              sourceDataIndex + -padTop * _dataInfo.stride[1];
+          for (var kernelY = -padTop;
+              kernelY < kernelHeight - padTop;
+              kernelY++) {
+            sourceDataIndex = kernelYSourceDataIndex;
+
+            var isPaddingY = !_isBetween(inputY + kernelY, 0, inputHeight - 1);
+
+            var kernelXSourceDataIndex =
+                sourceDataIndex + -padLeft * _dataInfo.stride[2];
+            for (var kernelX = -padLeft;
+                kernelX < kernelWidth - padLeft;
+                kernelX++) {
+              sourceDataIndex = kernelXSourceDataIndex;
+
+              var isPaddingX = !_isBetween(inputX + kernelX, 0, inputWidth - 1);
+
+              for (var inputZ = 0; inputZ < inputDepth; inputZ++) {
+                resultData[targetDataIndex++] =
+                    isPaddingY || isPaddingX ? 0.0 : _data[sourceDataIndex];
+
+                sourceDataIndex += _dataInfo.stride[3];
+              }
+
+              kernelXSourceDataIndex += _dataInfo.stride[2];
+            }
+
+            kernelYSourceDataIndex += _dataInfo.stride[1];
+          }
+
+          inputXSourceDataIndex += hStride * _dataInfo.stride[2];
+        }
+
+        inputYSourceDataIndex += vStride * _dataInfo.stride[1];
+      }
+
+      batchSourceDataIndex += _dataInfo.stride[0];
+    }
+
+    return new NDArrayImpl.raw(resultData, resultDescriptor, resultDataInfo);
+  }
 }
+
+bool _isBetween<T extends num>(T value, T start, T end) =>
+    value >= start && value <= end;
 
 final _iterableEquality = new IterableEquality<dynamic>();
 

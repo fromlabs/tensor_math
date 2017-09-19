@@ -126,4 +126,9 @@ abstract class NDObject {
       @required void begin(),
       @required void onValue(dimensionIndex, value, int valueCount),
       @required dynamic end()});
+
+  NDObject conv2d(
+      {kernel, bias, List<int> strides = const [1, 1], NDObject reuse});
+
+  NDObject maxPool({List<int> kernelShape, NDObject reuse});
 }
