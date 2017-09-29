@@ -1670,21 +1670,40 @@ class NDArrayBlockedImpl extends NDArrayBase {
   }
 
   @override
-  NDArray conv2d(
-      {kernel,
-      bias,
-      List<int> strides = const [1, 1],
+  NDArray oneHot(
+      {int axis = 0,
+      int dimensionCount,
+      NDDataType resultDataType,
       covariant NDArray reuse}) {
-    // TODO to implement NDArrayBlockedImpl.conv2d
+    // TODO to implement NDArrayBlockedImpl.oneHot
     throw new UnimplementedError(
-        "to implement NDArrayBlockedImpl.conv2d: $this");
+        "to implement NDArrayBlockedImpl.oneHot: $this");
   }
 
   @override
-  NDArray maxPool({List<int> kernelShape, covariant NDArray reuse}) {
-    // TODO to implement NDArrayBlockedImpl.maxPool
+  NDArray im2col(
+      {int blockHeight,
+      int blockWidth,
+      int vStride = 1,
+      int hStride = 1,
+      bool keepInputDepth = false,
+      covariant NDArray reuse}) {
+    // TODO to implement NDArrayBlockedImpl.im2col
     throw new UnimplementedError(
-        "to implement NDArrayBlockedImpl.maxPool: $this");
+        "to implement NDArrayBlockedImpl.im2col: $this");
+  }
+
+  @override
+  NDArray col2im(
+      {List<int> inputDimensions,
+      int blockHeight,
+      int blockWidth,
+      int vStride = 1,
+      int hStride = 1,
+      covariant NDArray reuse}) {
+    // TODO to implement NDArrayBlockedImpl.col2im
+    throw new UnimplementedError(
+        "to implement NDArrayBlockedImpl.col2im: $this");
   }
 }
 

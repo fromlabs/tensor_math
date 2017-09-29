@@ -127,8 +127,25 @@ abstract class NDObject {
       @required void onValue(dimensionIndex, value, int valueCount),
       @required dynamic end()});
 
-  NDObject conv2d(
-      {kernel, bias, List<int> strides = const [1, 1], NDObject reuse});
+  NDObject oneHot(
+      {int axis = 0,
+      @required int dimensionCount,
+      @required NDDataType resultDataType,
+      NDObject reuse});
 
-  NDObject maxPool({List<int> kernelShape, NDObject reuse});
+  NDObject im2col(
+      {int blockHeight,
+      int blockWidth,
+      int vStride = 1,
+      int hStride = 1,
+      bool keepInputDepth = false,
+      NDObject reuse});
+
+  NDObject col2im(
+      {List<int> inputDimensions,
+      int blockHeight,
+      int blockWidth,
+      int vStride = 1,
+      int hStride = 1,
+      NDObject reuse});
 }

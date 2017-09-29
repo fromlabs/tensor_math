@@ -90,6 +90,52 @@ abstract class NDArray implements NDObject {
   NDArray argMax({int axis = 0, covariant NDArray reuse});
 
   @override
+  NDArray oneHot(
+      {int axis = 0,
+      @required int dimensionCount,
+      @required NDDataType resultDataType,
+      covariant NDArray reuse});
+
+  @override
+  NDArray im2col(
+      {int blockHeight,
+      int blockWidth,
+      int vStride = 1,
+      int hStride = 1,
+      bool keepInputDepth = false,
+      covariant NDArray reuse});
+
+  @override
+  NDArray col2im(
+      {List<int> inputDimensions,
+      int blockHeight,
+      int blockWidth,
+      int vStride = 1,
+      int hStride = 1,
+      covariant NDArray reuse});
+
+  @override
+  NDArray elementWiseUnaryOperation(
+      {@required NDDataType resultDataType,
+      covariant NDArray reuse,
+      @required unaryOperation(value, int valueCount)});
+
+  @override
+  NDArray elementWiseBinaryOperation(value2,
+      {NDDataType dataType2,
+      @required NDDataType resultDataType,
+      covariant NDArray reuse,
+      @required binaryOperation(value1, value2, int valueCount)});
+
+  @override
+  NDArray elementWiseTernaryOperation(value2, value3,
+      {NDDataType dataType2,
+      NDDataType dataType3,
+      @required NDDataType resultDataType,
+      covariant NDArray reuse,
+      @required ternaryOperation(value1, value2, value3, int valueCount)});
+
+  @override
   NDArray reduceOperation(
       {List<int> reductionAxis,
       bool keepDimensions = false,

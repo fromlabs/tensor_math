@@ -4,6 +4,7 @@
 library tensor_math;
 
 export 'src/nd_data_type.dart';
+export 'src/nd_padding.dart';
 export 'src/nd_shape.dart';
 export 'src/nd_object.dart';
 export 'src/nd_descriptor.dart';

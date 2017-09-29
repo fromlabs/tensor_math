@@ -1,13 +1,22 @@
 // Copyright (c) 2017 Roberto Tassi. All rights reserved. Use of this source code
 // is governed by a MIT-style license that can be found in the LICENSE file.
 
-import "dart:math";
+import "dart:math" as math;
 
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 
 import "nd_data_type.dart";
 
 final _iterableEquality = new IterableEquality<int>();
+
+List<int> convertToValidReductionAxis(List<int> reductionAxis, int dimension) {
+  if (reductionAxis == null) {
+    return new List.generate(dimension, (index) => index);
+  } else {
+    return new List.from(reductionAxis)..sort();
+  }
+}
 
 class NDShape {
   final List<int> dimensions;
@@ -96,7 +105,7 @@ class NDShape {
 
   NDShape transpose({List<int> permutationAxis}) =>
       _transpose(permutationAxis: permutationAxis);
-
+/*
   NDShape conv2d(
       {NDShape kernel, NDShape bias, List<int> strides = const [1, 1]}) {
     if (hasUnknownDimensions) {
@@ -141,6 +150,69 @@ class NDShape {
 
       return new NDShape(
           [dimensions[0], outputHeight, outputWidth, outputDepth]);
+    }
+  }
+*/
+  NDShape oneHot({int axis = 0, int dimensionCount}) {
+    if (hasUnknownDimensions) {
+      return new NDShape();
+    } else {
+      // TODO controlli
+
+      var newDimensions = new List.from(dimensions);
+
+      newDimensions[axis] = dimensionCount;
+
+      return new NDShape(newDimensions);
+    }
+  }
+
+  NDShape im2col(
+      {@required int blockHeight,
+      @required int blockWidth,
+      int vStride = 1,
+      int hStride = 1,
+      bool keepInputDepth = false}) {
+    if (hasUnknownDimensions) {
+      return new NDShape();
+    } else {
+      // TODO controlli
+
+      var batchSize = dimensions[0];
+      var inputHeight = dimensions[1];
+      var inputWidth = dimensions[2];
+      var inputDepth = dimensions[3];
+
+      var outputHeight =
+          inputHeight != null ? (inputHeight / vStride).ceil() : null;
+      var outputWidth =
+          inputWidth != null ? (inputWidth / hStride).ceil() : null;
+
+      return keepInputDepth
+          ? new NDShape([
+              batchSize * outputHeight * outputWidth,
+              blockHeight * blockWidth,
+              inputDepth
+            ])
+          : new NDShape([
+              batchSize * outputHeight * outputWidth,
+              blockHeight * blockWidth * inputDepth
+            ]);
+    }
+  }
+
+  NDShape col2im(
+      {@required List<int> inputDimensions,
+      @required int blockHeight,
+      @required int blockWidth,
+      int vStride = 1,
+      int hStride = 1}) {
+    if (hasUnknownDimensions) {
+      return new NDShape();
+    } else {
+      // TODO controlli
+
+      return new NDShape(inputDimensions);
     }
   }
 
@@ -243,7 +315,7 @@ class NDShape {
   NDShape _broadcast(NDShape shape2) {
     if (dimensionCount != null && shape2.dimensionCount != null) {
       var resultDimensions =
-          new List(max(dimensionCount, shape2.dimensionCount));
+          new List(math.max(dimensionCount, shape2.dimensionCount));
 
       var resultIndex = resultDimensions.length - 1;
       var index1 = dimensionCount - 1;
@@ -425,13 +497,5 @@ class NDShape {
     } else {
       return 1;
     }
-  }
-}
-
-List<int> convertToValidReductionAxis(List<int> reductionAxis, int dimension) {
-  if (reductionAxis == null) {
-    return new List.generate(dimension, (index) => index);
-  } else {
-    return new List.from(reductionAxis)..sort();
   }
 }

@@ -493,6 +493,7 @@ class NDDescriptor implements NDObject {
           dynamic end()}) =>
       this.arg(axis: axis);
 
+  /*
   @override
   NDDescriptor conv2d(
       {covariant NDDescriptor kernel,
@@ -529,6 +530,59 @@ class NDDescriptor implements NDObject {
 
     return new NDDescriptor(
         shape: shape.maxPool(kernelShape: kernelShape), dataType: dataType);
+  }
+*/
+  @override
+  NDDescriptor oneHot(
+      {int axis = 0,
+      @required int dimensionCount,
+      @required NDDataType resultDataType,
+      covariant NDDescriptor reuse}) {
+    // TODO controlli
+
+    return new NDDescriptor(
+        shape: shape.oneHot(axis: axis, dimensionCount: dimensionCount),
+        dataType: resultDataType);
+  }
+
+  @override
+  NDDescriptor im2col(
+      {int blockHeight,
+      int blockWidth,
+      int vStride = 1,
+      int hStride = 1,
+      bool keepInputDepth = false,
+      covariant NDDescriptor reuse}) {
+    // TODO controlli
+
+    return new NDDescriptor(
+        shape: shape.im2col(
+            blockHeight: blockHeight,
+            blockWidth: blockWidth,
+            vStride: vStride,
+            hStride: hStride,
+            keepInputDepth: keepInputDepth),
+        dataType: dataType);
+  }
+
+  @override
+  NDDescriptor col2im(
+      {List<int> inputDimensions,
+      int blockHeight,
+      int blockWidth,
+      int vStride = 1,
+      int hStride = 1,
+      covariant NDDescriptor reuse}) {
+    // TODO controlli
+
+    return new NDDescriptor(
+        shape: shape.col2im(
+            inputDimensions: inputDimensions,
+            blockHeight: blockHeight,
+            blockWidth: blockWidth,
+            vStride: vStride,
+            hStride: hStride),
+        dataType: dataType);
   }
 
   @override
