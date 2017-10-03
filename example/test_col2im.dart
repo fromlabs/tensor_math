@@ -33,8 +33,8 @@ void test1(
     int kernelHeight,
     int kernelWidth,
     int outputDepth,
-    int vStride = 1,
-    int hStride = 1}) {
+    int heightStride = 1,
+    int widthStride = 1}) {
   var input = new tm.NDArray.generate(
       [batchSize, inputHeight, inputWidth, inputDepth], (index) => index + 1,
       dataType: tm.NDDataType.float32);
@@ -44,8 +44,8 @@ void test1(
   var inputColumns = input.im2col(
       blockHeight: kernelHeight,
       blockWidth: kernelWidth,
-      vStride: vStride,
-      hStride: hStride,
+      heightStride: heightStride,
+      widthStride: widthStride,
       keepInputDepth: false);
 
   print(inputColumns.shape);
@@ -65,18 +65,18 @@ void test1(
   }
 
   var output1 = inputColumns.col2im(
-      inputDimensions: input.shape.dimensions,
+      imageDimensions: input.shape.dimensions,
       blockHeight: kernelHeight,
       blockWidth: kernelWidth,
-      vStride: vStride,
-      hStride: hStride);
+      heightStride: heightStride,
+      widthStride: widthStride);
 
   var output2 = inputColumns2.col2im(
-      inputDimensions: input.shape.dimensions,
+      imageDimensions: input.shape.dimensions,
       blockHeight: kernelHeight,
       blockWidth: kernelWidth,
-      vStride: vStride,
-      hStride: hStride);
+      heightStride: heightStride,
+      widthStride: widthStride);
 
   if (!iterableEquality.equals(output1.toValue(), output2.toValue())) {
     print(output1.toValue());
@@ -94,8 +94,8 @@ void test2(
     int kernelHeight,
     int kernelWidth,
     int outputDepth,
-    int vStride = 1,
-    int hStride = 1}) {
+    int heightStride = 1,
+    int widthStride = 1}) {
   var input = new tm.NDArray.generate(
       [batchSize, inputHeight, inputWidth, inputDepth], (index) => index + 1,
       dataType: tm.NDDataType.float32);
@@ -105,8 +105,8 @@ void test2(
   var inputColumns = input.im2col(
       blockHeight: kernelHeight,
       blockWidth: kernelWidth,
-      vStride: vStride,
-      hStride: hStride,
+      heightStride: heightStride,
+      widthStride: widthStride,
       keepInputDepth: true);
 
   var inputColumns2 = inputColumns.transpose(permutationAxis: [1, 2, 0]);
@@ -124,18 +124,18 @@ void test2(
   }
 
   var output1 = inputColumns.col2im(
-      inputDimensions: input.shape.dimensions,
+      imageDimensions: input.shape.dimensions,
       blockHeight: kernelHeight,
       blockWidth: kernelWidth,
-      vStride: vStride,
-      hStride: hStride);
+      heightStride: heightStride,
+      widthStride: widthStride);
 
   var output2 = inputColumns2.col2im(
-      inputDimensions: input.shape.dimensions,
+      imageDimensions: input.shape.dimensions,
       blockHeight: kernelHeight,
       blockWidth: kernelWidth,
-      vStride: vStride,
-      hStride: hStride);
+      heightStride: heightStride,
+      widthStride: widthStride);
 
   if (!iterableEquality.equals(output1.toValue(), output2.toValue())) {
     print(output1.toValue());

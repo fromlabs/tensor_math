@@ -14,7 +14,8 @@ List<int> convertToValidReductionAxis(List<int> reductionAxis, int dimension) {
   if (reductionAxis == null) {
     return new List.generate(dimension, (index) => index);
   } else {
-    return new List.from(reductionAxis)..sort();
+    return new List.from(reductionAxis)
+      ..sort();
   }
 }
 
@@ -25,7 +26,7 @@ class NDShape {
 
   NDShape([List<int> dimensions])
       : this.dimensions =
-            dimensions != null ? new List.unmodifiable(dimensions) : null,
+  dimensions != null ? new List.unmodifiable(dimensions) : null,
         this._length = _calculateLength(dimensions);
 
   int get dimensionCount => dimensions?.length;
@@ -75,9 +76,10 @@ class NDShape {
 
   @override
   // ignore: hash_and_equals
-  bool operator ==(other) => other is NDShape
-      ? _iterableEquality.equals(dimensions, other.dimensions)
-      : false;
+  bool operator ==(other) =>
+      other is NDShape
+          ? _iterableEquality.equals(dimensions, other.dimensions)
+          : false;
 
   NDShape matMul(covariant NDShape shape2) => _matMul(shape2);
 
@@ -105,6 +107,7 @@ class NDShape {
 
   NDShape transpose({List<int> permutationAxis}) =>
       _transpose(permutationAxis: permutationAxis);
+
 /*
   NDShape conv2d(
       {NDShape kernel, NDShape bias, List<int> strides = const [1, 1]}) {
@@ -167,12 +170,11 @@ class NDShape {
     }
   }
 
-  NDShape im2col(
-      {@required int blockHeight,
-      @required int blockWidth,
-      int vStride = 1,
-      int hStride = 1,
-      bool keepInputDepth = false}) {
+  NDShape im2col({@required int blockHeight,
+    @required int blockWidth,
+    int heightStride = 1,
+    int widthStride = 1,
+    bool keepInputDepth = false}) {
     if (hasUnknownDimensions) {
       return new NDShape();
     } else {
@@ -184,35 +186,42 @@ class NDShape {
       var inputDepth = dimensions[3];
 
       var outputHeight =
-          inputHeight != null ? (inputHeight / vStride).ceil() : null;
+      inputHeight != null ? (inputHeight / heightStride).ceil() : null;
       var outputWidth =
-          inputWidth != null ? (inputWidth / hStride).ceil() : null;
+      inputWidth != null ? (inputWidth / widthStride).ceil() : null;
 
       return keepInputDepth
           ? new NDShape([
-              batchSize * outputHeight * outputWidth,
-              blockHeight * blockWidth,
-              inputDepth
-            ])
+        batchSize != null && outputHeight != null && outputWidth != null
+            ? batchSize * outputHeight * outputWidth
+            : null,
+        blockHeight != null && blockWidth != null
+            ? blockHeight * blockWidth
+            : null,
+        inputDepth
+      ])
           : new NDShape([
-              batchSize * outputHeight * outputWidth,
-              blockHeight * blockWidth * inputDepth
-            ]);
+        batchSize != null && outputHeight != null && outputWidth != null
+            ? batchSize * outputHeight * outputWidth
+            : null,
+        blockHeight != null && blockWidth != null && inputDepth != null
+            ? blockHeight * blockWidth * inputDepth
+            : null
+      ]);
     }
   }
 
-  NDShape col2im(
-      {@required List<int> inputDimensions,
-      @required int blockHeight,
-      @required int blockWidth,
-      int vStride = 1,
-      int hStride = 1}) {
+  NDShape col2im({@required List<int> imageDimensions,
+    @required int blockHeight,
+    @required int blockWidth,
+    int heightStride = 1,
+    int widthStride = 1}) {
     if (hasUnknownDimensions) {
       return new NDShape();
     } else {
       // TODO controlli
 
-      return new NDShape(inputDimensions);
+      return new NDShape(imageDimensions);
     }
   }
 
@@ -253,12 +262,14 @@ class NDShape {
       return this;
     } else {
       var newReductionAxis =
-          convertToValidReductionAxis(reductionAxis, dimensionCount);
+      convertToValidReductionAxis(reductionAxis, dimensionCount);
 
       if (newReductionAxis.length > dimensionCount) {
         throw new ArgumentError.value(newReductionAxis, "reduction axis",
             "Max dimension is $dimensionCount");
-      } else if (newReductionAxis.length != newReductionAxis.toSet().length) {
+      } else if (newReductionAxis.length != newReductionAxis
+          .toSet()
+          .length) {
         throw new ArgumentError.value(newReductionAxis, "reduction axis",
             "Must be unique indexes $newReductionAxis");
       }
@@ -271,7 +282,7 @@ class NDShape {
       for (var i = 0; i < dimensionCount; i++) {
         if (keepDimensions) {
           resultDimensions[resultIndex++] =
-              !axis.contains(i) ? dimensions[i] : 1;
+          !axis.contains(i) ? dimensions[i] : 1;
         } else {
           if (!axis.contains(i)) {
             resultDimensions[resultIndex++] = dimensions[i];
@@ -297,7 +308,9 @@ class NDShape {
       } else if (permutationAxis.length != dimensionCount) {
         throw new ArgumentError.value(permutationAxis, "permutation axis",
             "Dimension is $dimensionCount");
-      } else if (permutationAxis.length != permutationAxis.toSet().length) {
+      } else if (permutationAxis.length != permutationAxis
+          .toSet()
+          .length) {
         throw new ArgumentError.value(permutationAxis, "permutation axis",
             "Must be unique indexes $permutationAxis");
       }
@@ -315,7 +328,7 @@ class NDShape {
   NDShape _broadcast(NDShape shape2) {
     if (dimensionCount != null && shape2.dimensionCount != null) {
       var resultDimensions =
-          new List(math.max(dimensionCount, shape2.dimensionCount));
+      new List(math.max(dimensionCount, shape2.dimensionCount));
 
       var resultIndex = resultDimensions.length - 1;
       var index1 = dimensionCount - 1;
@@ -353,7 +366,7 @@ class NDShape {
 
         resultDimensions[shape2.dimensionCount - 2] = null;
         resultDimensions[shape2.dimensionCount - 1] =
-            shape2.dimensions[shape2.dimensionCount - 1];
+        shape2.dimensions[shape2.dimensionCount - 1];
 
         return new NDShape(resultDimensions);
       }
@@ -403,7 +416,7 @@ class NDShape {
       } else {
         resultDimensions[dimensionCount - 2] = dimensions[dimensionCount - 2];
         resultDimensions[dimensionCount - 1] =
-            shape2.dimensions[shape2.dimensionCount - 1];
+        shape2.dimensions[shape2.dimensionCount - 1];
 
         return new NDShape(resultDimensions);
       }

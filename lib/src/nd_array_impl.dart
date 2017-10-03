@@ -956,10 +956,15 @@ class NDArrayImpl extends NDArrayBase {
     while (resultDataIndex < resultData.length) {
       if (dimensionIndex < dimensions[shapeIndex]) {
         if (shapeIndex == resultShape.dimensionCount - 1) {
-          resultData[resultDataIndex++] =
-              (_data[dataIndex] == dimensionIndex ? one : zero);
-          dataIndex += stride[shapeIndex];
-          dimensionIndex++;
+          var value = _data[dataIndex];
+          for (; dimensionIndex < dimensions[shapeIndex]; dimensionIndex++) {
+            if (dimensionIndex == value) {
+              resultData[resultDataIndex] = one;
+            } else {
+              resultData[resultDataIndex] = zero;
+            }
+            resultDataIndex++;
+          }
         } else {
           shapeIndex++;
           dataIndexes[shapeIndex] = dataIndex;
@@ -983,15 +988,15 @@ class NDArrayImpl extends NDArrayBase {
   NDArray im2col(
       {int blockHeight,
       int blockWidth,
-      int vStride = 1,
-      int hStride = 1,
+      int heightStride = 1,
+      int widthStride = 1,
       bool keepInputDepth = false,
       covariant NDArray reuse}) {
     var resultDescriptor = descriptor.im2col(
         blockHeight: blockHeight,
         blockWidth: blockWidth,
-        vStride: vStride,
-        hStride: hStride,
+        heightStride: heightStride,
+        widthStride: widthStride,
         keepInputDepth: keepInputDepth);
 
     var batchSize = shape[0];
@@ -1004,8 +1009,8 @@ class NDArrayImpl extends NDArrayBase {
         inputWidth: inputWidth,
         blockHeight: blockHeight,
         blockWidth: blockWidth,
-        vStride: vStride,
-        hStride: hStride);
+        heightStride: heightStride,
+        widthStride: widthStride);
 
     var resultDataInfo = new DataInfo.normalized(resultDescriptor);
     var resultData = createData(resultDescriptor, reuse);
@@ -1018,11 +1023,11 @@ class NDArrayImpl extends NDArrayBase {
       sourceDataIndex = batchSourceDataIndex;
 
       var inputYSourceDataIndex = sourceDataIndex;
-      for (var inputY = 0; inputY < inputHeight; inputY += vStride) {
+      for (var inputY = 0; inputY < inputHeight; inputY += heightStride) {
         sourceDataIndex = inputYSourceDataIndex;
 
         var inputXSourceDataIndex = sourceDataIndex;
-        for (var inputX = 0; inputX < inputWidth; inputX += hStride) {
+        for (var inputX = 0; inputX < inputWidth; inputX += widthStride) {
           sourceDataIndex = inputXSourceDataIndex;
 
           var kernelYSourceDataIndex =
@@ -1057,10 +1062,10 @@ class NDArrayImpl extends NDArrayBase {
             kernelYSourceDataIndex += _dataInfo.stride[1];
           }
 
-          inputXSourceDataIndex += hStride * _dataInfo.stride[2];
+          inputXSourceDataIndex += widthStride * _dataInfo.stride[2];
         }
 
-        inputYSourceDataIndex += vStride * _dataInfo.stride[1];
+        inputYSourceDataIndex += heightStride * _dataInfo.stride[1];
       }
 
       batchSourceDataIndex += _dataInfo.stride[0];
@@ -1071,18 +1076,18 @@ class NDArrayImpl extends NDArrayBase {
 
   @override
   NDArray col2im(
-      {List<int> inputDimensions,
+      {List<int> imageDimensions,
       int blockHeight,
       int blockWidth,
-      int vStride = 1,
-      int hStride = 1,
+      int heightStride = 1,
+      int widthStride = 1,
       covariant NDArray reuse}) {
     var resultDescriptor = descriptor.col2im(
-        inputDimensions: inputDimensions,
+        imageDimensions: imageDimensions,
         blockHeight: blockHeight,
         blockWidth: blockWidth,
-        vStride: vStride,
-        hStride: hStride);
+        heightStride: heightStride,
+        widthStride: widthStride);
 
     var batchSize = resultDescriptor.shape[0];
     var inputHeight = resultDescriptor.shape[1];
@@ -1094,8 +1099,8 @@ class NDArrayImpl extends NDArrayBase {
         inputWidth: inputWidth,
         blockHeight: blockHeight,
         blockWidth: blockWidth,
-        vStride: vStride,
-        hStride: hStride);
+        heightStride: heightStride,
+        widthStride: widthStride);
 
     var keepInputDepth = shape.dimensionCount == 3;
 
@@ -1125,11 +1130,11 @@ class NDArrayImpl extends NDArrayBase {
       sourceDataIndex = batchSourceDataIndex;
 
       var inputYSourceDataIndex = sourceDataIndex;
-      for (var inputY = 0; inputY < inputHeight; inputY += vStride) {
+      for (var inputY = 0; inputY < inputHeight; inputY += heightStride) {
         sourceDataIndex = inputYSourceDataIndex;
 
         var inputXSourceDataIndex = sourceDataIndex;
-        for (var inputX = 0; inputX < inputWidth; inputX += hStride) {
+        for (var inputX = 0; inputX < inputWidth; inputX += widthStride) {
           sourceDataIndex = inputXSourceDataIndex;
           targetDataIndex = batchTargetDataIndex;
 
@@ -1169,11 +1174,11 @@ class NDArrayImpl extends NDArrayBase {
             kernelYSourceDataIndex += resultDataInfo.stride[1];
           }
 
-          inputXSourceDataIndex += hStride * resultDataInfo.stride[2];
+          inputXSourceDataIndex += widthStride * resultDataInfo.stride[2];
           batchTargetDataIndex += _dataInfo.stride[0];
         }
 
-        inputYSourceDataIndex += vStride * resultDataInfo.stride[1];
+        inputYSourceDataIndex += heightStride * resultDataInfo.stride[1];
       }
 
       batchSourceDataIndex += resultDataInfo.stride[0];

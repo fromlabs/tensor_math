@@ -1684,8 +1684,8 @@ class NDArrayBlockedImpl extends NDArrayBase {
   NDArray im2col(
       {int blockHeight,
       int blockWidth,
-      int vStride = 1,
-      int hStride = 1,
+      int heightStride = 1,
+      int widthStride = 1,
       bool keepInputDepth = false,
       covariant NDArray reuse}) {
     // TODO to implement NDArrayBlockedImpl.im2col
@@ -1695,11 +1695,11 @@ class NDArrayBlockedImpl extends NDArrayBase {
 
   @override
   NDArray col2im(
-      {List<int> inputDimensions,
+      {List<int> imageDimensions,
       int blockHeight,
       int blockWidth,
-      int vStride = 1,
-      int hStride = 1,
+      int heightStride = 1,
+      int widthStride = 1,
       covariant NDArray reuse}) {
     // TODO to implement NDArrayBlockedImpl.col2im
     throw new UnimplementedError(

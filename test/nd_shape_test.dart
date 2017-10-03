@@ -384,5 +384,70 @@ void main() {
       expect(new NDShape([1]).reshape(newDimensions: []).dimensions,
           orderedEquals([]));
     });
+
+    test('Reshape test', () {
+      expect(() => new NDShape([null, 10, 10]).reshape(newDimensions: [10]),
+          throwsArgumentError);
+
+      expect(
+          new NDShape([null, 10, 10]).reshape(newDimensions: [100]).dimensions,
+          equals([100]));
+
+      expect(() => new NDShape([null, 10, 10]).reshape(newDimensions: [101]),
+          throwsArgumentError);
+
+      expect(
+          new NDShape([null, 10, 10]).reshape(newDimensions: [200]).dimensions,
+          equals([100]));
+    });
+
+    test('Im2col test', () {
+      expect(
+          new NDShape([10, 10, 10, 10])
+              .im2col(blockHeight: 2, blockWidth: 2)
+              .dimensions,
+          equals([1000, 40]));
+
+      expect(
+          new NDShape([null, 10, 10, 10])
+              .im2col(blockHeight: 2, blockWidth: 2)
+              .dimensions,
+          equals([null, 40]));
+
+      expect(
+          new NDShape([10, 10, 10, null])
+              .im2col(blockHeight: 2, blockWidth: 2)
+              .dimensions,
+          equals([1000, null]));
+
+      expect(
+          new NDShape([10, 10, 10, 10])
+              .im2col(blockHeight: 2, blockWidth: 2, keepInputDepth: true)
+              .dimensions,
+          equals([1000, 4, 10]));
+
+      expect(
+          new NDShape([null, 10, 10, 10])
+              .im2col(blockHeight: 2, blockWidth: 2, keepInputDepth: true)
+              .dimensions,
+          equals([null, 4, 10]));
+
+      expect(
+          new NDShape([10, 10, 10, null])
+              .im2col(blockHeight: 2, blockWidth: 2, keepInputDepth: true)
+              .dimensions,
+          equals([1000, 4, null]));
+    });
+
+    test('Col2im test', () {
+      expect(
+          new NDShape([null, 40]).col2im(
+              imageDimensions: [10, 10, 10, 10],
+              blockHeight: 2,
+              blockWidth: 2).dimensions,
+          equals([10, 10, 10, 10]));
+
+      // TODO vari casi
+    });
   });
 }

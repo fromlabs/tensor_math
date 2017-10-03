@@ -100,18 +100,18 @@ abstract class NDArray implements NDObject {
   NDArray im2col(
       {int blockHeight,
       int blockWidth,
-      int vStride = 1,
-      int hStride = 1,
+      int heightStride = 1,
+      int widthStride = 1,
       bool keepInputDepth = false,
       covariant NDArray reuse});
 
   @override
   NDArray col2im(
-      {List<int> inputDimensions,
+      {List<int> imageDimensions,
       int blockHeight,
       int blockWidth,
-      int vStride = 1,
-      int hStride = 1,
+      int heightStride = 1,
+      int widthStride = 1,
       covariant NDArray reuse});
 
   @override

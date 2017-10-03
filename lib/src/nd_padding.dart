@@ -10,20 +10,20 @@ NDPadding2d createSamePadding2d(
     @required int inputWidth,
     @required int blockHeight,
     @required int blockWidth,
-    int vStride = 1,
-    int hStride = 1}) {
+    int heightStride = 1,
+    int widthStride = 1}) {
   var padAlongHeight;
-  if (inputHeight % vStride == 0) {
-    padAlongHeight = math.max(blockHeight - vStride, 0);
+  if (inputHeight % heightStride == 0) {
+    padAlongHeight = math.max(blockHeight - heightStride, 0);
   } else {
-    padAlongHeight = math.max(blockHeight - (inputHeight % vStride), 0);
+    padAlongHeight = math.max(blockHeight - (inputHeight % heightStride), 0);
   }
 
   var padAlongWidth;
-  if (inputWidth % hStride == 0) {
-    padAlongWidth = math.max(blockWidth - hStride, 0);
+  if (inputWidth % widthStride == 0) {
+    padAlongWidth = math.max(blockWidth - widthStride, 0);
   } else {
-    padAlongWidth = math.max(blockWidth - (inputWidth % hStride), 0);
+    padAlongWidth = math.max(blockWidth - (inputWidth % widthStride), 0);
   }
 
   var padTop = padAlongHeight ~/ 2;

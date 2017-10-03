@@ -549,8 +549,8 @@ class NDDescriptor implements NDObject {
   NDDescriptor im2col(
       {int blockHeight,
       int blockWidth,
-      int vStride = 1,
-      int hStride = 1,
+      int heightStride = 1,
+      int widthStride = 1,
       bool keepInputDepth = false,
       covariant NDDescriptor reuse}) {
     // TODO controlli
@@ -559,29 +559,29 @@ class NDDescriptor implements NDObject {
         shape: shape.im2col(
             blockHeight: blockHeight,
             blockWidth: blockWidth,
-            vStride: vStride,
-            hStride: hStride,
+            heightStride: heightStride,
+            widthStride: widthStride,
             keepInputDepth: keepInputDepth),
         dataType: dataType);
   }
 
   @override
   NDDescriptor col2im(
-      {List<int> inputDimensions,
+      {List<int> imageDimensions,
       int blockHeight,
       int blockWidth,
-      int vStride = 1,
-      int hStride = 1,
+      int heightStride = 1,
+      int widthStride = 1,
       covariant NDDescriptor reuse}) {
     // TODO controlli
 
     return new NDDescriptor(
         shape: shape.col2im(
-            inputDimensions: inputDimensions,
+            imageDimensions: imageDimensions,
             blockHeight: blockHeight,
             blockWidth: blockWidth,
-            vStride: vStride,
-            hStride: hStride),
+            heightStride: heightStride,
+            widthStride: widthStride),
         dataType: dataType);
   }
 

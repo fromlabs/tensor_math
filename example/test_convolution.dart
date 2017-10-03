@@ -49,8 +49,8 @@ void main() {
       kernelHeight: 3,
       kernelWidth: 3,
       outputDepth: 1,
-      vStride: 2,
-      hStride: 2);
+      heightStride: 2,
+      widthStride: 2);
 
   testConv(
       batchSize: 2,
@@ -69,8 +69,8 @@ void main() {
       kernelHeight: 3,
       kernelWidth: 3,
       outputDepth: 3,
-      vStride: 2,
-      hStride: 2);
+      heightStride: 2,
+      widthStride: 2);
 
   testConv(
       batchSize: 1,
@@ -89,8 +89,8 @@ void main() {
       kernelHeight: 3,
       kernelWidth: 3,
       outputDepth: 1,
-      vStride: 2,
-      hStride: 2);
+      heightStride: 2,
+      widthStride: 2);
 
   testConv(
       batchSize: 1,
@@ -109,8 +109,8 @@ void main() {
       kernelHeight: 2,
       kernelWidth: 2,
       outputDepth: 3,
-      vStride: 2,
-      hStride: 2);
+      heightStride: 2,
+      widthStride: 2);
 
   testConv(
       batchSize: 1,
@@ -146,8 +146,8 @@ void testConv(
     int kernelHeight,
     int kernelWidth,
     int outputDepth,
-    int vStride = 1,
-    int hStride = 1}) {
+    int heightStride = 1,
+    int widthStride = 1}) {
   var input = new tm.NDArray.generate(
       [batchSize, inputHeight, inputWidth, inputDepth], (index) => index + 1,
       dataType: tm.NDDataType.float32);
@@ -165,11 +165,11 @@ void testConv(
   print("input shape: ${input.shape}");
   print("kernel shape: ${kernel.shape}");
   print("bias shape: ${bias.shape}");
-  print("vStride: $vStride");
-  print("hStride: $hStride");
+  print("heightStride: $heightStride");
+  print("widthStride: $widthStride");
 
-  var output =
-      conv2d(input, kernel: kernel, vStride: vStride, hStride: hStride);
+  var output = conv2d(input,
+      kernel: kernel, heightStride: heightStride, widthStride: widthStride);
 
   print("output shape: ${output.shape}");
   print("output: $output");
@@ -183,8 +183,8 @@ void testConv(
       input: input,
       bias: bias,
       kernel: kernel,
-      vStride: vStride,
-      hStride: hStride);
+      heightStride: heightStride,
+      widthStride: widthStride);
 
   print("gradients: $gradients");
 }
@@ -223,7 +223,10 @@ void testPool(
 }
 
 tm.NDArray conv2d(tm.NDArray input,
-    {tm.NDArray kernel, tm.NDArray bias, int vStride = 1, int hStride = 1}) {
+    {tm.NDArray kernel,
+    tm.NDArray bias,
+    int heightStride = 1,
+    int widthStride = 1}) {
   var batchSize = input.shape[0];
   var inputHeight = input.shape[1];
   var inputWidth = input.shape[2];
@@ -233,15 +236,16 @@ tm.NDArray conv2d(tm.NDArray input,
   var kernelWidth = kernel.shape[1];
 
   var outputHeight =
-      inputHeight != null ? (inputHeight / vStride).ceil() : null;
-  var outputWidth = inputWidth != null ? (inputWidth / hStride).ceil() : null;
+      inputHeight != null ? (inputHeight / heightStride).ceil() : null;
+  var outputWidth =
+      inputWidth != null ? (inputWidth / widthStride).ceil() : null;
   var outputDepth = kernel.shape[3];
 
   tm.NDArray inputColumns = input.im2col(
       blockHeight: kernelHeight,
       blockWidth: kernelWidth,
-      vStride: vStride,
-      hStride: hStride,
+      heightStride: heightStride,
+      widthStride: widthStride,
       keepInputDepth: false);
 
   // OK reshape sui primi livelli (no ultimo), comunque matrice piccola
@@ -264,8 +268,8 @@ Map<String, tm.NDArray> conv2dGradients(
     tm.NDArray output,
     tm.NDArray kernel,
     tm.NDArray bias,
-    int vStride = 1,
-    int hStride = 1,
+    int heightStride = 1,
+    int widthStride = 1,
     tm.NDArray backPropagatedGradient}) {
   var kernelHeight = kernel.shape[0];
   var kernelWidth = kernel.shape[1];
@@ -287,8 +291,8 @@ Map<String, tm.NDArray> conv2dGradients(
   tm.NDArray inputColumns = input.im2col(
       blockHeight: kernelHeight,
       blockWidth: kernelWidth,
-      vStride: vStride,
-      hStride: hStride,
+      heightStride: heightStride,
+      widthStride: widthStride,
       keepInputDepth: false);
 
   // OK transpose ultimi due livelli
@@ -304,11 +308,11 @@ Map<String, tm.NDArray> conv2dGradients(
       .matMul(kernelReshaped.transpose(permutationAxis: [1, 0]));
 
   var inputGradient = inputColumnsGradient.col2im(
-      inputDimensions: input.shape.dimensions,
+      imageDimensions: input.shape.dimensions,
       blockHeight: kernelHeight,
       blockWidth: kernelWidth,
-      vStride: vStride,
-      hStride: hStride);
+      heightStride: heightStride,
+      widthStride: widthStride);
 
   // TODO calcolo gradiente del bias
   var biasGradient;
@@ -326,18 +330,19 @@ tm.NDArray maxPool(tm.NDArray input, {int blockHeight, int blockWidth}) {
   var inputWidth = input.shape[2];
   var inputDepth = input.shape[3];
 
-  int vStride = blockHeight;
-  int hStride = blockWidth;
+  int heightStride = blockHeight;
+  int widthStride = blockWidth;
 
   var outputHeight =
-      inputHeight != null ? (inputHeight / vStride).ceil() : null;
-  var outputWidth = inputWidth != null ? (inputWidth / hStride).ceil() : null;
+      inputHeight != null ? (inputHeight / heightStride).ceil() : null;
+  var outputWidth =
+      inputWidth != null ? (inputWidth / widthStride).ceil() : null;
 
   tm.NDArray inputColumns = input.im2col(
       blockHeight: blockHeight,
       blockWidth: blockWidth,
-      vStride: vStride,
-      hStride: hStride,
+      heightStride: heightStride,
+      widthStride: widthStride,
       keepInputDepth: true);
 
   var reduction = inputColumns.reduceMax(reductionAxis: [1]);
@@ -355,29 +360,28 @@ tm.NDArray maxPoolGradient(
     int blockHeight,
     int blockWidth,
     tm.NDArray backPropagatedGradient}) {
-  int vStride = blockHeight;
-  int hStride = blockWidth;
+  int heightStride = blockHeight;
+  int widthStride = blockWidth;
 
   // TODO cache del inputColumns
   tm.NDArray inputColumns = input.im2col(
       blockHeight: blockHeight,
       blockWidth: blockWidth,
-      vStride: vStride,
-      hStride: hStride,
+      heightStride: heightStride,
+      widthStride: widthStride,
       keepInputDepth: true);
 
-  var reductionForGradient =
-      inputColumns.reduceMax(reductionAxis: [1], keepDimensions: true);
+  var outputDepth = inputColumns.shape[2];
 
-  var maxForGradient = inputColumns.elementWiseBinaryOperation(
-      reductionForGradient,
-      resultDataType: tm.NDDataType.float32,
-      binaryOperation: (value1, value2, valueCount) {
-    return value1 == value2 ? 1.0 : 0.0;
-  });
+  // TODO args con keepDimensions
+  var args = inputColumns.argMax(axis: 1);
 
-  var sumForGradient =
-      maxForGradient.reduceSum(reductionAxis: [1], keepDimensions: true);
+  // TODO non avendo la keepDimensions facciamo un reshape
+  args = args.reshape(newDimensions: [-1, 1, outputDepth]);
 
-  return maxForGradient.div(sumForGradient);
+  // TODO funzione per trasformare in one-hot-encoding
+  return backPropagatedGradient.mul(args.oneHot(
+      axis: 1,
+      dimensionCount: inputColumns.shape[1],
+      resultDataType: backPropagatedGradient.dataType));
 }
