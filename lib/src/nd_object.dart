@@ -44,6 +44,10 @@ abstract class NDObject {
 
   NDObject exp({NDObject reuse});
 
+  NDObject sqrt({NDObject reuse});
+
+  NDObject pow(num exponent, {NDObject reuse});
+
   NDObject reciprocal({NDObject reuse});
 
   NDObject log({NDObject reuse});

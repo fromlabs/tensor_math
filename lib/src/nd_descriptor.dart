@@ -39,10 +39,10 @@ class NDDescriptor implements NDObject {
       dataType: dataType.mergeWith(descriptor2.dataType));
 
   @override
-  NDDescriptor normalize({covariant NDDescriptor reuse}) => descriptor;
+  NDDescriptor normalize({NDObject reuse}) => descriptor;
 
   @override
-  NDDescriptor cast(NDDataType toDataType, {covariant NDDescriptor reuse}) {
+  NDDescriptor cast(NDDataType toDataType, {NDObject reuse}) {
     if (!dataType.isCastableTo(toDataType)) {
       throw new UnsupportedError(
           "Cast from NDArray($dataType) to NDArray($toDataType)");
@@ -87,7 +87,7 @@ class NDDescriptor implements NDObject {
       isGreaterOrEqual(descriptor2);
 
   @override
-  NDDescriptor argMax({int axis = 0, covariant NDDescriptor reuse}) =>
+  NDDescriptor argMax({int axis = 0, NDObject reuse}) =>
       arg(axis: axis);
 
   NDDescriptor broadcast(covariant NDDescriptor descriptor2,
@@ -96,19 +96,19 @@ class NDDescriptor implements NDObject {
           shape: shape.broadcast(descriptor2.shape), dataType: resultDataType);
 
   @override
-  NDDescriptor tile(List<int> multiplies, {covariant NDDescriptor reuse}) =>
+  NDDescriptor tile(List<int> multiplies, {NDObject reuse}) =>
       new NDDescriptor(shape: shape.tile(multiplies), dataType: dataType);
 
   @override
   NDDescriptor transpose(
-          {List<int> permutationAxis, covariant NDDescriptor reuse}) =>
+          {List<int> permutationAxis, NDObject reuse}) =>
       new NDDescriptor(
           shape: shape.transpose(permutationAxis: permutationAxis),
           dataType: dataType);
 
   @override
   NDDescriptor matMul(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -122,7 +122,7 @@ class NDDescriptor implements NDObject {
   }
 
   @override
-  NDDescriptor not({covariant NDDescriptor reuse}) {
+  NDDescriptor not({NDObject reuse}) {
     if (!dataType.isBoolean) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only boolean types");
@@ -133,7 +133,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor isEqual(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -148,7 +148,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor isGreater(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -163,7 +163,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor isGreaterOrEqual(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -178,7 +178,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor isLess(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -193,7 +193,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor isLessOrEqual(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -208,7 +208,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor isNotEqual(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -224,7 +224,7 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor select(covariant NDDescriptor thenDescriptor,
       covariant NDDescriptor elseDescriptor,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isBoolean) {
       throw new UnsupportedError(
           "Select on NDArray(${this.dataType}) condition: supported only boolean types");
@@ -243,7 +243,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor reshape(
-          {List<int> newDimensions, covariant NDDescriptor reuse}) =>
+          {List<int> newDimensions, NDObject reuse}) =>
       new NDDescriptor(
           shape: shape.reshape(newDimensions: newDimensions),
           dataType: dataType);
@@ -266,7 +266,7 @@ class NDDescriptor implements NDObject {
   NDDescriptor reduceAny(
       {List<int> reductionAxis,
       bool keepDimensions: false,
-      covariant NDDescriptor reuse}) {
+      NDObject reuse}) {
     if (!dataType.isBoolean) {
       throw new UnsupportedError(
           "Reduce any on NDArray($dataType) condition: supported only boolean types");
@@ -284,7 +284,7 @@ class NDDescriptor implements NDObject {
   NDDescriptor reduceMax(
       {List<int> reductionAxis,
       bool keepDimensions: false,
-      covariant NDDescriptor reuse}) {
+      NDObject reuse}) {
     if (!dataType.isNumeric) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only numeric data type");
@@ -300,7 +300,7 @@ class NDDescriptor implements NDObject {
   NDDescriptor reduceMean(
       {List<int> reductionAxis,
       bool keepDimensions: false,
-      covariant NDDescriptor reuse}) {
+      NDObject reuse}) {
     if (!dataType.isFloat) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only float data type");
@@ -316,7 +316,7 @@ class NDDescriptor implements NDObject {
   NDDescriptor reduceSum(
       {List<int> reductionAxis,
       bool keepDimensions: false,
-      covariant NDDescriptor reuse}) {
+      NDObject reuse}) {
     if (!dataType.isNumeric) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only numeric data type");
@@ -329,7 +329,7 @@ class NDDescriptor implements NDObject {
   }
 
   @override
-  NDDescriptor abs({covariant NDDescriptor reuse}) {
+  NDDescriptor abs({NDObject reuse}) {
     if (!dataType.isNumeric) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only numeric data type");
@@ -339,7 +339,7 @@ class NDDescriptor implements NDObject {
   }
 
   @override
-  NDDescriptor exp({covariant NDDescriptor reuse}) {
+  NDDescriptor exp({NDObject reuse}) {
     if (!dataType.isFloat) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only float data type");
@@ -349,27 +349,7 @@ class NDDescriptor implements NDObject {
   }
 
   @override
-  NDDescriptor reciprocal({covariant NDDescriptor reuse}) {
-    if (!dataType.isFloat) {
-      throw new UnsupportedError(
-          "NDArray($dataType)): supported only float data type");
-    }
-
-    return this;
-  }
-
-  @override
-  NDDescriptor log({covariant NDDescriptor reuse}) {
-    if (!dataType.isFloat) {
-      throw new UnsupportedError(
-          "NDArray($dataType)): supported only float data type");
-    }
-
-    return this;
-  }
-
-  @override
-  NDDescriptor neg({covariant NDDescriptor reuse}) {
+  NDDescriptor pow(num exponent, {NDObject reuse}) {
     if (!dataType.isNumeric) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only numeric data type");
@@ -379,7 +359,47 @@ class NDDescriptor implements NDObject {
   }
 
   @override
-  NDDescriptor sign({covariant NDDescriptor reuse}) {
+  NDDescriptor sqrt({NDObject reuse}) {
+    if (!dataType.isFloat) {
+      throw new UnsupportedError(
+          "NDArray($dataType)): supported only float data type");
+    }
+
+    return this;
+  }
+
+  @override
+  NDDescriptor reciprocal({NDObject reuse}) {
+    if (!dataType.isFloat) {
+      throw new UnsupportedError(
+          "NDArray($dataType)): supported only float data type");
+    }
+
+    return this;
+  }
+
+  @override
+  NDDescriptor log({NDObject reuse}) {
+    if (!dataType.isFloat) {
+      throw new UnsupportedError(
+          "NDArray($dataType)): supported only float data type");
+    }
+
+    return this;
+  }
+
+  @override
+  NDDescriptor neg({NDObject reuse}) {
+    if (!dataType.isNumeric) {
+      throw new UnsupportedError(
+          "NDArray($dataType)): supported only numeric data type");
+    }
+
+    return this;
+  }
+
+  @override
+  NDDescriptor sign({NDObject reuse}) {
     if (!dataType.isNumeric) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only numeric data type");
@@ -390,7 +410,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor sub(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -404,7 +424,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor mul(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -418,7 +438,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor add(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -432,7 +452,7 @@ class NDDescriptor implements NDObject {
 
   @override
   NDDescriptor div(covariant NDDescriptor descriptor2,
-      {covariant NDDescriptor reuse}) {
+      {NDObject reuse}) {
     if (!this.dataType.isCompatibleWith(descriptor2.dataType)) {
       throw new UnsupportedError(
           "NDArray($dataType) is not compatible with NDArray(${descriptor2.dataType})");
@@ -447,7 +467,7 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor elementWiseUnaryOperation(
           {@required NDDataType resultDataType,
-          covariant NDDescriptor reuse,
+          NDObject reuse,
           unaryOperation(value, int valueCount)}) =>
       new NDDescriptor(shape: shape, dataType: resultDataType);
 
@@ -455,7 +475,7 @@ class NDDescriptor implements NDObject {
   NDDescriptor elementWiseBinaryOperation(covariant NDDescriptor descriptor2,
           {NDDataType dataType2,
           @required NDDataType resultDataType,
-          covariant NDDescriptor reuse,
+          NDObject reuse,
           binaryOperation(value1, value2, int valueCount)}) =>
       broadcast(descriptor2, resultDataType: resultDataType);
 
@@ -465,7 +485,7 @@ class NDDescriptor implements NDObject {
           {NDDataType dataType2,
           NDDataType dataType3,
           @required NDDataType resultDataType,
-          covariant NDDescriptor reuse,
+          NDObject reuse,
           ternaryOperation(value1, value2, value3, int valueCount)}) =>
       broadcast(descriptor2, resultDataType: resultDataType)
           .broadcast(descriptor3, resultDataType: resultDataType);
@@ -475,7 +495,7 @@ class NDDescriptor implements NDObject {
           {List<int> reductionAxis,
           bool keepDimensions = false,
           @required NDDataType resultDataType,
-          covariant NDDescriptor reuse,
+          NDObject reuse,
           void begin(),
           void onValue(value, int valueCount),
           dynamic end()}) =>
@@ -487,7 +507,7 @@ class NDDescriptor implements NDObject {
   @override
   NDDescriptor argOperation(
           {int axis = 0,
-          covariant NDDescriptor reuse,
+          NDObject reuse,
           void begin(),
           void onValue(dimensionIndex, value, int valueCount),
           dynamic end()}) =>
@@ -499,7 +519,7 @@ class NDDescriptor implements NDObject {
       {covariant NDDescriptor kernel,
       covariant NDDescriptor bias,
       List<int> strides = const [1, 1],
-      covariant NDDescriptor reuse}) {
+      NDObject reuse}) {
     if (!dataType.isFloat) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only float data type");
@@ -522,7 +542,7 @@ class NDDescriptor implements NDObject {
   }
 
   @override
-  NDDescriptor maxPool({List<int> kernelShape, covariant NDDescriptor reuse}) {
+  NDDescriptor maxPool({List<int> kernelShape, NDObject reuse}) {
     if (!dataType.isFloat) {
       throw new UnsupportedError(
           "NDArray($dataType)): supported only float data type");
@@ -537,7 +557,7 @@ class NDDescriptor implements NDObject {
       {int axis = 0,
       @required int dimensionCount,
       @required NDDataType resultDataType,
-      covariant NDDescriptor reuse}) {
+      NDObject reuse}) {
     // TODO controlli
 
     return new NDDescriptor(
@@ -552,7 +572,7 @@ class NDDescriptor implements NDObject {
       int heightStride = 1,
       int widthStride = 1,
       bool keepInputDepth = false,
-      covariant NDDescriptor reuse}) {
+      NDObject reuse}) {
     // TODO controlli
 
     return new NDDescriptor(
@@ -572,7 +592,7 @@ class NDDescriptor implements NDObject {
       int blockWidth,
       int heightStride = 1,
       int widthStride = 1,
-      covariant NDDescriptor reuse}) {
+      NDObject reuse}) {
     // TODO controlli
 
     return new NDDescriptor(

@@ -11,6 +11,10 @@ import "nd_array.dart";
 import "nd_array_impl.dart";
 import "nd_array_blocked_impl.dart";
 
+void _debug(msg) {
+  print(msg);
+}
+
 NDArray createTestNDArray(List<int> dimensions, {NDDataType dataType}) =>
     new NDArray.generate(dimensions, (index) => index, dataType: dataType);
 
@@ -22,6 +26,10 @@ NDArray adds(Iterable values, {NDDataType dataType, NDArray reuse}) {
   var arrays = values
       .map<NDArray>((value) => toNDArray(value, dataType: dataType))
       .toList();
+
+  if (arrays.length > 2) {
+    _debug("TO OPTIMIZE: adds of ${arrays.length} arrays");
+  }
 
   if (arrays.length > 1) {
     return arrays.reduce((total, element) => total + element);
@@ -38,8 +46,10 @@ NDArray toNDArray(value, {NDDataType dataType}) {
     }
 
     return value;
-  } else {
+  } else if (value != null) {
     return new NDArray(value, dataType: dataType);
+  } else {
+    throw new ArgumentError.notNull();
   }
 }
 
@@ -205,8 +215,11 @@ abstract class NDArrayBase implements NDArray {
   NDArray operator >=(value2) => isGreaterOrEqual(value2);
 
   @override
-  NDArray cast(NDDataType toDataType, {NDArray reuse}) =>
-      new NDArrayBase.castFrom(this, toDataType, reuse);
+  NDArray cast(NDDataType toDataType, {NDArray reuse}) {
+    _debug("CALL: cast");
+
+    return new NDArrayBase.castFrom(this, toDataType, reuse);
+  }
 
   @override
   NDArray elementWiseUnaryOperation(

@@ -159,6 +159,12 @@ abstract class NDArray implements NDObject {
   NDArray exp({covariant NDArray reuse});
 
   @override
+  NDArray sqrt({covariant NDArray reuse});
+
+  @override
+  NDArray pow(num exponent, {covariant NDArray reuse});
+
+  @override
   NDArray reciprocal({covariant NDArray reuse});
 
   @override

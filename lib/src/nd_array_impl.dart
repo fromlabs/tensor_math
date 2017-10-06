@@ -17,6 +17,10 @@ import "nd_array_base.dart";
 import "nd_util.dart";
 import 'package:tensor_math/src/nd_object.dart';
 
+void _debug(msg) {
+  // print(msg);
+}
+
 class NDArrayImpl extends NDArrayBase {
   final List _data;
 
@@ -72,6 +76,8 @@ class NDArrayImpl extends NDArrayBase {
     if (shape.isScalar) {
       return _data[_dataInfo.offset];
     } else {
+      _debug("CALL: toValue");
+
       var shapeIndex = 0;
       var dimensionValues = new List(shape.dimensionCount);
       var dimensionIndexes = new List(shape.dimensionCount);
@@ -120,6 +126,8 @@ class NDArrayImpl extends NDArrayBase {
     if (isNormalized) {
       return this;
     } else {
+      _debug("CALL: normalize");
+
       var resultDescriptor = descriptor;
 
       var resultDataInfo = new DataInfo.normalized(resultDescriptor);
@@ -145,6 +153,8 @@ class NDArrayImpl extends NDArrayBase {
         resultData = _data;
       } else {
         // TODO se le dimensioni sono adiacenti si potrebbe ottimizzare e ricardere nel caso precedente
+
+        _debug("TO OPTIMIZE: reshape of not normalized array");
 
         resultData = elementWiseUnaryOperationInternal(
             resultDescriptor, reuse, (value, valueCount) => value)._data;
@@ -185,6 +195,8 @@ class NDArrayImpl extends NDArrayBase {
     var resultDescriptor = descriptor.tile(multiplies);
 
     if (descriptor != resultDescriptor) {
+      _debug("CALL: tile");
+
       var resultShape = resultDescriptor.shape;
       var resultData = createData(resultDescriptor, reuse);
       var resultDataInfo = new DataInfo.normalized(resultDescriptor);
@@ -244,6 +256,8 @@ class NDArrayImpl extends NDArrayBase {
 
   @override
   NDArray matMul(value2, {NDArray reuse}) {
+    _debug("CALL: matMul");
+
     NDArrayImpl array2 = toNDArray(value2, dataType: dataType);
 
     var resultDescriptor = descriptor.matMul(array2.descriptor);
@@ -318,6 +332,15 @@ class NDArrayImpl extends NDArrayBase {
   @override
   NDArray exp({NDArray reuse}) => elementWiseUnaryOperationInternal(
       descriptor.exp(), reuse, (value, valueCount) => math.exp(value));
+
+  @override
+  NDArray sqrt({covariant NDArray reuse}) => elementWiseUnaryOperationInternal(
+      descriptor.sqrt(), reuse, (value, valueCount) => math.sqrt(value));
+
+  @override
+  NDArray pow(num exponent, {covariant NDArray reuse}) =>
+      elementWiseUnaryOperationInternal(descriptor.pow(exponent), reuse,
+          (value, valueCount) => math.pow(value, exponent));
 
   @override
   NDArray reciprocal({NDArray reuse}) => elementWiseUnaryOperationInternal(
@@ -584,6 +607,8 @@ class NDArrayImpl extends NDArrayBase {
 
       resultData[0] = unaryOperation(_data[_dataInfo.offset], 1);
     } else {
+      _debug("CALL: elementWiseUnaryOperationInternal");
+
       resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
@@ -636,6 +661,8 @@ class NDArrayImpl extends NDArrayBase {
       resultData[0] = binaryOperation(
           _data[_dataInfo.offset], array2._data[array2._dataInfo.offset], 1);
     } else {
+      _debug("CALL: elementWiseBinaryOperationInternal");
+
       resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
@@ -697,6 +724,8 @@ class NDArrayImpl extends NDArrayBase {
           array3._data[array3._dataInfo.offset],
           1);
     } else {
+      _debug("CALL: elementWiseTernaryOperationInternal");
+
       resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
       var shapeIndex = 0;
@@ -764,6 +793,8 @@ class NDArrayImpl extends NDArrayBase {
         convertToValidReductionAxis(reductionAxis, shape.dimensionCount);
 
     if (newReductionAxis.isNotEmpty) {
+      _debug("CALL: reduceOperationInternal");
+
       var resultData = createData(resultDescriptor, reuse);
       var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
@@ -851,6 +882,8 @@ class NDArrayImpl extends NDArrayBase {
       {void begin(),
       void onValue(dimensionIndex, value, int valueCount),
       dynamic end()}) {
+    _debug("CALL: argOperationInternal");
+
     var resultData = createData(resultDescriptor, reuse);
     var resultDataInfo = new DataInfo.normalized(resultDescriptor);
 
@@ -920,6 +953,8 @@ class NDArrayImpl extends NDArrayBase {
       int dimensionCount,
       NDDataType resultDataType,
       NDObject reuse}) {
+    _debug("CALL: oneHot");
+
     final zero = resultDataType.isFloat ? 0.0 : 0;
     final one = resultDataType.isFloat ? 1.0 : 1;
 
@@ -992,6 +1027,8 @@ class NDArrayImpl extends NDArrayBase {
       int widthStride = 1,
       bool keepInputDepth = false,
       covariant NDArray reuse}) {
+    _debug("CALL: im2col");
+
     var resultDescriptor = descriptor.im2col(
         blockHeight: blockHeight,
         blockWidth: blockWidth,
@@ -1082,6 +1119,8 @@ class NDArrayImpl extends NDArrayBase {
       int heightStride = 1,
       int widthStride = 1,
       covariant NDArray reuse}) {
+    _debug("CALL: col2im");
+
     var resultDescriptor = descriptor.col2im(
         imageDimensions: imageDimensions,
         blockHeight: blockHeight,
@@ -1121,8 +1160,6 @@ class NDArrayImpl extends NDArrayBase {
     var targetDataIndex = _dataInfo.offset;
 
     var sourceDataIndex = 0;
-
-    // TODO a questo punto targetDataIndex deve tener conto degli stride!
 
     var batchSourceDataIndex = sourceDataIndex;
     var batchTargetDataIndex = targetDataIndex;
@@ -1357,6 +1394,8 @@ Iterable<num> _createValueIterable(
   if (descriptor.shape.isScalar) {
     yield _data[dataInfo.offset];
   } else {
+    _debug("CALL: _createValueIterable");
+
     var shapeIndex = 0;
     var dimensionIndexes = new List(descriptor.shape.dimensionCount);
     var dataIndexes = new List(descriptor.shape.dimensionCount);

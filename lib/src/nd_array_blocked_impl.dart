@@ -1186,6 +1186,18 @@ class NDArrayBlockedImpl extends NDArrayBase {
       });
 
   @override
+  NDArray sqrt({NDArray reuse}) {
+    // TODO to implement NDArrayBlockedImpl.sqrt
+    throw new UnimplementedError("to implement NDArrayBlockedImpl.sqrt: $this");
+  }
+
+  @override
+  NDArray pow(num exponent, {NDArray reuse}) {
+    // TODO to implement NDArrayBlockedImpl.pow
+    throw new UnimplementedError("to implement NDArrayBlockedImpl.pow: $this");
+  }
+
+  @override
   NDArray log({NDArray reuse}) =>
       elementWiseUnaryOperationInternal(descriptor.log(), reuse,
           (Float32x4 value, valueCount) {
